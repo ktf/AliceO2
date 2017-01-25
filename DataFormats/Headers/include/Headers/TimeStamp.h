@@ -3,18 +3,7 @@
 #include "Headers/DataHeader.h"
 #include <chrono>
 
-// a chrono clock implementation
-// - always relative to run start
-// - need run start to calculate the epoch
-// - based on revolution frequency and number of bunches
-template <typename RefTimePoint, bool BunchPrecision = false>
-class LHCClock {
-public:
-  LHCClock(const RefTimePoint& start);
-  ~LHCClock();
-  LHCClock(const LHCClock&) = default;
-  LHCClock& operator=(const LHCClock&) = default;
-
+namespace LHCClockParameter {
   // number of bunches and the 40 MHz clock with 25 ns bunch spacing
   // gives revolution time of 89.1 us and 11.223345 kHz
   static const int gRevolutionFrequency = 11223;
@@ -22,22 +11,37 @@ public:
 
   // the type of the clock tick depends on whether to use also the bunches
   // as substructure of the orbit.
-  template <bool PrecisionSwitch>
-  struct RepTypeTrait {
+  // a trait class to extrat the properties of the clock, namely the type
+  // of the tick and the period
+  template <bool BunchPrecision>
+  struct Property {
     typedef uint32_t rep;
     typedef std::ratio<1, gRevolutionFrequency> period;
   };
-  //template <>
-  //struct RepTypeTrait<true> {
-  //  typedef uint64_t rep;
-  //  typedef std::ratio<1, gRevolutionFrequency*gNumberOfBunches> period;
-  //};
+  template <>
+  struct Property<true> {
+    typedef uint64_t rep;
+    typedef std::ratio<1, gRevolutionFrequency*gNumberOfBunches> period;
+  };
+};
 
-  typedef typename RepTypeTrait<BunchPrecision>::rep    rep;
-  typedef typename RepTypeTrait<BunchPrecision>::period period;
-  typedef std::chrono::duration<rep, period>            duration;
-  typedef std::chrono::time_point<LHCClock>             time_point;
-  static const bool is_steady =                         true;
+// a chrono clock implementation
+// - always relative to run start
+// - need run start to calculate the epoch
+// - based on revolution frequency and number of bunches
+template <typename RefTimePoint, bool BunchPrecision = false>
+class LHCClock {
+public:
+  LHCClock(const RefTimePoint& start) : mReference(start) {}
+  ~LHCClock() {}
+  LHCClock(const LHCClock&) = default;
+  LHCClock& operator=(const LHCClock&) = default;
+
+  typedef typename LHCClockParameter::Property<BunchPrecision>::rep    rep;
+  typedef typename LHCClockParameter::Property<BunchPrecision>::period period;
+  typedef std::chrono::duration<rep, period> duration;
+  typedef std::chrono::time_point<LHCClock>  time_point;
+  static const bool is_steady =              true;
 
   /// the now() function is the main characteristics of the clock
   /// calculate now from the system clock and the reference start time
