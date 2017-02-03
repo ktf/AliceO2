@@ -3,11 +3,21 @@
 #include "Headers/DataHeader.h"
 #include <chrono>
 
+// https://lhc-machine-outreach.web.cern.ch/lhc-machine-outreach/collisions.htm
+// https://www.lhc-closer.es/taking_a_closer_look_at_lhc/0.buckets_and_bunches
+
 namespace LHCClockParameter {
   // number of bunches and the 40 MHz clock with 25 ns bunch spacing
   // gives revolution time of 89.1 us and 11.223345 kHz
-  static const int gRevolutionFrequency = 11223;
+  // this depends on the assumption that the particles are moving effectively
+  // at speed of light. There are also documents specifying the orbit time
+  // to 89.4 us
+  // Note: avoid to define the revolution frequency and use the integral numbers
+  // for bunch places and bunch spacing in nano seconds
+  // TODO: this eventually needs to be configurable
   static const int gNumberOfBunches = 3564;
+  static const int gBunchSpacingNanoSec = 25;
+  static const int gOrbitTimeNanoSec = std::ratio<gNumberOfBunches*gBunchSpacingNanoSec>::num;
 
   // the type of the clock tick depends on whether to use also the bunches
   // as substructure of the orbit.
@@ -16,12 +26,16 @@ namespace LHCClockParameter {
   template <bool BunchPrecision>
   struct Property {
     typedef uint32_t rep;
-    typedef std::ratio<1, gRevolutionFrequency> period;
+    // avoid rounding errors by using the integral numbers in the std::ratio
+    // template to define the period
+    typedef std::ratio_multiply<std::ratio<gOrbitTimeNanoSec>, std::nano> period;
   };
   template <>
   struct Property<true> {
     typedef uint64_t rep;
-    typedef std::ratio<1, gRevolutionFrequency*gNumberOfBunches> period;
+    // this is effectively the LHC clock and the ratio is the
+    // bunch spacing
+    typedef std::ratio_multiply<std::ratio<gBunchSpacingNanoSec>, std::nano> period;
   };
 };
 
