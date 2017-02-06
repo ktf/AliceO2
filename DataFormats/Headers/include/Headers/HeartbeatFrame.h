@@ -106,6 +106,20 @@ struct HeartbeatFrameEnvelope : public BaseHeader
     : BaseHeader(sizeof(HeartbeatFrameEnvelope), sHeaderType, sSerializationMethod, sVersion)
     , header(h), trailer(t) {}
 };
+
+// a statistics data block for heartbeat frames
+// it transmits real time as the payload of the HB frame in AliceO2
+// eventually to be dropped later, its intended for the first experimental work
+struct HeartbeatStatistics
+{
+  // time tick when this statistics was created
+  uint64_t timeTickNanoSeconds;
+  // difference to the previous time tick
+  uint64_t durationNanoSeconds;
+
+  HeartbeatStatistics() : timeTickNanoSeconds(0), durationNanoSeconds(0) {}
+};
+
 };
 };
 #endif
