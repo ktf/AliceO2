@@ -122,6 +122,19 @@ o2_define_bucket(
     ${OPTIONAL_DDS_INCLUDE_DIR}
 )
 
+# a common bucket for the implementation of devices inherited
+# from O2device
+o2_define_bucket(
+    NAME
+    O2DeviceApplication_bucket
+
+    DEPENDENCIES
+    Base
+    Headers
+    O2device
+    dl
+)
+
 o2_define_bucket(
     NAME
     O2MessageMonitor_bucket
