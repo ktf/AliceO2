@@ -88,7 +88,12 @@ class TimeStamp
   //static TimeUnitID const gMicroSeconds = TimeUnitID("USEC");
 
   template <typename TimeUnit>
-  std::chrono::time_point<TimeUnit> get() const;
+  std::chrono::time_point<TimeUnit> get() const {
+    typedef std::chrono::time_point<TimeUnit> time_point;
+    if (mUnit == gClockLHC) {
+
+    }
+  }
 
   template <typename TimeUnit>
   operator std::chrono::time_point<TimeUnit>() const {return get<TimeUnit>();}
