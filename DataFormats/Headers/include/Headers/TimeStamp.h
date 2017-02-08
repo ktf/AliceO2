@@ -15,9 +15,9 @@ namespace LHCClockParameter {
   // Note: avoid to define the revolution frequency and use the integral numbers
   // for bunch places and bunch spacing in nano seconds
   // TODO: this eventually needs to be configurable
-  static const int gNumberOfBunches = 3564;
-  static const int gBunchSpacingNanoSec = 25;
-  static const int gOrbitTimeNanoSec = std::ratio<gNumberOfBunches*gBunchSpacingNanoSec>::num;
+  static const int NumberOfBunches = 3564;
+  static const int BunchSpacingNanoSec = 25;
+  static const int OrbitTimeNanoSec = std::ratio<gNumberOfBunches*gBunchSpacingNanoSec>::num;
 
   // the type of the clock tick depends on whether to use also the bunches
   // as substructure of the orbit.
@@ -43,10 +43,14 @@ namespace LHCClockParameter {
 // - always relative to run start
 // - need run start to calculate the epoch
 // - based on revolution frequency and number of bunches
+// TODO: the reference time is probably the start of the fill
+// TODO: make enum type instead BunchPrecision
 template <typename RefTimePoint, bool BunchPrecision = false>
 class LHCClock {
 public:
   LHCClock(const RefTimePoint& start) : mReference(start) {}
+  /// forbidden, always need a reference
+  LHCClock() = delete;
   ~LHCClock() {}
   LHCClock(const LHCClock&) = default;
   LHCClock& operator=(const LHCClock&) = default;
@@ -66,13 +70,11 @@ public:
   }
 
 private:
-  /// forbidden, always need a reference
-  LHCClock() {};
-
   /// external reference: start time of the run
   RefTimePoint mReference;
 };
 
+// TODO: consider using bitfields
 class TimeStamp
 {
  public:
@@ -99,15 +101,18 @@ class TimeStamp
   operator std::chrono::time_point<TimeUnit>() const {return get<TimeUnit>();}
 
  private:
-  TimeUnitID mUnit;
-  // the unions are probably not a good idea as the members have too different
-  // meaning depending on the unit, but take it as a fist working assumption
   union {
-    uint16_t mBCNumber;
-    uint16_t mSubTicks;
-  };
-  union {
-    uint32_t mPeriod;
-    uint32_t mTicks;
+    uint64_t mTimeStamp64;
+    TimeUnitID mUnit;
+    // the unions are probably not a good idea as the members have too different
+    // meaning depending on the unit, but take it as a fist working assumption
+    union {
+      uint16_t mBCNumber;
+      uint16_t mSubTicks;
+    };
+    union {
+      uint32_t mPeriod;
+      uint32_t mTicks;
+    };
   };
 };
