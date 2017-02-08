@@ -36,7 +36,7 @@ struct HeartbeatHeader
 {
   union {
     // the complete 64 bit header word
-    uint64_t headerWord;
+    uint64_t headerWord = 0;
     struct {
 	// bit 0 to 31: orbit number
 	uint32_t orbit;
@@ -54,20 +54,18 @@ struct HeartbeatHeader
 	uint8_t blockType:4;
     };
   };
-
-  HeartbeatHeader() : headerWord(0) {}
 };
 
 struct HeartbeatTrailer
 {
   union {
     // the complete 64 bit trailer word
-    uint64_t trailerWord;
+    uint64_t trailerWord = 0;
     struct {
 	// bit 0 to 31: data length in words
 	uint32_t dataLength;
 	// bit 32 to 52: detector specific status words
-	uint32_t bcid:21;
+	uint32_t status:21;
 	// bit 53: =1 in case a new physics trigger arrived within read-out period
 	uint16_t hbfTruncated:1;
 	// bit 54: =0 HBF correctly transmitted
@@ -80,8 +78,6 @@ struct HeartbeatTrailer
 	uint8_t blockType:4;
     };
   };
-
-  HeartbeatTrailer() : trailerWord(0) {}
 };
 
 // composite struct for the HBH and HBT which are the envelope for the payload
