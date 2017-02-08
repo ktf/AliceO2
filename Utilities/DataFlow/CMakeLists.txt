@@ -19,7 +19,7 @@ O2_SETUP(NAME ${MODULE_NAME})
 
 set(SRCS
     src/HeartbeatSampler.cxx
-    src/SubframeBuilder.cxx
+    src/SubframeBuilderDevice.cxx
     )
 
 set(LIBRARY_NAME ${MODULE_NAME})
@@ -34,12 +34,12 @@ set(BUCKET_NAME ${MODULE_BUCKET_NAME})
 
 Set(Exe_Names
     heartbeatSampler
-    subframeBuilder
+    SubframeBuilderDevice
     )
 
 set(Exe_Source
     src/runHeartbeatSampler.cxx
-    src/runSubframeBuilder.cxx
+    src/runSubframeBuilderDevice.cxx
     )
 
 list(LENGTH Exe_Names _length)

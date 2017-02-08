@@ -1,16 +1,18 @@
 //-*- Mode: C++ -*-
 
-#ifndef SUBFRAMEBUILDER_H
-#define SUBFRAMEBUILDER_H
+#ifndef SUBFRAMEBUILDERDEVICE_H
+#define SUBFRAMEBUILDERDEVICE_H
 
 #include "Headers/DataHeader.h"
 #include "Headers/HeartbeatFrame.h"
 #include "O2device/O2device.h"
 
+class FairMQParts;
+
 namespace AliceO2 {
 namespace DataFlow {
 
-/// @class SubframeBuilder
+/// @class SubframeBuilderDevice
 ///
 /// The device inplements the high-level API of the FairMQDevice
 /// run loop. The registered method is called once per message
@@ -21,18 +23,21 @@ namespace DataFlow {
 /// the message data. Very likely the message parts are no longer
 /// valid after leaving the handler method. But one could apply a
 /// scheme with unique pointers and move semantics
-class SubframeBuilder : public Base::O2device
+class SubframeBuilderDevice : public Base::O2device
 {
 public:
   /// Default constructor
-  SubframeBuilder();
+  SubframeBuilderDevice();
 
   /// Default destructor
-  virtual ~SubframeBuilder();
+  virtual ~SubframeBuilderDevice() final;
 
 protected:
   /// overloading the InitTask() method of FairMQDevice
-  virtual void InitTask();
+  void InitTask() final;
+
+   /// overloading ConditionalRun method of FairMQDevice
+  virtual bool ConditionalRun() final;
 
   /// data handling method to be registered as handler in the
   /// FairMQDevice API method OnData
