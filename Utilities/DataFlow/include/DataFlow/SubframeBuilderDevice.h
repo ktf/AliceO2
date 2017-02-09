@@ -57,6 +57,7 @@ public:
   static constexpr const char* OptionKeyInputChannelName = "input-channel-name";
   static constexpr const char* OptionKeyOutputChannelName = "output-channel-name";
   static constexpr const char* OptionKeyDuration = "duration";
+  static constexpr const char* OptionKeySelfTriggered = "self-triggered";
   // TODO: this is just a first mockup, remove it
   static constexpr uint32_t DefaultDuration = 10000;
 
@@ -91,6 +92,7 @@ private:
   uint32_t mDuration;
   std::string mInputChannelName;
   std::string mOutputChannelName;
+  bool mIsSelfTriggered;
 };
 
 }; // namespace DataFlow

@@ -10,6 +10,7 @@ AliceO2::DataFlow::SubframeBuilderDevice::SubframeBuilderDevice()
   , mDuration(DefaultDuration)
   , mInputChannelName()
   , mOutputChannelName()
+  , mIsSelfTriggered(false)
 {
 }
 
@@ -20,13 +21,17 @@ AliceO2::DataFlow::SubframeBuilderDevice::~SubframeBuilderDevice()
 void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
 {
   mDuration = fConfig->GetValue<uint32_t>(OptionKeyDuration);
+  mIsSelfTriggered = fConfig->GetValue<bool>(OptionKeySelfTriggered);
   mInputChannelName = fConfig->GetValue<std::string>(OptionKeyInputChannelName);
   mOutputChannelName = fConfig->GetValue<std::string>(OptionKeyOutputChannelName);
 
-  // this needs to be registered as soon as the device works with input
-  // ConditionalRun is not called anymore from the base class if the
-  // callback is registered
-  //OnData("input", &AliceO2::DataFlow::SubframeBuilderDevice::HandleData);
+  if (!mIsSelfTriggered) {
+    // depending on whether the device is self-triggered or expects input,
+    // the handler function needs to be registered or not.
+    // ConditionalRun is not called anymore from the base class if the
+    // callback is registered
+    OnData("input", &AliceO2::DataFlow::SubframeBuilderDevice::HandleData);
+  }
 }
 
 bool AliceO2::DataFlow::SubframeBuilderDevice::ConditionalRun()
@@ -58,7 +63,10 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   md.startTime = mFrameNumber * mDuration;
   md.duration = mDuration;
 
-  // send an empty subframe (no detector payload)
+  // send an empty subframe (no detector payload), only the data header
+  // and the subframe meta data are added to the sub timeframe
+  // TODO: this is going to be changed as soon as the device implements
+  // handling of the input data
   O2Message outgoing;
 
   // build multipart message from header and payload
