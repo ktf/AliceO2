@@ -7,6 +7,7 @@ O2_SETUP(NAME ${MODULE_NAME})
 # Define the source and header files
 set(SRCS
   src/DataHeader.cxx
+  src/HeartbeatFrame.cxx
 )
 
 set(HEADERS
