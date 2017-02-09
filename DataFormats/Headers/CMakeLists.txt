@@ -12,6 +12,7 @@ set(SRCS
 
 set(HEADERS
   include/${MODULE_NAME}/DataHeader.h
+  include/${MODULE_NAME}/HeartbeatFrame.h
 )
 
 set(LIBRARY_NAME ${MODULE_NAME})
