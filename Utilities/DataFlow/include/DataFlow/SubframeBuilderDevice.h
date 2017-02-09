@@ -10,7 +10,7 @@
 
 #include "Headers/DataHeader.h"
 #include "Headers/HeartbeatFrame.h"
-#include "O2device/O2device.h"
+#include "O2Device/O2Device.h"
 #include <cstring>
 
 class FairMQParts;
@@ -49,11 +49,10 @@ struct SubframeMetadata
 /// The duration should be with respect to a time constant, which in
 /// itself needs to be configurable, now the time constant is
 /// hard-coded microseconds
-class SubframeBuilderDevice : public Base::O2device
+class SubframeBuilderDevice : public Base::O2Device
 {
 public:
-  // the O2message is probably going to be changed in the near future
-  typedef AliceO2::Base::O2message O2Message;
+  typedef AliceO2::Base::O2Message O2Message;
 
   static constexpr const char* OptionKeyInputChannelName = "input-channel-name";
   static constexpr const char* OptionKeyOutputChannelName = "output-channel-name";

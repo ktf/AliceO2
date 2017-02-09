@@ -5,7 +5,7 @@
 #include "FairMQProgOptions.h"
 
 AliceO2::DataFlow::SubframeBuilderDevice::SubframeBuilderDevice()
-  : O2device()
+  : O2Device()
   , mFrameNumber(0)
   , mDuration(DefaultDuration)
   , mInputChannelName()

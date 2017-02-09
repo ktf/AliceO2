@@ -5,11 +5,11 @@
 
 #include "Headers/DataHeader.h"
 #include "Headers/HeartbeatFrame.h"
-#include "O2device/O2device.h"
+#include "O2Device/O2Device.h"
 
 namespace AliceO2 {
 namespace DataFlow {
-class HeartbeatSampler : public Base::O2device
+class HeartbeatSampler : public Base::O2Device
 {
 public:
   /// Default constructor

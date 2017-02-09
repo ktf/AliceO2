@@ -1,7 +1,7 @@
 #include "DataFlow/HeartbeatSampler.h"
 
 AliceO2::DataFlow::HeartbeatSampler::HeartbeatSampler()
-  : O2device()
+  : O2Device()
 {
 }
 
