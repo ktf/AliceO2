@@ -131,7 +131,7 @@ o2_define_bucket(
     DEPENDENCIES
     Base
     Headers
-    O2device
+    O2Device
     dl
 )
 
