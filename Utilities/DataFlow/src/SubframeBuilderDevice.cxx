@@ -1,3 +1,8 @@
+/// @file   SubframeBuilderDevice.cxx
+/// @author Giulio Eulisse, Matthias Richter, Sandro Wenzel
+/// @since  2017-02-07
+/// @brief  Demonstrator device for a subframe builder
+
 #include <thread> // this_thread::sleep_for
 #include <chrono>
 

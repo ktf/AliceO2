@@ -3,7 +3,7 @@
 #ifndef SUBFRAMEBUILDERDEVICE_H
 #define SUBFRAMEBUILDERDEVICE_H
 
-/// @file   SubframeBuilderDevice
+/// @file   SubframeBuilderDevice.h
 /// @author Giulio Eulisse, Matthias Richter, Sandro Wenzel
 /// @since  2017-02-07
 /// @brief  Demonstrator device for a subframe builder
