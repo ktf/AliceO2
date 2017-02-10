@@ -23,6 +23,9 @@ namespace DataFlow {
 /// processes on the FLP
 /// The heartbeat triggers are sent out with constant frequency, the
 /// period in nano seconds can be configured by option --period
+///
+/// TODO: the class can evolve to a general clock sampler device with
+/// configurable period, even randomly distributed
 class HeartbeatSampler : public Base::O2Device
 {
 public:
@@ -45,8 +48,12 @@ protected:
   virtual bool ConditionalRun() final;
 
 private:
+  /// publishing period (configurable)
   uint32_t mPeriod;
+  /// name of the (configurable)
   std::string mOutputChannelName;
+  /// number of elapsed periods
+  int mCount;
 };
 
 }; // namespace DataFlow

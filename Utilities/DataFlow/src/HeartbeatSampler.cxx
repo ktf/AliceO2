@@ -14,6 +14,7 @@ AliceO2::DataFlow::HeartbeatSampler::HeartbeatSampler()
   : O2Device()
   , mPeriod(89100)
   , mOutputChannelName("output")
+  , mCount(0)
 {
 }
 
@@ -35,13 +36,16 @@ bool AliceO2::DataFlow::HeartbeatSampler::ConditionalRun()
 
   AliceO2::Header::DataHeader dh;
   dh.dataDescription = AliceO2::Header::gDataDescriptionHeartbeatFrame;
-  dh.dataOrigin = AliceO2::Header::DataOrigin("TEST");
+  dh.dataOrigin = AliceO2::Header::DataOrigin("SMPL");
   dh.subSpecification = 0;
   dh.payloadSize = sizeof(hbfPayload);
 
+  // Note: the block type of both header an trailer members of the envelope
+  // structure are autmatically initialized to the appropriate block type
+  // and size '1' (i.e. only one 64bit word)
   AliceO2::Header::HeartbeatFrameEnvelope specificHeader;
-  //specificHeader.header = 0;
-  //specificHeader.trailer = 0;
+  specificHeader.header.orbit = mCount;
+  specificHeader.trailer.hbAccept = 1;
 
   O2Message outgoing;
 
@@ -52,5 +56,6 @@ bool AliceO2::DataFlow::HeartbeatSampler::ConditionalRun()
   Send(outgoing, mOutputChannelName.c_str());
   outgoing.fParts.clear();
 
+  mCount++;
   return true;
 }
