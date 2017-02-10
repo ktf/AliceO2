@@ -30,7 +30,7 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
     // the handler function needs to be registered or not.
     // ConditionalRun is not called anymore from the base class if the
     // callback is registered
-    OnData("input", &AliceO2::DataFlow::SubframeBuilderDevice::HandleData);
+    OnData(mInputChannelName.c_str(), &AliceO2::DataFlow::SubframeBuilderDevice::HandleData);
   }
 }
 
