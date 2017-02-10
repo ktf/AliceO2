@@ -35,8 +35,8 @@ extern const AliceO2::Header::DataDescription gDataDescriptionHeartbeatFrame;
 struct HeartbeatHeader
 {
   union {
-    // the complete 64 bit header word
-    uint64_t headerWord = 0;
+    // the complete 64 bit header word, initialize with blockType 1 and size 1
+    uint64_t headerWord = 0x11000000;
     struct {
 	// bit 0 to 31: orbit number
 	uint32_t orbit;
@@ -59,8 +59,8 @@ struct HeartbeatHeader
 struct HeartbeatTrailer
 {
   union {
-    // the complete 64 bit trailer word
-    uint64_t trailerWord = 0;
+    // the complete 64 bit trailer word, initialize with blockType 1 and size 1
+    uint64_t trailerWord = 0x51000000;
     struct {
 	// bit 0 to 31: data length in words
 	uint32_t dataLength;
