@@ -1,23 +1,21 @@
-void run_sim_mft(Int_t nEvents = 1, Int_t nMuons = 100, TString mcEngine = "TGeant3")
+void run_sim_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3")
 {
-
-  gRandom->SetSeed(0);
-
   TString dir = getenv("VMCWORKDIR");
   TString geom_dir = dir + "/Detectors/Geometry/";
   gSystem->Setenv("GEOMPATH",geom_dir.Data());
+
 
   TString tut_configdir = dir + "/Detectors/gconfig";
   gSystem->Setenv("CONFIG_DIR",tut_configdir.Data());
 
   // Output file name
   char fileout[100];
-  sprintf(fileout, "AliceO2_%s.mc_%iev_%imu.root", mcEngine.Data(), nEvents, nMuons);
+  sprintf(fileout, "AliceO2_%s.tpc.mc_%i_event.root", mcEngine.Data(), nEvents);
   TString outFile = fileout;
 
   // Parameter file name
   char filepar[100];
-  sprintf(filepar, "AliceO2_%s.params_%iev_%imu.root", mcEngine.Data(), nEvents, nMuons);
+  sprintf(filepar, "AliceO2_%s.tpc.params_%i.root", mcEngine.Data(), nEvents);
   TString parFile = filepar;
 
   // In general, the following parts need not be touched
@@ -28,6 +26,7 @@ void run_sim_mft(Int_t nEvents = 1, Int_t nMuons = 100, TString mcEngine = "TGea
   // Timer
   TStopwatch timer;
   timer.Start();
+
 
   // Create simulation run
   FairRunSim* run = new FairRunSim();
@@ -43,19 +42,19 @@ void run_sim_mft(Int_t nEvents = 1, Int_t nMuons = 100, TString mcEngine = "TGea
   cave->SetGeometryFileName("cave.geo");
   run->AddModule(cave);
 
-  //TGeoGlobalMagField::Instance()->SetField(new AliceO2::Field::MagneticField("Maps","Maps", -1., -1., AliceO2::Field::MagneticField::k5kG));
 
-  AliceO2::MFT::Detector* mft = new AliceO2::MFT::Detector();
-
-  run->AddModule(mft);
+  // ===| Add TPC |============================================================
+  AliceO2::TPC::Detector* tpc = new AliceO2::TPC::Detector("TPC", kTRUE);
+  tpc->SetGeoFileName("TPCGeometry.root");
+  run->AddModule(tpc);
 
   // Create PrimaryGenerator
   FairPrimaryGenerator* primGen = new FairPrimaryGenerator();
-  FairBoxGenerator* boxGen = new FairBoxGenerator(13, nMuons);
+  FairBoxGenerator* boxGen = new FairBoxGenerator(2212, 1); /*protons*/
 
-  //boxGen->SetXYZ(0.,0.,0.);
-  boxGen->SetThetaRange(170.0, 177.0);
-  boxGen->SetPRange(4., 20.);
+  //boxGen->SetThetaRange(0.0, 90.0);
+  boxGen->SetEtaRange(-0.9,0.9);
+  boxGen->SetPRange(100, 100.01);
   boxGen->SetPhiRange(0., 360.);
   boxGen->SetDebug(kTRUE);
 
@@ -63,6 +62,10 @@ void run_sim_mft(Int_t nEvents = 1, Int_t nMuons = 100, TString mcEngine = "TGea
 
   run->SetGenerator(primGen);
 
+  // store track trajectories
+//  run->SetStoreTraj(kTRUE);
+
+  // Initialize simulation run
   run->Init();
 
   // Runtime database
@@ -73,20 +76,17 @@ void run_sim_mft(Int_t nEvents = 1, Int_t nMuons = 100, TString mcEngine = "TGea
   rtdb->saveOutput();
   rtdb->print();
 
-  //AliceO2::MFT::GeometryTGeo *geom = mft->GetGeometryTGeo();
-  //printf("MFT has %d disks.\n",geom->GetNofDisks());
-
+  // Start run
   run->Run(nEvents);
-  run->CreateGeometryFile("geofile_mft.root");
+//  run->CreateGeometryFile("geofile_full.root");
 
   // Finish
   timer.Stop();
   Double_t rtime = timer.RealTime();
   Double_t ctime = timer.CpuTime();
   cout << endl << endl;
-  cout << "Macro finished succesfully" << endl;
+  cout << "Macro finished succesfully." << endl;
   cout << "Output file is " << outFile << endl;
   cout << "Parameter file is " << parFile << endl;
   cout << "Real time " << rtime << " s, CPU time " << ctime << "s" << endl << endl;
-
 }

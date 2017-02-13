@@ -9,12 +9,12 @@
   #include "FairRuntimeDb.h"
   #include "FairParRootFileIo.h"
   #include "FairSystemInfo.h"
+  #include "Field/MagneticField.h"
 
   #include "ITSReconstruction/CookedTrackerTask.h"
-  #include "Field/MagneticField.h"
 #endif
 
-void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
+void run_trac_its(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         // Initialize logger
         FairLogger *logger = FairLogger::GetLogger();
         logger->SetLogVerbosityLevel("LOW");
@@ -44,16 +44,18 @@ void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         // Setup tracker
         // To run with n threads call AliceO2::ITS::CookedTrackerTask(n)
         AliceO2::ITS::CookedTrackerTask *trac = new AliceO2::ITS::CookedTrackerTask;
-        fRun->AddTask(trac);
-        fRun->Init();
-	AliceO2::Field::MagneticField* fld = (AliceO2::Field::MagneticField*)fRun->GetField();
-	if (!fld) {
-	  std::cout << "Failed to get field instance from FairRunAna" << std::endl;
-	  return;
-	}
-	trac->setBz(fld->solenoidField()); //in kG
 
-	
+        fRun->AddTask(trac);
+
+        fRun->Init();
+
+        AliceO2::Field::MagneticField* fld = (AliceO2::Field::MagneticField*)fRun->GetField();
+      	if (!fld) {
+      	  std::cout << "Failed to get field instance from FairRunAna" << std::endl;
+      	  return;
+      	}
+      	trac->setBz(fld->solenoidField()); //in kG
+
         timer.Start();
         fRun->Run();
 
@@ -75,7 +77,8 @@ void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         cout << "<DartMeasurement name=\"CpuLoad\" type=\"numeric/double\">";
         cout << cpuUsage;
         cout << "</DartMeasurement>" << endl;
-        std::cout << "Macro finished succesfully." << std::endl;
+        cout << endl << endl;
+        cout << "Macro finished succesfully." << endl;
 
         std::cout << endl << std::endl;
         std::cout << "Output file is "    << outputfile.str() << std::endl;

@@ -99,7 +99,7 @@ o2_define_bucket(
 
 o2_define_bucket(
     NAME
-    O2device_bucket
+    O2Device_bucket
 
     DEPENDENCIES
     common_boost_bucket
@@ -122,13 +122,26 @@ o2_define_bucket(
     ${OPTIONAL_DDS_INCLUDE_DIR}
 )
 
+# a common bucket for the implementation of devices inherited
+# from O2device
 o2_define_bucket(
     NAME
-    fairMQmonitor_bucket
+    O2DeviceApplication_bucket
 
     DEPENDENCIES
-    O2device_bucket
-    O2device
+    Base
+    Headers
+    O2Device
+    dl
+)
+
+o2_define_bucket(
+    NAME
+    O2MessageMonitor_bucket
+
+    DEPENDENCIES
+    O2Device_bucket
+    O2Device
 )
 
 o2_define_bucket(
@@ -186,9 +199,11 @@ o2_define_bucket(
     common_field_bucket
 
     DEPENDENCIES
-    Core RIO MathUtils Geom
+    fairroot_base_bucket
+    Base ParBase Core RIO MathUtils Geom
 
     INCLUDE_DIRECTORIES
+    ${FAIRROOT_INCLUDE_DIR}
     ${ROOT_INCLUDE_DIR}
     ${CMAKE_SOURCE_DIR}/Common/MathUtils/include
 )

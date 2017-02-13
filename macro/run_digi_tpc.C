@@ -1,20 +1,4 @@
-#if !defined(__CINT__) || defined(__MAKECINT__)
-  #include <sstream>
-
-  #include <TStopwatch.h>
-
-  #include "FairLogger.h"
-  #include "FairRunAna.h"
-  #include "FairFileSource.h"
-  #include "FairRuntimeDb.h"
-  #include "FairParRootFileIo.h"
-  #include "FairSystemInfo.h"
-
-  #include "ITSReconstruction/CookedTrackerTask.h"
-  #include "Field/MagneticField.h"
-#endif
-
-void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
+void run_digi_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         // Initialize logger
         FairLogger *logger = FairLogger::GetLogger();
         logger->SetLogVerbosityLevel("LOW");
@@ -22,9 +6,9 @@ void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
 
         // Input and output file name
         std::stringstream inputfile, outputfile, paramfile;
-        inputfile << "AliceO2_" << mcEngine << ".clus_" << nEvents << "_event.root";
-        paramfile << "AliceO2_" << mcEngine << ".params_" << nEvents << ".root";
-        outputfile << "AliceO2_" << mcEngine << ".trac_" << nEvents << "_event.root";
+        inputfile << "AliceO2_" << mcEngine << ".tpc.mc_" << nEvents << "_event.root";
+        paramfile << "AliceO2_" << mcEngine << ".tpc.params_" << nEvents << ".root";
+        outputfile << "AliceO2_" << mcEngine << ".tpc.digi_" << nEvents << "_event.root";
 
         // Setup timer
         TStopwatch timer;
@@ -41,19 +25,17 @@ void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         parInput1->open(paramfile.str().c_str());
         rtdb->setFirstInput(parInput1);
 
-        // Setup tracker
-        // To run with n threads call AliceO2::ITS::CookedTrackerTask(n)
-        AliceO2::ITS::CookedTrackerTask *trac = new AliceO2::ITS::CookedTrackerTask;
-        fRun->AddTask(trac);
-        fRun->Init();
-	AliceO2::Field::MagneticField* fld = (AliceO2::Field::MagneticField*)fRun->GetField();
-	if (!fld) {
-	  std::cout << "Failed to get field instance from FairRunAna" << std::endl;
-	  return;
-	}
-	trac->setBz(fld->solenoidField()); //in kG
+      //  TGeoManager::Import("geofile_full.root");
 
-	
+        // Setup digitizer
+        AliceO2::ITS::DigitizerTask *digi = new AliceO2::ITS::DigitizerTask;
+        fRun->AddTask(digi);
+
+        AliceO2::TPC::DigitizerTask *digiTPC = new AliceO2::TPC::DigitizerTask;
+        fRun->AddTask(digiTPC);
+
+        fRun->Init();
+
         timer.Start();
         fRun->Run();
 
@@ -75,8 +57,8 @@ void run_trac(Int_t nEvents = 10, TString mcEngine = "TGeant3"){
         cout << "<DartMeasurement name=\"CpuLoad\" type=\"numeric/double\">";
         cout << cpuUsage;
         cout << "</DartMeasurement>" << endl;
+        cout << endl << endl;
         std::cout << "Macro finished succesfully." << std::endl;
-
         std::cout << endl << std::endl;
         std::cout << "Output file is "    << outputfile.str() << std::endl;
         //std::cout << "Parameter file is " << parFile << std::endl;
