@@ -18,17 +18,6 @@ class FairMQParts;
 namespace AliceO2 {
 namespace DataFlow {
 
-// TODO: this definition has to go to some common place
-// maybe also an identifier for the time constant should be added
-struct SubframeMetadata
-{
-  // TODO: replace with timestamp struct
-  uint64_t startTime = ~(uint64_t)0;
-  uint64_t duration = ~(uint64_t)0;
-
-  //further meta data to be added
-};
-
 /// @class SubframeBuilderDevice
 /// A demonstrator device for building of sub timeframes
 ///
@@ -58,6 +47,8 @@ public:
   static constexpr const char* OptionKeyOutputChannelName = "output-channel-name";
   static constexpr const char* OptionKeyDuration = "duration";
   static constexpr const char* OptionKeySelfTriggered = "self-triggered";
+  static constexpr const char* OptionKeyInDataFile = "indatafile-name";
+
   // TODO: this is just a first mockup, remove it
   static constexpr uint32_t DefaultDuration = 10000;
 
@@ -92,6 +83,7 @@ private:
   uint32_t mDuration;
   std::string mInputChannelName;
   std::string mOutputChannelName;
+  std::string mInitDataFileName;
   bool mIsSelfTriggered;
 };
 

@@ -14,6 +14,8 @@
 #include "FairMQProgOptions.h"
 
 #include "FLP2EPNex_distributed/FLPSender.h"
+#include "Headers/DataHeader.h"
+#include "DataFlow/SubframeMetadata.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -70,6 +72,7 @@ void FLPSender::Run()
       // test-mode: receive and store id part in the buffer.
       FairMQMessagePtr id(NewMessage());
       if (dataInChannel.Receive(id) > 0) {
+        std::cerr << "#### received message\n";
         header->timeFrameId = *(static_cast<uint16_t*>(id->GetData()));
         header->flpIndex = fIndex;
       } else {
@@ -102,7 +105,31 @@ void FLPSender::Run()
     } else {
       // regular mode: receive data part from input
       if (dataInChannel.Receive(parts.At(1)) >= 0) {
-        fSTFBuffer.push(move(parts));
+        // this is taking the input and moving it to output
+
+         // TODO: read all the parts at once
+
+        LOG(INFO) << "RECEIVED MESSAGE OF SIZE " << parts.At(1)->GetSize() << "\n";
+        LOG(INFO) << "FITS WITH DATAHEADER " << parts.At(1)->GetSize() % sizeof(Header::DataHeader) << "\n";
+
+        // here every second message is indeed either the DataHeader or the payload to the meta header
+        // How to figure this out? Global class ID? ROOT dictionary?
+
+        Header::DataHeader * dh = reinterpret_cast<Header::DataHeader*>(parts.At(1)->GetData());
+        dh->dataDescription.print();
+        LOG(INFO) << dh->payloadSize << "\n";
+
+        struct SubframeMetadata
+        {
+          // TODO: replace with timestamp struct
+          uint64_t startTime = ~(uint64_t)0;
+          uint64_t duration = ~(uint64_t)0;
+        };
+
+        SubframeMetadata * md = reinterpret_cast<SubframeMetadata*>(parts.At(1)->GetData());
+        LOG(INFO) << md->startTime << "\t" << md->duration << "\n";
+
+     //   fSTFBuffer.push(move(parts));
       } else {
         // if nothing was received, try again
         continue;

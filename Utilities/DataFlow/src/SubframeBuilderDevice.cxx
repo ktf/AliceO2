@@ -7,7 +7,15 @@
 #include <chrono>
 
 #include "DataFlow/SubframeBuilderDevice.h"
+#include "DataFlow/SubframeMetadata.h"
 #include "FairMQProgOptions.h"
+
+
+struct TestPayload {
+ // std::vector<TestSerializedCluster> clusters;
+ std::vector<double> clusters;
+};
+
 
 AliceO2::DataFlow::SubframeBuilderDevice::SubframeBuilderDevice()
   : O2Device()
@@ -29,6 +37,7 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
   mIsSelfTriggered = fConfig->GetValue<bool>(OptionKeySelfTriggered);
   mInputChannelName = fConfig->GetValue<std::string>(OptionKeyInputChannelName);
   mOutputChannelName = fConfig->GetValue<std::string>(OptionKeyOutputChannelName);
+  mInitDataFileName = fConfig->GetValue<std::string>(OptionKeyInDataFile);
 
   if (!mIsSelfTriggered) {
     // depending on whether the device is self-triggered or expects input,
@@ -76,6 +85,18 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
 
   // build multipart message from header and payload
   AddMessage(outgoing, dh, NewSimpleMessage(md));
+
+//  TestPayload clusterPayload;
+
+//  // For the moment, add the data as another part to this message
+//  AliceO2::Header::DataHeader payloadheader;
+//  payloadheader.dataDescription = AliceO2::Header::DataDescription("CLUSTER");
+//  payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
+//  payloadheader.subSpecification = 0;
+//  payloadheader.payloadSize = clusterPayload.clusters.size();
+
+
+//  AddMessage(outgoing, payloadheader, NewSimpleMessage(clusterPayload.clusters.data()));
 
   // send message
   Send(outgoing, mOutputChannelName.c_str());
