@@ -104,7 +104,7 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
   dh.dataDescription = mDataDescription;
   dh.dataOrigin = mDataOrigin;
   dh.subSpecification = mSubSpecification;
-  dh.payloadSize = 0;
+  dh.payloadSize = mFileBuffer.size();
 
   O2Message outgoing;
 
@@ -113,10 +113,16 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
   // TODO: obviously there is a lot to do here, avoid copying etc, this
   // is just a proof of principle
   // NewSimpleMessage(mFileBuffer) does not work with the vector
-  std::unique_ptr<FairMQMessage> msg(fTransportFactory->CreateMessage());
-  msg->Rebuild(mFileBuffer.size());
-  memcpy(msg->GetData(), &mFileBuffer[0], mFileBuffer.size());
-  AddMessage(outgoing, dh, move(msg));
+
+  //  std::unique_ptr<FairMQMessage> msg(fTransportFactory->CreateMessage());
+//  msg->Rebuild(mFileBuffer.size());
+//  memcpy(msg->GetData(), &mFileBuffer[0], mFileBuffer.size());
+//  AddMessage(outgoing, dh, move(msg));
+
+  // the alternative would be
+  // TODO: fix payload size in dh
+  AddMessage(outgoing, dh, NewSimpleMessage(mFileBuffer.data()));
+
 
   // send message
   Send(outgoing, mOutputChannelName.c_str());

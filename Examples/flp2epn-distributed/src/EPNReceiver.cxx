@@ -12,6 +12,7 @@
 #include "FairMQProgOptions.h"
 
 #include "FLP2EPNex_distributed/EPNReceiver.h"
+#include "Headers/DataHeader.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -105,7 +106,8 @@ void EPNReceiver::Run()
       // store the received ID
       f2eHeader& header = *(static_cast<f2eHeader*>(parts.At(0)->GetData()));
       id = header.timeFrameId;
-      // LOG(INFO) << "Received sub-time frame #" << id << " from FLP" << header.flpIndex;
+      LOG(INFO) << "Received sub-time frame #" << id << " from FLP" << header.flpIndex;
+      LOG(INFO) << "parts contains " << parts.Size() << "\n";
 
       // DEBUG:: store receive intervals per FLP
       // if (fTestMode > 0) {
@@ -126,7 +128,7 @@ void EPNReceiver::Run()
         // if the received ID has not previously been discarded,
         // store the data part in the buffer
         fTimeframeBuffer[id].parts.AddPart(move(parts.At(1)));
-        // PrintBuffer(fTimeframeBuffer);
+        PrintBuffer(fTimeframeBuffer);
       }
       else
       {
