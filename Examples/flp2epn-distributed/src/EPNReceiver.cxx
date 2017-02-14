@@ -13,15 +13,14 @@
 
 #include "FLP2EPNex_distributed/EPNReceiver.h"
 #include "Headers/DataHeader.h"
+#include "DataFlow/SubframeMetadata.h"
 
 using namespace std;
 using namespace std::chrono;
 using namespace AliceO2::Devices;
-
-struct f2eHeader {
-  uint16_t timeFrameId;
-  int      flpIndex;
-};
+using SubframeMetadata = AliceO2::DataFlow::SubframeMetadata;
+using TPCTestPayload = AliceO2::DataFlow::TPCTestPayload;
+using TPCTestCluster = AliceO2::DataFlow::TPCTestCluster;
 
 EPNReceiver::EPNReceiver()
   : fTimeframeBuffer()
@@ -100,66 +99,72 @@ void EPNReceiver::Run()
   FairMQChannel& ackOutChannel = fChannels.at(fAckChannelName).at(0);
 
   while (CheckCurrentState(RUNNING)) {
-    FairMQParts parts;
+    FairMQParts subtimeframeParts;
+    if (Receive(subtimeframeParts, fInChannelName, 0, 100) <= 0)
+      continue;
 
-    if (Receive(parts, fInChannelName, 0, 100) > 0) {
-      // store the received ID
-      f2eHeader& header = *(static_cast<f2eHeader*>(parts.At(0)->GetData()));
-      id = header.timeFrameId;
-      LOG(INFO) << "Received sub-time frame #" << id << " from FLP" << header.flpIndex;
-      LOG(INFO) << "parts contains " << parts.Size() << "\n";
+    assert(subtimeframeParts.Size() >= 2);
 
-      // DEBUG:: store receive intervals per FLP
-      // if (fTestMode > 0) {
-      //   int flpId = header.flpIndex;
-      //   rcvIntervals.at(flpId).push_back(duration_cast<milliseconds>(steady_clock::now() - rcvTimestamp.at(flpId)).count());
-      //   LOG(WARN) << rcvIntervals.at(flpId).back();
-      //   rcvTimestamp.at(flpId) = steady_clock::now();
-      // }
-      // end DEBUG
+    Header::DataHeader* dh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(0)->GetData());
+    assert(strncmp(dh->dataDescription.str, "SUBTIMEFRAMEMETA", 16) == 0);
+    SubframeMetadata* sfm = reinterpret_cast<SubframeMetadata*>(subtimeframeParts.At(1)->GetData());
+    id = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime);
 
-      if (fDiscardedSet.find(id) == fDiscardedSet.end())
-      {
-        if (fTimeframeBuffer.find(id) == fTimeframeBuffer.end())
-        {
-          // if this is the first part with this ID, save the receive time.
-          fTimeframeBuffer[id].start = steady_clock::now();
-        }
-        // if the received ID has not previously been discarded,
-        // store the data part in the buffer
-        fTimeframeBuffer[id].parts.AddPart(move(parts.At(1)));
-        PrintBuffer(fTimeframeBuffer);
+    // in this case the subtime frame did send some data
+    if(subtimeframeParts.Size() > 2) {
+      int part = 2;
+      // check if we got something from TPC
+      auto *header = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(part)->GetData());
+      if (strncmp(header->dataDescription.str, "TPCCLUSTER", 16) == 0) {
+         assert( header->payloadSize == subtimeframeParts.At(part+1)->GetSize() );
+         TPCTestCluster *cl = reinterpret_cast<TPCTestCluster*>(subtimeframeParts.At(part+1)->GetData());
+         auto numberofClusters = header->payloadSize / sizeof(TPCTestCluster);
+         assert( header->payloadSize % sizeof(TPCTestCluster) == 0 );
       }
-      else
-      {
-        // if received ID has been previously discarded.
-        LOG(WARN) << "Received part from an already discarded timeframe with id " << id;
-      }
-
-      if (fTimeframeBuffer[id].parts.Size() == fNumFLPs) {
-        // LOG(INFO) << "Collected all parts for timeframe #" << id;
-        // when all parts are collected send then to the output channel
-        Send(fTimeframeBuffer[id].parts, fOutChannelName);
-
-        if (fTestMode > 0) {
-          // Send an acknowledgement back to the sampler to measure the round trip time
-          unique_ptr<FairMQMessage> ack(NewMessage(sizeof(uint16_t)));
-          memcpy(ack->GetData(), &id, sizeof(uint16_t));
-
-          if (ackOutChannel.Send(ack, 0) <= 0) {
-            LOG(ERROR) << "Could not send acknowledgement without blocking";
-          }
-        }
-
-        // fTimeframeBuffer[id].end = steady_clock::now();
-
-        fTimeframeBuffer.erase(id);
-      }
-
-      // LOG(WARN) << "Buffer size: " << fTimeframeBuffer.size();
     }
 
-    // check if any incomplete timeframes in the buffer are older than timeout period, and discard them if they are
+    if (fDiscardedSet.find(id) == fDiscardedSet.end())
+    {
+      if (fTimeframeBuffer.find(id) == fTimeframeBuffer.end())
+      {
+        // if this is the first part with this ID, save the receive time.
+        fTimeframeBuffer[id].start = steady_clock::now();
+      }
+      // if the received ID has not previously been discarded,
+      // store the data part in the buffer
+      fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(1)));
+      PrintBuffer(fTimeframeBuffer);
+    }
+    else
+    {
+      // if received ID has been previously discarded.
+      LOG(WARN) << "Received part from an already discarded timeframe with id " << id;
+    }
+
+    if (fTimeframeBuffer[id].parts.Size() == fNumFLPs) {
+      // LOG(INFO) << "Collected all parts for timeframe #" << id;
+      // when all parts are collected send then to the output channel
+      Send(fTimeframeBuffer[id].parts, fOutChannelName);
+
+      if (fTestMode > 0) {
+        // Send an acknowledgement back to the sampler to measure the round trip time
+        unique_ptr<FairMQMessage> ack(NewMessage(sizeof(uint16_t)));
+        memcpy(ack->GetData(), &id, sizeof(uint16_t));
+
+        if (ackOutChannel.Send(ack, 0) <= 0) {
+          LOG(ERROR) << "Could not send acknowledgement without blocking";
+        }
+      }
+
+      // fTimeframeBuffer[id].end = steady_clock::now();
+
+      fTimeframeBuffer.erase(id);
+    }
+
+    // LOG(WARN) << "Buffer size: " << fTimeframeBuffer.size();
+
+    // Check if any incomplete timeframes in the buffer are older than
+    // timeout period, and discard them if they are
     DiscardIncompleteTimeframes();
   }
 

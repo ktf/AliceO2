@@ -8,6 +8,7 @@ struct SubframeMetadata
 {
   // TODO: replace with timestamp struct
   // IDEA: not timeframeID because can be calculcated with helper function
+  // QUESTION: isn't the duration set to ~22ms?
   uint64_t startTime = ~(uint64_t)0;
   uint64_t duration = ~(uint64_t)0;
 
@@ -15,6 +16,28 @@ struct SubframeMetadata
 
   // putting data specific to FLP origin
   int      flpIndex;
+};
+
+// Helper function to derive the timeframe id from the actual timestamp.
+// Timestamp is in nanoseconds. Each Timeframe is ~22ms i.e. 2^17 nanoseconds,
+// so we can get a unique id by dividing by the timeframe period and masking 
+// the lower 16 bits. Overlaps will only happen every ~ 22 minutes.
+constexpr uint16_t
+timeframeIdFromTimestamp(int64_t timestamp) {
+  return (timestamp >> 17) & 0xffff;
+}
+
+// A Mockup class to describe some TPC-like payload
+struct TPCTestCluster {
+  float x = 0.f;
+  float y = 0.f;
+  float z = 1.5f;
+  float q = 0.;
+  uint64_t timeStamp; // the time this thing was digitized/recorded
+};
+
+struct TPCTestPayload {
+  std::vector<TPCTestCluster> clusters;
 };
 
 } // end namespace DataFlow

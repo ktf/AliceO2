@@ -86,17 +86,24 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   // build multipart message from header and payload
   AddMessage(outgoing, dh, NewSimpleMessage(md));
 
-//  TestPayload clusterPayload;
+  auto clusterPayload = new std::vector<TPCTestCluster>;
+  clusterPayload->resize(1000); // sending a thousand clusters
+  for (int i=0;i<1000;++i) {
+    // put some random toy time stamp to each cluster
+    clusterPayload->operator[](i).timeStamp = md.startTime + i;
+  }
 
-//  // For the moment, add the data as another part to this message
-//  AliceO2::Header::DataHeader payloadheader;
-//  payloadheader.dataDescription = AliceO2::Header::DataDescription("CLUSTER");
-//  payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
-//  payloadheader.subSpecification = 0;
-//  payloadheader.payloadSize = clusterPayload.clusters.size();
+  // For the moment, add the data as another part to this message
+  AliceO2::Header::DataHeader payloadheader;
+  payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
+  payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
+  payloadheader.subSpecification = 0;
+  payloadheader.payloadSize = clusterPayload->size() * sizeof(TPCTestCluster);
 
-
-//  AddMessage(outgoing, payloadheader, NewSimpleMessage(clusterPayload.clusters.data()));
+  AddMessage(outgoing, payloadheader,
+             NewMessage(clusterPayload->data(), payloadheader.payloadSize,
+                     [](void* data, void* hint){ delete static_cast<decltype(clusterPayload)>(hint); }, clusterPayload )
+             );
 
   // send message
   Send(outgoing, mOutputChannelName.c_str());
