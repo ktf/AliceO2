@@ -32,6 +32,9 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
 
     assert(timeframeParts.Size() >= 2);
 
+    auto indexHeader = reinterpret_cast<Header::DataHeader*>(timeframeParts.At(timeframeParts.Size() - 1)->GetData());
+    auto index = reinterpret_cast<void*>(timeframeParts.At(timeframeParts.Size())->GetData());
+
     // TODO: fill this with checks on time frame
     LOG(INFO) << "This time frame has " << timeframeParts.Size() << " parts \n";
   }

@@ -7,6 +7,7 @@
 
 #include <cstddef> // size_t
 #include <fstream> // writing to file (DEBUG)
+#include <cstring>
 
 #include "FairMQLogger.h"
 #include "FairMQProgOptions.h"
@@ -98,6 +99,10 @@ void EPNReceiver::Run()
 
   FairMQChannel& ackOutChannel = fChannels.at(fAckChannelName).at(0);
 
+  typedef std::pair<Header::DataHeader, int> IndexElement;
+  std::vector<IndexElement> index;
+  std::multimap<int, int> flpIds;
+
   while (CheckCurrentState(RUNNING)) {
     FairMQParts subtimeframeParts;
     if (Receive(subtimeframeParts, fInChannelName, 0, 100) <= 0)
@@ -109,9 +114,11 @@ void EPNReceiver::Run()
     assert(strncmp(dh->dataDescription.str, "SUBTIMEFRAMEMETA", 16) == 0);
     SubframeMetadata* sfm = reinterpret_cast<SubframeMetadata*>(subtimeframeParts.At(1)->GetData());
     id = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime);
+    auto flpId = sfm->flpIndex;
+    flpIds.insert(std::make_pair(id, flpId));
 
     // in this case the subtime frame did send some data
-    if(subtimeframeParts.Size() > 2) {
+    if (subtimeframeParts.Size() > 2) {
       int part = 2;
       // check if we got something from TPC
       auto *header = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(part)->GetData());
@@ -132,7 +139,21 @@ void EPNReceiver::Run()
       }
       // if the received ID has not previously been discarded,
       // store the data part in the buffer
-      fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(1)));
+      // For the moment we just concatenate the subtimeframes and add
+      // an index for their description at the end. Given every second
+      // part is a data header we skip every two parts to populate the
+      // index. 
+      // Moreover we know that the SubframeMetadata is always in the second
+      // part, so we can extract the flpId from there.
+      for (size_t i = 0; i < subtimeframeParts.Size(); ++i)
+      {
+        if (i % 2)
+        {
+          auto adh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(i)->GetData());
+          index.push_back(std::make_pair(*adh, index.size()*2));
+        }
+        fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(i)));
+      }
       PrintBuffer(fTimeframeBuffer);
     }
     else
@@ -141,10 +162,23 @@ void EPNReceiver::Run()
       LOG(WARN) << "Received part from an already discarded timeframe with id " << id;
     }
 
-    if (fTimeframeBuffer[id].parts.Size() == fNumFLPs) {
+    if (flpIds.count(id) == fNumFLPs) {
+      AliceO2::Header::DataHeader tih;
+      tih.dataDescription = AliceO2::Header::DataDescription("TIMEFRAMEINDEX");
+      tih.dataOrigin = AliceO2::Header::DataOrigin("EPN");
+      tih.subSpecification = 0;
+      tih.payloadSize = index.size() * sizeof(index.front());
+      void *indexData = malloc(tih.payloadSize);
+      memcpy(indexData, index.data(), tih.payloadSize);
+
+      fTimeframeBuffer[id].parts.AddPart(NewSimpleMessage(tih));
+      fTimeframeBuffer[id].parts.AddPart(NewMessage(indexData, tih.payloadSize,
+                         [](void* data, void* hint){ free(data); }, nullptr));
       // LOG(INFO) << "Collected all parts for timeframe #" << id;
       // when all parts are collected send then to the output channel
       Send(fTimeframeBuffer[id].parts, fOutChannelName);
+      index.clear();
+      flpIds.erase(id);
 
       if (fTestMode > 0) {
         // Send an acknowledgement back to the sampler to measure the round trip time
@@ -165,6 +199,7 @@ void EPNReceiver::Run()
 
     // Check if any incomplete timeframes in the buffer are older than
     // timeout period, and discard them if they are
+    // QUESTION: is this really what we want to do?
     DiscardIncompleteTimeframes();
   }
 

@@ -73,6 +73,25 @@
                 "sndBufSize": "10"
             }
 	    ]
-        }]
+        },
+
+        {
+            "id": "timeframeValidator",
+            "channels":
+            [
+	    {
+                "name": "input",
+                "type": "sub",
+                "method": "connect",
+                "sockets":
+                [
+                  { "address": "tcp://127.0.0.1:5580"}
+	        ],
+               "sndBufSize": "10"
+            }
+	    ]
+        }
+
+      ]
     }
 }
