@@ -17,7 +17,10 @@ void addCustomOptions(bpo::options_description& options)
      "Name of the input channel")
     (AliceO2::DataFlow::SubframeBuilderDevice::OptionKeyOutputChannelName,
      bpo::value<std::string>()->default_value("output"),
-     "Name of the output channel");
+     "Name of the output channel")
+    (AliceO2::DataFlow::SubframeBuilderDevice::OptionKeyDetector,
+     bpo::value<std::string>()->default_value("TPC"),
+     "Name of detector as data source");
 }
 
 FairMQDevicePtr getDevice(const FairMQProgOptions& /*config*/)

@@ -38,6 +38,7 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
   mInputChannelName = fConfig->GetValue<std::string>(OptionKeyInputChannelName);
   mOutputChannelName = fConfig->GetValue<std::string>(OptionKeyOutputChannelName);
   mInitDataFileName = fConfig->GetValue<std::string>(OptionKeyInDataFile);
+  mDataType = fConfig->GetValue<std::string>(OptionKeyDetector);
 
   if (!mIsSelfTriggered) {
     // depending on whether the device is self-triggered or expects input,
@@ -86,25 +87,48 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   // build multipart message from header and payload
   AddMessage(outgoing, dh, NewSimpleMessage(md));
 
-  auto clusterPayload = new std::vector<TPCTestCluster>;
-  clusterPayload->resize(1000); // sending a thousand clusters
-  for (int i=0;i<1000;++i) {
-    // put some random toy time stamp to each cluster
-    clusterPayload->operator[](i).timeStamp = md.startTime + i;
+  if (mDataType.compare("TPC")) {
+    // LOG(INFO) << "SENDING TPC PAYLOAD\n";
+    auto clusterPayload = new std::vector<TPCTestCluster>;
+    clusterPayload->resize(1000); // sending a thousand clusters
+    for (int i = 0; i < 1000; ++i) {
+      // put some random toy time stamp to each cluster
+      clusterPayload->operator[](i).timeStamp = md.startTime + i;
+    }
+
+    // For the moment, add the data as another part to this message
+    AliceO2::Header::DataHeader payloadheader;
+    payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
+    payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
+    payloadheader.subSpecification = 0;
+    payloadheader.payloadSize = clusterPayload->size() * sizeof(TPCTestCluster);
+
+    AddMessage(
+      outgoing, payloadheader,
+      NewMessage(clusterPayload->data(), payloadheader.payloadSize,
+                 [](void* data, void* hint) { delete static_cast<decltype(clusterPayload)>(hint); }, clusterPayload));
+  } else if (mDataType.compare("ITS")) {
+    // LOG(INFO) << "SENDING ITS PAYLOAD\n";
+    auto ITSPayload = new std::vector<ITSRawData>;
+    ITSPayload->resize(500);
+    for (size_t i = 0; i < ITSPayload->size(); ++i) {
+      // put some toy time stamp to each raw data entry
+      ITSPayload->operator[](i).timeStamp = md.startTime + i;
+    }
+
+    AliceO2::Header::DataHeader payloadheader;
+    payloadheader.dataDescription = AliceO2::Header::DataDescription("ITSRAW");
+    payloadheader.dataOrigin = AliceO2::Header::DataOrigin("ITS");
+    payloadheader.subSpecification = 0;
+    payloadheader.payloadSize = ITSPayload->size() * sizeof(ITSRawData);
+
+    AddMessage(outgoing, payloadheader,
+               NewMessage(ITSPayload->data(), payloadheader.payloadSize,
+                          [](void* data, void* hint) { delete static_cast<decltype(ITSPayload)>(hint); }, ITSPayload));
   }
-
-  // For the moment, add the data as another part to this message
-  AliceO2::Header::DataHeader payloadheader;
-  payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
-  payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
-  payloadheader.subSpecification = 0;
-  payloadheader.payloadSize = clusterPayload->size() * sizeof(TPCTestCluster);
-
-  AddMessage(outgoing, payloadheader,
-             NewMessage(clusterPayload->data(), payloadheader.payloadSize,
-                     [](void* data, void* hint){ delete static_cast<decltype(clusterPayload)>(hint); }, clusterPayload )
-             );
-
+  else {
+    LOG(INFO) << "not sending detector payload\n";
+  }
   // send message
   Send(outgoing, mOutputChannelName.c_str());
   outgoing.fParts.clear();

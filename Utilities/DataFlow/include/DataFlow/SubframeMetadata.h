@@ -40,6 +40,14 @@ struct TPCTestPayload {
   std::vector<TPCTestCluster> clusters;
 };
 
+// a mockup class to describe some "ITS" payload
+struct ITSRawData {
+  float x = -1.;
+  float y = 1.;
+  uint64_t timeStamp;
+};
+
+
 } // end namespace DataFlow
 } // end namespace AliceO2
 

@@ -48,6 +48,7 @@ public:
   static constexpr const char* OptionKeyDuration = "duration";
   static constexpr const char* OptionKeySelfTriggered = "self-triggered";
   static constexpr const char* OptionKeyInDataFile = "indatafile-name";
+  static constexpr const char* OptionKeyDetector = "detector-name";
 
   // TODO: this is just a first mockup, remove it
   static constexpr uint32_t DefaultDuration = 10000;
@@ -84,6 +85,7 @@ private:
   std::string mInputChannelName;
   std::string mOutputChannelName;
   std::string mInitDataFileName;
+  std::string mDataType; // which form of this guy sends
   bool mIsSelfTriggered;
 };
 
