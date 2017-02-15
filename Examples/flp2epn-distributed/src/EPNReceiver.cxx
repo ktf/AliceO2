@@ -115,8 +115,6 @@ void EPNReceiver::Run()
     SubframeMetadata* sfm = reinterpret_cast<SubframeMetadata*>(subtimeframeParts.At(1)->GetData());
     id = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime, sfm->duration);
     auto flpId = sfm->flpIndex;
-    flpIds.insert(std::make_pair(id, flpId));
-    LOG(INFO) << "Timeframe ID " << id << " for startTime " << sfm->startTime  << "\n";
 
     // in this case the subtime frame did send some data
     if (subtimeframeParts.Size() > 2) {
@@ -138,6 +136,8 @@ void EPNReceiver::Run()
         // if this is the first part with this ID, save the receive time.
         fTimeframeBuffer[id].start = steady_clock::now();
       }
+      flpIds.insert(std::make_pair(id, flpId));
+      LOG(INFO) << "Timeframe ID " << id << " for startTime " << sfm->startTime  << "\n";
       // if the received ID has not previously been discarded,
       // store the data part in the buffer
       // For the moment we just concatenate the subtimeframes and add
@@ -164,6 +164,7 @@ void EPNReceiver::Run()
     }
 
     if (flpIds.count(id) == fNumFLPs) {
+      LOG(INFO) << "Timeframe " << id << " complete. Publishing.\n";
       AliceO2::Header::DataHeader tih;
       tih.dataDescription = AliceO2::Header::DataDescription("TIMEFRAMEINDEX");
       tih.dataOrigin = AliceO2::Header::DataOrigin("EPN");

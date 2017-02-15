@@ -9,10 +9,10 @@
 xterm -geometry 80x25+0+0 -hold -e epnReceiver --id epnReceiver --mq-config confComplexSetup.json --in-chan-name input --out-chan-name output --num-flps 2 &
 
 # this is the flp for TPC
-xterm -geometry 80x25+500+0 -hold -e flpSender --id flpSenderTPC --mq-config confComplexSetup.json --in-chan-name input --out-chan-name output --num-epns 1 &
+xterm -geometry 80x25+500+0 -hold -e flpSender --id flpSenderTPC --mq-config confComplexSetup.json --in-chan-name input --out-chan-name output --num-epns 1 --flp-index 0 &
 
 # this is the flp for ITS
-xterm -geometry 80x25+800+0 -hold -e flpSender --id flpSenderITS --mq-config confComplexSetup.json --in-chan-name input --out-chan-name output --num-epns 1 &
+xterm -geometry 80x25+800+0 -hold -e flpSender --id flpSenderITS --mq-config confComplexSetup.json --in-chan-name input --out-chan-name output --num-epns 1 --flp-index 1 &
 
 # this is the subtimeframe publisher for TPC
 xterm -geometry 80x25+0+500 -hold -e SubframeBuilderDevice --id subframeBuilderTPC --mq-config confComplexSetup.json --self-triggered --detector TPC &
