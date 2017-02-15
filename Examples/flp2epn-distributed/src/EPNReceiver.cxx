@@ -113,9 +113,10 @@ void EPNReceiver::Run()
     Header::DataHeader* dh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(0)->GetData());
     assert(strncmp(dh->dataDescription.str, "SUBTIMEFRAMEMETA", 16) == 0);
     SubframeMetadata* sfm = reinterpret_cast<SubframeMetadata*>(subtimeframeParts.At(1)->GetData());
-    id = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime);
+    id = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime, sfm->duration);
     auto flpId = sfm->flpIndex;
     flpIds.insert(std::make_pair(id, flpId));
+    LOG(INFO) << "Timeframe ID " << id << " for startTime " << sfm->startTime  << "\n";
 
     // in this case the subtime frame did send some data
     if (subtimeframeParts.Size() > 2) {
@@ -154,7 +155,7 @@ void EPNReceiver::Run()
         }
         fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(i)));
       }
-      PrintBuffer(fTimeframeBuffer);
+      //PrintBuffer(fTimeframeBuffer);
     }
     else
     {

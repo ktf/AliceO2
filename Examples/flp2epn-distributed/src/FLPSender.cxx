@@ -99,7 +99,7 @@ void FLPSender::Run()
 inline void FLPSender::sendFrontData()
 {
   SubframeMetadata *sfm = static_cast<SubframeMetadata*>(fSTFBuffer.front().At(1)->GetData());
-  uint16_t currentTimeframeId = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime);
+  uint16_t currentTimeframeId = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime, sfm->duration);
 
   // for which EPN is the message?
   int direction = currentTimeframeId % fNumEPNs;

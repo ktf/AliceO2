@@ -51,7 +51,13 @@ public:
   static constexpr const char* OptionKeyDetector = "detector-name";
 
   // TODO: this is just a first mockup, remove it
-  static constexpr uint32_t DefaultDuration = 10000;
+  // Default duration is for now harcoded to 22 milliseconds.
+  // Default start time for all the producers is 8/4/1977
+  // Timeframe start time will be ((N * duration) + start time) where
+  // N is the incremental number of timeframes being sent out.
+  // TODO: replace this with a unique Heartbeat from a common device.
+  static constexpr uint32_t DefaultDuration = 22000000;
+  static constexpr uint64_t DefaultHeartbeatStart = 229314600000000000LL;
 
   /// Default constructor
   SubframeBuilderDevice();
@@ -87,6 +93,7 @@ private:
   std::string mInitDataFileName;
   std::string mDataType; // which form of this guy sends
   bool mIsSelfTriggered;
+  uint64_t mHeartbeatStart = DefaultHeartbeatStart;
 };
 
 }; // namespace DataFlow

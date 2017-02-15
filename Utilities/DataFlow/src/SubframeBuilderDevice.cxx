@@ -33,7 +33,7 @@ AliceO2::DataFlow::SubframeBuilderDevice::~SubframeBuilderDevice()
 
 void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
 {
-  mDuration = fConfig->GetValue<uint32_t>(OptionKeyDuration);
+//  mDuration = fConfig->GetValue<uint32_t>(OptionKeyDuration);
   mIsSelfTriggered = fConfig->GetValue<bool>(OptionKeySelfTriggered);
   mInputChannelName = fConfig->GetValue<std::string>(OptionKeyInputChannelName);
   mOutputChannelName = fConfig->GetValue<std::string>(OptionKeyOutputChannelName);
@@ -52,7 +52,7 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
 bool AliceO2::DataFlow::SubframeBuilderDevice::ConditionalRun()
 {
   // TODO: make the time constant configurable
-  std::this_thread::sleep_for(std::chrono::microseconds(mDuration));
+  std::this_thread::sleep_for(std::chrono::nanoseconds(mDuration));
 
   BuildAndSendFrame();
   mFrameNumber++;
@@ -75,8 +75,9 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
 
   // subframe meta information as payload
   SubframeMetadata md;
-  md.startTime = mFrameNumber * mDuration;
+  md.startTime = mFrameNumber * mDuration + mHeartbeatStart;
   md.duration = mDuration;
+  LOG(INFO) << "Start time for subframe " << timeframeIdFromTimestamp(md.startTime, mDuration) << " " << md.startTime<< "\n";
 
   // send an empty subframe (no detector payload), only the data header
   // and the subframe meta data are added to the sub timeframe
