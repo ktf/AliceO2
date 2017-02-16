@@ -31,7 +31,8 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
     if (Receive(timeframeParts, mInChannelName, 0, 100) <= 0)
       continue;
 
-    assert(timeframeParts.Size() >= 2);
+    if (timeframeParts.Size() < 2)
+      LOG(ERROR) << "Expecting at least 2 parts\n";
 
     auto indexHeader = reinterpret_cast<Header::DataHeader*>(timeframeParts.At(timeframeParts.Size() - 2)->GetData());
     auto index = reinterpret_cast<void*>(timeframeParts.At(timeframeParts.Size() - 1)->GetData());
@@ -39,6 +40,9 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
     // TODO: fill this with checks on time frame
     LOG(INFO) << "This time frame has " << timeframeParts.Size() << " parts.\n";
     auto indexEntries = indexHeader->payloadSize / sizeof(IndexElement);
+    if (strncmp(indexHeader->dataDescription.str, "TIMEFRAMEINDEX", 14) != 0)
+      LOG(ERROR) << "Could not find a valid index header\n";
+    LOG(INFO) << indexHeader->dataDescription.str << "\n";
     LOG(INFO) << "This time frame has " << indexEntries << "entries in the index.\n";
     if ((indexEntries * 2 + 2) != (timeframeParts.Size()))
       LOG(ERROR) << "Mismatched index and received parts\n";

@@ -176,7 +176,7 @@ void EPNReceiver::Run()
       tih.dataDescription = AliceO2::Header::DataDescription("TIMEFRAMEINDEX");
       tih.dataOrigin = AliceO2::Header::DataOrigin("EPN");
       tih.subSpecification = 0;
-      tih.payloadSize = index.size() * sizeof(flattenedIndex.front());
+      tih.payloadSize = index.count(id) * sizeof(flattenedIndex.front());
       void *indexData = malloc(tih.payloadSize);
       auto indexRange = index.equal_range(id);
       for (auto ie = indexRange.first; ie != indexRange.second; ++ie)
