@@ -99,9 +99,13 @@ void EPNReceiver::Run()
 
   FairMQChannel& ackOutChannel = fChannels.at(fAckChannelName).at(0);
 
-  typedef std::pair<Header::DataHeader, int> IndexElement;
-  std::vector<IndexElement> index;
-  std::multimap<int, int> flpIds;
+  // Simple multi timeframe index
+  typedef int PartPosition;
+  typedef int TimeframeId;
+  typedef int FlpId;
+  typedef std::pair<Header::DataHeader, PartPosition> IndexElement;
+  std::multimap<TimeframeId, IndexElement> index;
+  std::multimap<TimeframeId, FlpId> flpIds;
 
   while (CheckCurrentState(RUNNING)) {
     FairMQParts subtimeframeParts;
@@ -151,7 +155,8 @@ void EPNReceiver::Run()
         if (i % 2)
         {
           auto adh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(i)->GetData());
-          index.push_back(std::make_pair(*adh, index.size()*2));
+          auto ie = std::make_pair(*adh, index.size()*2);
+          index.insert(std::make_pair(id, ie));
         }
         fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(i)));
       }
@@ -166,12 +171,17 @@ void EPNReceiver::Run()
     if (flpIds.count(id) == fNumFLPs) {
       LOG(INFO) << "Timeframe " << id << " complete. Publishing.\n";
       AliceO2::Header::DataHeader tih;
+      std::vector<IndexElement> flattenedIndex;
+
       tih.dataDescription = AliceO2::Header::DataDescription("TIMEFRAMEINDEX");
       tih.dataOrigin = AliceO2::Header::DataOrigin("EPN");
       tih.subSpecification = 0;
-      tih.payloadSize = index.size() * sizeof(index.front());
+      tih.payloadSize = index.size() * sizeof(flattenedIndex.front());
       void *indexData = malloc(tih.payloadSize);
-      memcpy(indexData, index.data(), tih.payloadSize);
+      auto indexRange = index.equal_range(id);
+      for (auto ie = indexRange.first; ie != indexRange.second; ++ie)
+        flattenedIndex.push_back(ie->second);
+      memcpy(indexData, flattenedIndex.data(), tih.payloadSize);
 
       fTimeframeBuffer[id].parts.AddPart(NewSimpleMessage(tih));
       fTimeframeBuffer[id].parts.AddPart(NewMessage(indexData, tih.payloadSize,
@@ -179,7 +189,7 @@ void EPNReceiver::Run()
       // LOG(INFO) << "Collected all parts for timeframe #" << id;
       // when all parts are collected send then to the output channel
       Send(fTimeframeBuffer[id].parts, fOutChannelName);
-      index.clear();
+      index.erase(id);
       flpIds.erase(id);
 
       if (fTestMode > 0) {
