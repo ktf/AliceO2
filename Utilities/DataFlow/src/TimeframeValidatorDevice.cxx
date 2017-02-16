@@ -9,6 +9,9 @@
 #include "DataFlow/TimeframeValidatorDevice.h"
 #include "FairMQProgOptions.h"
 
+// FIXME: this should really be in a central place
+typedef int PartPosition;
+typedef std::pair<AliceO2::Header::DataHeader, PartPosition> IndexElement;
 
 AliceO2::DataFlow::TimeframeValidatorDevice::TimeframeValidatorDevice()
   : O2Device()
@@ -20,8 +23,6 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::InitTask()
 {
   mInChannelName = fConfig->GetValue<std::string>(OptionKeyInputChannelName);
 }
-
-
 
 void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
 {
@@ -36,6 +37,10 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
     auto index = reinterpret_cast<void*>(timeframeParts.At(timeframeParts.Size() - 1)->GetData());
 
     // TODO: fill this with checks on time frame
-    LOG(INFO) << "This time frame has " << timeframeParts.Size() << " parts \n";
+    LOG(INFO) << "This time frame has " << timeframeParts.Size() << " parts.\n";
+    auto indexEntries = indexHeader->payloadSize / sizeof(IndexElement);
+    LOG(INFO) << "This time frame has " << indexEntries << "entries in the index.\n";
+    if ((indexEntries * 2 + 2) != (timeframeParts.Size()))
+      LOG(ERROR) << "Mismatched index and received parts\n";
   }
 }

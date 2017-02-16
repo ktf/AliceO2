@@ -189,7 +189,9 @@ void EPNReceiver::Run()
       // LOG(INFO) << "Collected all parts for timeframe #" << id;
       // when all parts are collected send then to the output channel
       Send(fTimeframeBuffer[id].parts, fOutChannelName);
+      LOG(INFO) << "Index count for " << id << " " << index.count(id) << "\n";
       index.erase(id);
+      LOG(INFO) << "Index count for " << id << " " << index.count(id) << "\n";
       flpIds.erase(id);
 
       if (fTestMode > 0) {
