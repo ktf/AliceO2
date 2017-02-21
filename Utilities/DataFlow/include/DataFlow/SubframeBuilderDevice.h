@@ -94,6 +94,23 @@ private:
   std::string mDataType; // which form of this guy sends
   bool mIsSelfTriggered;
   uint64_t mHeartbeatStart = DefaultHeartbeatStart;
+
+  template <typename T>
+  size_t fakeHBHPayloadHBT(char **buffer, std::function<void(T&,int)> filler, int numOfElements) {
+    // LOG(INFO) << "SENDING TPC PAYLOAD\n";
+    auto payloadSize = sizeof(Header::HeartbeatHeader)+sizeof(T)*numOfElements+sizeof(Header::HeartbeatTrailer);
+    *buffer = new char[payloadSize];
+    auto *hbh = reinterpret_cast<Header::HeartbeatHeader*>(buffer);
+    auto *hbt = reinterpret_cast<Header::HeartbeatTrailer*>(payloadSize - sizeof(Header::HeartbeatTrailer));
+
+    T *payload = reinterpret_cast<T*>(buffer + sizeof(Header::HeartbeatHeader));
+    for (int i = 0; i < numOfElements; ++i) {
+      new (payload + i) T();
+      // put some random toy time stamp to each cluster
+      filler(payload[i], i);
+    }
+    return payloadSize;
+  }
 };
 
 }; // namespace DataFlow

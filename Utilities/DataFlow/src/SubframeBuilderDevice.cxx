@@ -5,11 +5,15 @@
 
 #include <thread> // this_thread::sleep_for
 #include <chrono>
+#include <functional>
 
 #include "DataFlow/SubframeBuilderDevice.h"
 #include "DataFlow/SubframeMetadata.h"
+#include "Headers/HeartbeatFrame.h"
 #include "FairMQProgOptions.h"
 
+using HeartbeatHeader = AliceO2::Header::HeartbeatHeader;
+using HeartbeatTrailer = AliceO2::Header::HeartbeatTrailer;
 
 struct TestPayload {
  // std::vector<TestSerializedCluster> clusters;
@@ -60,8 +64,22 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::ConditionalRun()
   return true;
 }
 
+
+// FIXME: how do we actually find out the payload size???
+size_t extractDetectorPayload(char **payload, char *buffer, size_t bufferSize) {
+  *payload = buffer + sizeof(HeartbeatHeader);
+  return bufferSize - sizeof(HeartbeatHeader) - sizeof(HeartbeatTrailer);
+}
+
+static std::set<std::string> gValidDetectorTypes = {"TPC", "ITS"};
+
 bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
 {
+  if (gValidDetectorTypes.count(mDataType) == 0) {
+    LOG(INFO) << "not sending detector payload\n";
+    return true;
+  }
+
   // top level subframe header, the DataHeader is going to be used with
   // description "SUBTIMEFRAMEMETA"
   // this should be defined in a common place, and also the origin
@@ -88,48 +106,31 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   // build multipart message from header and payload
   AddMessage(outgoing, dh, NewSimpleMessage(md));
 
-  if (mDataType.compare("TPC")) {
-    // LOG(INFO) << "SENDING TPC PAYLOAD\n";
-    auto clusterPayload = new std::vector<TPCTestCluster>;
-    clusterPayload->resize(1000); // sending a thousand clusters
-    for (int i = 0; i < 1000; ++i) {
-      // put some random toy time stamp to each cluster
-      clusterPayload->operator[](i).timeStamp = md.startTime + i;
-    }
+  char *incomingBuffer = nullptr;
+  AliceO2::Header::DataHeader payloadheader;
 
+  size_t bufferSize = 0;
+
+  if (mDataType.compare("TPC")) {
+    std::function<void(TPCTestCluster&, int)> f = [md](TPCTestCluster &cluster, int idx) {cluster.timeStamp = md.startTime + idx;};
+    bufferSize = fakeHBHPayloadHBT<TPCTestCluster>(&incomingBuffer, f, 1000);
     // For the moment, add the data as another part to this message
-    AliceO2::Header::DataHeader payloadheader;
     payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
     payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
-    payloadheader.subSpecification = 0;
-    payloadheader.payloadSize = clusterPayload->size() * sizeof(TPCTestCluster);
-
-    AddMessage(
-      outgoing, payloadheader,
-      NewMessage(clusterPayload->data(), payloadheader.payloadSize,
-                 [](void* data, void* hint) { delete static_cast<decltype(clusterPayload)>(hint); }, clusterPayload));
   } else if (mDataType.compare("ITS")) {
-    // LOG(INFO) << "SENDING ITS PAYLOAD\n";
-    auto ITSPayload = new std::vector<ITSRawData>;
-    ITSPayload->resize(500);
-    for (size_t i = 0; i < ITSPayload->size(); ++i) {
-      // put some toy time stamp to each raw data entry
-      ITSPayload->operator[](i).timeStamp = md.startTime + i;
-    }
-
-    AliceO2::Header::DataHeader payloadheader;
+    bufferSize = fakeHBHPayloadHBT<ITSRawData>(&incomingBuffer, [md](ITSRawData &cluster, int idx) {cluster.timeStamp = md.startTime + idx;}, 500);
     payloadheader.dataDescription = AliceO2::Header::DataDescription("ITSRAW");
     payloadheader.dataOrigin = AliceO2::Header::DataOrigin("ITS");
-    payloadheader.subSpecification = 0;
-    payloadheader.payloadSize = ITSPayload->size() * sizeof(ITSRawData);
+  }
 
-    AddMessage(outgoing, payloadheader,
-               NewMessage(ITSPayload->data(), payloadheader.payloadSize,
-                          [](void* data, void* hint) { delete static_cast<decltype(ITSPayload)>(hint); }, ITSPayload));
-  }
-  else {
-    LOG(INFO) << "not sending detector payload\n";
-  }
+  char *payload = nullptr;
+  auto payloadSize = extractDetectorPayload((char **)payload, (char *)incomingBuffer, bufferSize);
+  payloadheader.subSpecification = 0;
+  payloadheader.payloadSize = payloadSize;
+
+  AddMessage(outgoing, payloadheader,
+             NewMessage(payload, payloadheader.payloadSize,
+                        [](void* data, void* hint) { delete[] reinterpret_cast<char *>(hint); }, incomingBuffer));
   // send message
   Send(outgoing, mOutputChannelName.c_str());
   outgoing.fParts.clear();
