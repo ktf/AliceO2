@@ -35,7 +35,11 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
       LOG(ERROR) << "Expecting at least 2 parts\n";
 
     auto indexHeader = reinterpret_cast<Header::DataHeader*>(timeframeParts.At(timeframeParts.Size() - 2)->GetData());
-    auto index = reinterpret_cast<void*>(timeframeParts.At(timeframeParts.Size() - 1)->GetData());
+    // FIXME: Provide iterator pair API for the index 
+    //        Index should really be something which provides an
+    //        iterator pair API so that we can sort / find / lower_bound
+    //        easily. Right now we simply use it a C-style array.
+    auto index = reinterpret_cast<IndexElement*>(timeframeParts.At(timeframeParts.Size() - 1)->GetData());
 
     // TODO: fill this with checks on time frame
     LOG(INFO) << "This time frame has " << timeframeParts.Size() << " parts.\n";
@@ -46,5 +50,26 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
     LOG(INFO) << "This time frame has " << indexEntries << "entries in the index.\n";
     if ((indexEntries * 2 + 2) != (timeframeParts.Size()))
       LOG(ERROR) << "Mismatched index and received parts\n";
+
+    // - Use the index to find out if we have TPC data
+    // - Get the part with the TPC data
+    // - Validate TPCCluster dummy data
+    // - Validate ITSRaw dummy data
+    int tpcIndex = -1;
+    int itsIndex = -1;
+
+    for (int ii = 0; ii < indexEntries; ++ii) {
+      IndexElement &ie = index[ii];
+      if (ie.first.dataDescription == "TPC")
+        tpcIndex = ie.second;
+      if (ie.first.dataDescription == "ITS")
+        itsIndex = ie.second;
+    }
+
+    if (tpcIndex < 0)
+      LOG(ERROR) << "Could not find expected TPC payload\n";
+    if (itsIndex < 0)
+      LOG(ERROR) << "Could not find expected ITS payload\n";
+    LOG(INFO) << "Everything is fine with received timeframe\n";
   }
 }
