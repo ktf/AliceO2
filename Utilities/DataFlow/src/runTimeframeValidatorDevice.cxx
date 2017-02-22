@@ -1,5 +1,5 @@
 #include "runFairMQDevice.h"
-#include "DataFlow/TimeFrameValidatorDevice.h"
+#include "DataFlow/TimeframeValidatorDevice.h"
 
 namespace bpo = boost::program_options;
 
