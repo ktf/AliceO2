@@ -113,9 +113,9 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
 
     // Data header it at position - 1
     auto itsHeader = reinterpret_cast<DataHeader *>(timeframeParts.At(itsIndex)->GetData());
-    if (itsHeader->dataDescription != "ITSRAW")
+    if (strcmp(itsHeader->dataDescription.str,"ITSRAW")!=0)
     {
-      LOG(ERROR) << "Wrong data description. Expecting ITSRAW, found " << tpcHeader->dataDescription.str << "\n";
+      LOG(ERROR) << "Wrong data description. Expecting ITSRAW, found " << itsHeader->dataDescription.str << "\n";
       continue;
     }
     auto itsPayload = reinterpret_cast<ITSRawData*>(timeframeParts.At(itsIndex + 1)->GetData());
