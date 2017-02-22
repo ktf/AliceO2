@@ -130,6 +130,7 @@ void EPNReceiver::Run()
          TPCTestCluster *cl = reinterpret_cast<TPCTestCluster*>(subtimeframeParts.At(part+1)->GetData());
          auto numberofClusters = header->payloadSize / sizeof(TPCTestCluster);
          assert( header->payloadSize % sizeof(TPCTestCluster) == 0 );
+        LOG(DEBUG) << "TPCCLUSTER found\n";
       }
     }
 
@@ -152,11 +153,13 @@ void EPNReceiver::Run()
       // part, so we can extract the flpId from there.
       for (size_t i = 0; i < subtimeframeParts.Size(); ++i)
       {
-        if (i % 2)
+        if (i % 2 == 0)
         {
           auto adh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(i)->GetData());
+          std::cerr << "Input dataDescription " << adh->dataDescription.str << "\n";
           auto ie = std::make_pair(*adh, index.size()*2);
           index.insert(std::make_pair(id, ie));
+          std::cerr << "Intermediate dataDescription " << ie.first.dataDescription.str << "\n";
         }
         fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(i)));
       }
@@ -180,7 +183,10 @@ void EPNReceiver::Run()
       void *indexData = malloc(tih.payloadSize);
       auto indexRange = index.equal_range(id);
       for (auto ie = indexRange.first; ie != indexRange.second; ++ie)
+      {
+        std::cerr << "Final Index data description " << ie->second.first.dataDescription.str << "\n";
         flattenedIndex.push_back(ie->second);
+      }
       memcpy(indexData, flattenedIndex.data(), tih.payloadSize);
 
       fTimeframeBuffer[id].parts.AddPart(NewSimpleMessage(tih));

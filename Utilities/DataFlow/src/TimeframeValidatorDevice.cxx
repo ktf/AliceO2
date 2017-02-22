@@ -60,6 +60,8 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
 
     for (int ii = 0; ii < indexEntries; ++ii) {
       IndexElement &ie = index[ii];
+      assert(ie.second >= 0);
+      LOG(DEBUG) << ie.first.dataDescription.str << std::endl;
       if (ie.first.dataDescription == "TPC")
         tpcIndex = ie.second;
       if (ie.first.dataDescription == "ITS")

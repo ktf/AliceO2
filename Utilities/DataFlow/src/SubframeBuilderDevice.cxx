@@ -108,6 +108,8 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
 
   char *incomingBuffer = nullptr;
   AliceO2::Header::DataHeader payloadheader;
+  payloadheader.dataDescription = AliceO2::Header::DataDescription("UNKNOWN");
+  payloadheader.dataOrigin = AliceO2::Header::DataOrigin("UNKNOWN");
 
   size_t bufferSize = 0;
 
@@ -118,13 +120,13 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
     payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
     payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
   } else if (mDataType.compare("ITS")) {
-    bufferSize = fakeHBHPayloadHBT<ITSRawData>(&incomingBuffer, [md](ITSRawData &cluster, int idx) {cluster.timeStamp = md.startTime + idx;}, 500);
+    bufferSize = fakeHBHPayloadHBT<ITSRawData>(&incomingBuffer, [md](ITSRawData &cluster, int idx) { cluster.timeStamp = md.startTime + idx;}, 500);
     payloadheader.dataDescription = AliceO2::Header::DataDescription("ITSRAW");
     payloadheader.dataOrigin = AliceO2::Header::DataOrigin("ITS");
   }
 
   char *payload = nullptr;
-  auto payloadSize = extractDetectorPayload((char **)payload, (char *)incomingBuffer, bufferSize);
+  auto payloadSize = extractDetectorPayload(&payload, (char *)incomingBuffer, bufferSize);
   payloadheader.subSpecification = 0;
   payloadheader.payloadSize = payloadSize;
 

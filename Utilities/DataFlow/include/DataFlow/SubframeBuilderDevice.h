@@ -100,14 +100,14 @@ private:
     // LOG(INFO) << "SENDING TPC PAYLOAD\n";
     auto payloadSize = sizeof(Header::HeartbeatHeader)+sizeof(T)*numOfElements+sizeof(Header::HeartbeatTrailer);
     *buffer = new char[payloadSize];
-    auto *hbh = reinterpret_cast<Header::HeartbeatHeader*>(buffer);
+    auto *hbh = reinterpret_cast<Header::HeartbeatHeader*>(*buffer);
     assert(payloadSize > 0);
     assert(payloadSize - sizeof(Header::HeartbeatTrailer) > 0);
     auto *hbt = reinterpret_cast<Header::HeartbeatTrailer*>(payloadSize - sizeof(Header::HeartbeatTrailer));
 
-    T *payload = reinterpret_cast<T*>(buffer + sizeof(Header::HeartbeatHeader));
+    T *payload = reinterpret_cast<T*>(*buffer + sizeof(Header::HeartbeatHeader));
     for (int i = 0; i < numOfElements; ++i) {
-      new (payload + i) T();
+      new (payload + i) T;
       // put some random toy time stamp to each cluster
       filler(payload[i], i);
     }
