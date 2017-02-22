@@ -6,7 +6,28 @@
 #include "Publishers/DataPublisherDevice.h"
 #include "Headers/DataHeader.h"
 #include "Headers/HeartbeatFrame.h"
+#include "DataFlow/SubframeMetadata.h"
 #include "FairMQProgOptions.h"
+
+using HeartbeatHeader = AliceO2::Header::HeartbeatHeader;
+using HeartbeatTrailer = AliceO2::Header::HeartbeatTrailer;
+using TPCTestCluster = AliceO2::DataFlow::TPCTestCluster;
+using ITSRawData = AliceO2::DataFlow::ITSRawData;
+
+
+template <typename T>
+void fakePayload(std::vector<byte> &buffer, std::function<void(T&,int)> filler, int numOfElements) {
+  // LOG(INFO) << "SENDING TPC PAYLOAD\n";
+  auto payloadSize = sizeof(T)*numOfElements;
+  buffer.resize(buffer.size() + payloadSize);
+
+  T *payload = reinterpret_cast<T*>(buffer.data() + sizeof(HeartbeatHeader));
+  for (int i = 0; i < numOfElements; ++i) {
+    new (payload + i) T();
+    // put some random toy time stamp to each cluster
+    filler(payload[i], i);
+  }
+}
 
 AliceO2::Utilities::DataPublisherDevice::DataPublisherDevice()
   : O2Device()
@@ -40,7 +61,15 @@ void AliceO2::Utilities::DataPublisherDevice::InitTask()
 
   if (!mFileName.empty()) {
     AppendFile(mFileName.c_str(), mFileBuffer);
+  } else if (strncmp(mDataDescription.str, "TPC", 16)) {
+    auto f = [](TPCTestCluster &cluster, int idx) {cluster.timeStamp = idx;};
+    fakePayload<TPCTestCluster>(mFileBuffer, f, 1000);
+    // For the moment, add the data as another part to this message
+  } else if (strncmp(mDataDescription.str, "ITS", 16)) {
+    auto f = [](ITSRawData &cluster, int idx) {cluster.timeStamp = idx;};
+    fakePayload<ITSRawData>(mFileBuffer, f, 500);
   }
+
   mFileBuffer.resize(mFileBuffer.size() + sizeof(AliceO2::Header::HeartbeatTrailer));
   auto* hbhOut = reinterpret_cast<AliceO2::Header::HeartbeatHeader*>(&mFileBuffer[0]);
   auto* hbtOut = reinterpret_cast<AliceO2::Header::HeartbeatTrailer*>(&mFileBuffer[mFileBuffer.size() - sizeof(AliceO2::Header::HeartbeatTrailer)]);
@@ -85,6 +114,7 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
 
   // TODO: make tool for reading and manipulation of the HeartbeatFrame/Envelop
 
+
   // assume everything valid
   // write the HBH and HBT as envelop to the buffer of the file data
   auto* hbhOut = reinterpret_cast<AliceO2::Header::HeartbeatHeader*>(&mFileBuffer[0]);
@@ -95,7 +125,6 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
   *hbhOut = hbfEnvelope->header;
   hbhOut->headerLength = 1;
   *hbtOut = hbfEnvelope->trailer;
-  hbtOut->trailerLength;
   hbtOut->dataLength = mFileBuffer.size() - sizeof(AliceO2::Header::HeartbeatFrameEnvelope);
 
   // top level subframe header, the DataHeader is going to be used with
