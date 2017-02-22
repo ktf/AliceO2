@@ -81,12 +81,12 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   }
 
   // top level subframe header, the DataHeader is going to be used with
-  // description "SUBTIMEFRAMEMETA"
+  // description "SUBTIMEFRAMEMD"
   // this should be defined in a common place, and also the origin
   // the origin can probably name a detector identifier, but not sure if
   // all CRUs of a FLP in all cases serve a single detector
   AliceO2::Header::DataHeader dh;
-  dh.dataDescription = AliceO2::Header::DataDescription("SUBTIMEFRAMEMETA");
+  dh.dataDescription = AliceO2::Header::DataDescription("SUBTIMEFRAMEMD");
   dh.dataOrigin = AliceO2::Header::DataOrigin("TEST");
   dh.subSpecification = 0;
   dh.payloadSize = sizeof(SubframeMetadata);
@@ -114,13 +114,14 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   size_t bufferSize = 0;
 
   if (mDataType.compare("TPC")) {
-    std::function<void(TPCTestCluster&, int)> f = [md](TPCTestCluster &cluster, int idx) {cluster.timeStamp = md.startTime + idx;};
+    auto f = [](TPCTestCluster &cluster, int idx) {cluster.timeStamp = idx;};
     bufferSize = fakeHBHPayloadHBT<TPCTestCluster>(&incomingBuffer, f, 1000);
     // For the moment, add the data as another part to this message
     payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
     payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
   } else if (mDataType.compare("ITS")) {
-    bufferSize = fakeHBHPayloadHBT<ITSRawData>(&incomingBuffer, [md](ITSRawData &cluster, int idx) { cluster.timeStamp = md.startTime + idx;}, 500);
+    auto f = [](ITSRawData &cluster, int idx) { cluster.timeStamp = idx;};
+    bufferSize = fakeHBHPayloadHBT<ITSRawData>(&incomingBuffer, f, 500);
     payloadheader.dataDescription = AliceO2::Header::DataDescription("ITSRAW");
     payloadheader.dataOrigin = AliceO2::Header::DataOrigin("ITS");
   }

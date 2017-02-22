@@ -7,7 +7,11 @@
 #include <chrono>
 
 #include "DataFlow/TimeframeValidatorDevice.h"
+#include "DataFlow/SubframeMetadata.h"
 #include "FairMQProgOptions.h"
+
+
+using DataHeader = AliceO2::Header::DataHeader;
 
 // FIXME: this should really be in a central place
 typedef int PartPosition;
@@ -62,16 +66,72 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
       IndexElement &ie = index[ii];
       assert(ie.second >= 0);
       LOG(DEBUG) << ie.first.dataDescription.str << std::endl;
-      if (ie.first.dataDescription == "TPC")
+      if (ie.first.dataDescription == "TPCCLUSTER")
         tpcIndex = ie.second;
-      if (ie.first.dataDescription == "ITS")
+      if (ie.first.dataDescription == "ITSRAW")
         itsIndex = ie.second;
     }
 
     if (tpcIndex < 0)
+    {
       LOG(ERROR) << "Could not find expected TPC payload\n";
+      continue;
+    }
     if (itsIndex < 0)
+    {
       LOG(ERROR) << "Could not find expected ITS payload\n";
+      continue;
+    }
+    LOG(DEBUG) << "TPC Index " << tpcIndex << "\n";
+    LOG(DEBUG) << "ITS Index " << itsIndex << "\n";
+
+    // Data header it at position - 1
+    auto tpcHeader = reinterpret_cast<DataHeader *>(timeframeParts.At(tpcIndex)->GetData());
+    if (tpcHeader->dataDescription != "TPCCLUSTER")
+    {
+      LOG(ERROR) << "Wrong data description. Expecting TPCCLUSTER, found " << tpcHeader->dataDescription.str << "\n";
+      continue;
+    }
+    auto tpcPayload = reinterpret_cast<TPCTestCluster *>(timeframeParts.At(tpcIndex + 1)->GetData());
+    if (tpcHeader->payloadSize % sizeof(TPCTestCluster))
+      LOG(ERROR) << "TPCCLUSTER Size Mismatch\n";
+    auto numOfClusters = tpcHeader->payloadSize / sizeof(TPCTestCluster);
+    for (size_t ci = 0 ; ci < numOfClusters; ++ci)
+    {
+      TPCTestCluster &cluster = tpcPayload[ci];
+      if (cluster.z != 1.5)
+      {
+        LOG(ERROR) << "TPC Data mismatch. Expecting z = 1.5 got " << cluster.z << "\n";
+        break;
+      }
+      if (cluster.timeStamp != ci)
+      {
+        LOG(ERROR) << "TPC Data mismatch. Expecting " << ci << " got " << cluster.timeStamp << "\n";
+        break;
+      }
+    }
+
+    // Data header it at position - 1
+    auto itsHeader = reinterpret_cast<DataHeader *>(timeframeParts.At(itsIndex)->GetData());
+    if (itsHeader->dataDescription != "ITSRAW")
+    {
+      LOG(ERROR) << "Wrong data description. Expecting ITSRAW, found " << tpcHeader->dataDescription.str << "\n";
+      continue;
+    }
+    auto itsPayload = reinterpret_cast<ITSRawData*>(timeframeParts.At(itsIndex + 1)->GetData());
+    if (itsHeader->payloadSize % sizeof(ITSRawData))
+      LOG(ERROR) << "ITSRawData Size Mismatch.\n";
+    numOfClusters = itsHeader->payloadSize / sizeof(ITSRawData);
+    for (size_t ci = 0 ; ci < numOfClusters; ++ci)
+    {
+      ITSRawData &cluster = itsPayload[ci];
+      if (cluster.timeStamp != ci)
+      {
+        LOG(ERROR) << "ITS Data mismatch. Expecting " << ci << " got " << cluster.timeStamp << "\n";
+        break;
+      }
+    }
     LOG(INFO) << "Everything is fine with received timeframe\n";
+
   }
 }

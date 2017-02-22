@@ -115,7 +115,7 @@ void EPNReceiver::Run()
     assert(subtimeframeParts.Size() >= 2);
 
     Header::DataHeader* dh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(0)->GetData());
-    assert(strncmp(dh->dataDescription.str, "SUBTIMEFRAMEMETA", 16) == 0);
+    assert(strncmp(dh->dataDescription.str, "SUBTIMEFRAMEMD", 16) == 0);
     SubframeMetadata* sfm = reinterpret_cast<SubframeMetadata*>(subtimeframeParts.At(1)->GetData());
     id = AliceO2::DataFlow::timeframeIdFromTimestamp(sfm->startTime, sfm->duration);
     auto flpId = sfm->flpIndex;
@@ -156,10 +156,8 @@ void EPNReceiver::Run()
         if (i % 2 == 0)
         {
           auto adh = reinterpret_cast<Header::DataHeader*>(subtimeframeParts.At(i)->GetData());
-          std::cerr << "Input dataDescription " << adh->dataDescription.str << "\n";
-          auto ie = std::make_pair(*adh, index.size()*2);
+          auto ie = std::make_pair(*adh, index.count(id)*2);
           index.insert(std::make_pair(id, ie));
-          std::cerr << "Intermediate dataDescription " << ie.first.dataDescription.str << "\n";
         }
         fTimeframeBuffer[id].parts.AddPart(move(subtimeframeParts.At(i)));
       }
@@ -184,7 +182,6 @@ void EPNReceiver::Run()
       auto indexRange = index.equal_range(id);
       for (auto ie = indexRange.first; ie != indexRange.second; ++ie)
       {
-        std::cerr << "Final Index data description " << ie->second.first.dataDescription.str << "\n";
         flattenedIndex.push_back(ie->second);
       }
       memcpy(indexData, flattenedIndex.data(), tih.payloadSize);
