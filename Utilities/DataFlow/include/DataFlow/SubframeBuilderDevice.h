@@ -69,9 +69,6 @@ protected:
   /// overloading the InitTask() method of FairMQDevice
   void InitTask() final;
 
-   /// overloading ConditionalRun method of FairMQDevice
-  virtual bool ConditionalRun() final;
-
   /// data handling method to be registered as handler in the
   /// FairMQDevice API method OnData
   /// The device base class handles the state loop in the RUNNING
@@ -83,11 +80,12 @@ protected:
   /// Build the frame and send it
   /// For the moment a simple mockup composing a DataHeader and adding it
   /// to the multipart message together with the SubframeMetadata as payload
-  bool BuildAndSendFrame();
+  bool BuildAndSendFrame(FairMQParts &parts);
 
 private:
   unsigned mFrameNumber;
   uint32_t mDuration;
+  uint32_t mOrbitsPerTimeframe = 256;
   std::string mInputChannelName;
   std::string mOutputChannelName;
   std::string mInitDataFileName;

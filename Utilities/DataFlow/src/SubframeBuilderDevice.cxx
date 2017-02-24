@@ -10,10 +10,12 @@
 #include "DataFlow/SubframeBuilderDevice.h"
 #include "DataFlow/SubframeMetadata.h"
 #include "Headers/HeartbeatFrame.h"
+#include "Headers/DataHeader.h"
 #include "FairMQProgOptions.h"
 
 using HeartbeatHeader = AliceO2::Header::HeartbeatHeader;
 using HeartbeatTrailer = AliceO2::Header::HeartbeatTrailer;
+using DataHeader = AliceO2::Header::DataHeader;
 
 struct TestPayload {
  // std::vector<TestSerializedCluster> clusters;
@@ -53,32 +55,16 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
   }
 }
 
-bool AliceO2::DataFlow::SubframeBuilderDevice::ConditionalRun()
-{
-  // TODO: make the time constant configurable
-  std::this_thread::sleep_for(std::chrono::nanoseconds(mDuration));
-
-  BuildAndSendFrame();
-  mFrameNumber++;
-
-  return true;
-}
-
-
 // FIXME: how do we actually find out the payload size???
 size_t extractDetectorPayload(char **payload, char *buffer, size_t bufferSize) {
   *payload = buffer + sizeof(HeartbeatHeader);
   return bufferSize - sizeof(HeartbeatHeader) - sizeof(HeartbeatTrailer);
 }
 
-static std::set<std::string> gValidDetectorTypes = {"TPC", "ITS"};
-
-bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
+bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame(FairMQParts &inParts)
 {
-  if (gValidDetectorTypes.count(mDataType) == 0) {
-    LOG(INFO) << "not sending detector payload\n";
-    return true;
-  }
+  char *incomingBuffer = (char *)inParts.At(1)->GetData();
+  HeartbeatHeader *hbh = reinterpret_cast<HeartbeatHeader*>(incomingBuffer);
 
   // top level subframe header, the DataHeader is going to be used with
   // description "SUBTIMEFRAMEMD"
@@ -93,7 +79,7 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
 
   // subframe meta information as payload
   SubframeMetadata md;
-  md.startTime = mFrameNumber * mDuration + mHeartbeatStart;
+  md.startTime = (hbh->orbit / mOrbitsPerTimeframe) * mDuration;
   md.duration = mDuration;
   LOG(INFO) << "Start time for subframe " << timeframeIdFromTimestamp(md.startTime, mDuration) << " " << md.startTime<< "\n";
 
@@ -106,33 +92,18 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame()
   // build multipart message from header and payload
   AddMessage(outgoing, dh, NewSimpleMessage(md));
 
-  char *incomingBuffer = nullptr;
-  AliceO2::Header::DataHeader payloadheader;
-  payloadheader.dataDescription = AliceO2::Header::DataDescription("UNKNOWN");
-  payloadheader.dataOrigin = AliceO2::Header::DataOrigin("UNKNOWN");
-
-  size_t bufferSize = 0;
-
-  if (mDataType.compare("TPC")) {
-    auto f = [](TPCTestCluster &cluster, int idx) {cluster.timeStamp = idx;};
-    bufferSize = fakeHBHPayloadHBT<TPCTestCluster>(&incomingBuffer, f, 1000);
-    // For the moment, add the data as another part to this message
-    payloadheader.dataDescription = AliceO2::Header::DataDescription("TPCCLUSTER");
-    payloadheader.dataOrigin = AliceO2::Header::DataOrigin("TPC");
-  } else if (mDataType.compare("ITS")) {
-    auto f = [](ITSRawData &cluster, int idx) { cluster.timeStamp = idx;};
-    bufferSize = fakeHBHPayloadHBT<ITSRawData>(&incomingBuffer, f, 500);
-    payloadheader.dataDescription = AliceO2::Header::DataDescription("ITSRAW");
-    payloadheader.dataOrigin = AliceO2::Header::DataOrigin("ITS");
-  }
-
   char *payload = nullptr;
-  auto payloadSize = extractDetectorPayload(&payload, (char *)incomingBuffer, bufferSize);
+  auto payloadSize = extractDetectorPayload(&payload,
+                                            incomingBuffer,
+                                            inParts.At(1)->GetSize());
+  DataHeader payloadheader(*AliceO2::Header::get<DataHeader>((byte*)inParts.At(0)->GetData()));
+
   payloadheader.subSpecification = 0;
   payloadheader.payloadSize = payloadSize;
 
+  // FIXME: take care of multiple HBF per SubtimeFrame
   AddMessage(outgoing, payloadheader,
-             NewMessage(payload, payloadheader.payloadSize,
+             NewMessage(payload, payloadSize,
                         [](void* data, void* hint) { delete[] reinterpret_cast<char *>(hint); }, incomingBuffer));
   // send message
   Send(outgoing, mOutputChannelName.c_str());
@@ -154,5 +125,6 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::HandleData(FairMQParts& msgParts,
   // specific FLP-EPN setup
   // to fit into the simple emulation of event/frame ids in the flpSender the order of
   // subtimeframes needs to be preserved
+  BuildAndSendFrame(msgParts);
   return true;
 }
