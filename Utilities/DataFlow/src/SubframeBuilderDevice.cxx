@@ -25,11 +25,6 @@ struct TestPayload {
 
 AliceO2::DataFlow::SubframeBuilderDevice::SubframeBuilderDevice()
   : O2Device()
-  , mFrameNumber(0)
-  , mDuration(DefaultDuration)
-  , mInputChannelName()
-  , mOutputChannelName()
-  , mIsSelfTriggered(false)
 {
 }
 
@@ -43,8 +38,6 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
   mIsSelfTriggered = fConfig->GetValue<bool>(OptionKeySelfTriggered);
   mInputChannelName = fConfig->GetValue<std::string>(OptionKeyInputChannelName);
   mOutputChannelName = fConfig->GetValue<std::string>(OptionKeyOutputChannelName);
-  mInitDataFileName = fConfig->GetValue<std::string>(OptionKeyInDataFile);
-  mDataType = fConfig->GetValue<std::string>(OptionKeyDetector);
 
   if (!mIsSelfTriggered) {
     // depending on whether the device is self-triggered or expects input,

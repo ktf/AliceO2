@@ -83,14 +83,12 @@ protected:
   bool BuildAndSendFrame(FairMQParts &parts);
 
 private:
-  unsigned mFrameNumber;
-  uint32_t mDuration;
+  unsigned mFrameNumber = 0;
+  uint32_t mDuration = DefaultDuration;
   uint32_t mOrbitsPerTimeframe = 256;
-  std::string mInputChannelName;
-  std::string mOutputChannelName;
-  std::string mInitDataFileName;
-  std::string mDataType; // which form of this guy sends
-  bool mIsSelfTriggered;
+  std::string mInputChannelName = "";
+  std::string mOutputChannelName = "";
+  bool mIsSelfTriggered = false;
   uint64_t mHeartbeatStart = DefaultHeartbeatStart;
 
   template <typename T>
