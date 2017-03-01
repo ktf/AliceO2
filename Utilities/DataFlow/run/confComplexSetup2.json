@@ -4,9 +4,33 @@
         "devices":
         [
         {
+            "id": "heartbeatSampler",
+            "channels":
+            [
+            {
+                "name": "output",
+                "type": "pub",
+                "method": "bind",
+                "sockets":
+                [
+                 { "address": "tcp://*:5450" }
+                ],
+                "sndBufSize": "10"
+            }
+            ]
+        },
+        {
             "id": "subframeBuilderTPC",
             "channels":
             [
+            {
+                "name": "input-channel-name",
+                "type": "sub",
+                "method": "connect",
+                "sockets":[
+                  {"address": "tcp://127.0.0.1:5450"}
+                ]
+            },
             {
                 "name": "output",
                 "type": "pub",
@@ -21,7 +45,16 @@
         {
             "id": "flpSenderTPC",
             "channels":
-            [{
+            [
+            {
+                "name": "input-channel-name",
+                "type": "sub",
+                "method": "connect",
+                "sockets":[
+                  {"address": "tcp://127.0.0.1:5450"}
+                ]
+            },
+            {
                 "name": "input",
                 "type": "sub",
                 "method": "connect",

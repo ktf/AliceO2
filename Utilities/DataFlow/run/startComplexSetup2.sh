@@ -6,7 +6,11 @@
 
 # it would be nice having a script that generates the configuration file for N FLP and M EPNS
 
-# we have 4 epn and 2 flps 
+# Start one HBSampler device
+
+xterm -geometry 80x25+0+0 -hold -e heartbeatSampler --id heartbeatSampler --mq-config confComplexSetup2.json --output-chan-name output &
+
+# we have 4 epn and 2 flps
 xterm -geometry 80x25+0+0 -hold -e epnReceiver --id epnReceiver1 --mq-config confComplexSetup2.json --in-chan-name input --out-chan-name output --num-flps 2 &
 
 xterm -geometry 80x25+0+0 -hold -e epnReceiver --id epnReceiver2 --mq-config confComplexSetup2.json --in-chan-name input --out-chan-name output --num-flps 2 &
