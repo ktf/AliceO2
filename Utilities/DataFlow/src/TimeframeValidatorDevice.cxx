@@ -8,6 +8,7 @@
 
 #include "DataFlow/TimeframeValidatorDevice.h"
 #include "DataFlow/SubframeMetadata.h"
+#include "Headers/DataHeader.h"
 #include "FairMQProgOptions.h"
 
 
@@ -38,8 +39,8 @@ void AliceO2::DataFlow::TimeframeValidatorDevice::Run()
     if (timeframeParts.Size() < 2)
       LOG(ERROR) << "Expecting at least 2 parts\n";
 
-    auto indexHeader = reinterpret_cast<Header::DataHeader*>(timeframeParts.At(timeframeParts.Size() - 2)->GetData());
-    // FIXME: Provide iterator pair API for the index 
+    auto indexHeader = AliceO2::Header::get<Header::DataHeader>(timeframeParts.At(timeframeParts.Size() - 2)->GetData());
+    // FIXME: Provide iterator pair API for the index
     //        Index should really be something which provides an
     //        iterator pair API so that we can sort / find / lower_bound
     //        easily. Right now we simply use it a C-style array.
