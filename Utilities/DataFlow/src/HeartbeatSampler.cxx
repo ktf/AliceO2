@@ -12,9 +12,6 @@
 
 AliceO2::DataFlow::HeartbeatSampler::HeartbeatSampler()
   : O2Device()
-  , mPeriod(89100)
-  , mOutputChannelName("output")
-  , mCount(0)
 {
 }
 
@@ -31,6 +28,7 @@ void AliceO2::DataFlow::HeartbeatSampler::InitTask()
 bool AliceO2::DataFlow::HeartbeatSampler::ConditionalRun()
 {
   std::this_thread::sleep_for(std::chrono::nanoseconds(mPeriod));
+  //std::this_thread::sleep_for(std::chrono::seconds(1));
 
   AliceO2::Header::HeartbeatStatistics hbfPayload;
 

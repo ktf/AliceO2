@@ -43,8 +43,8 @@ class SubframeBuilderDevice : public Base::O2Device
 public:
   typedef AliceO2::Base::O2Message O2Message;
 
-  static constexpr const char* OptionKeyInputChannelName = "input-channel-name";
-  static constexpr const char* OptionKeyOutputChannelName = "output-channel-name";
+  static constexpr const char* OptionKeyInputChannelName = "in-chan-name";
+  static constexpr const char* OptionKeyOutputChannelName = "out-chan-name";
   static constexpr const char* OptionKeyDuration = "duration";
   static constexpr const char* OptionKeySelfTriggered = "self-triggered";
   static constexpr const char* OptionKeyInDataFile = "indatafile-name";

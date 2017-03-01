@@ -17,12 +17,6 @@ using HeartbeatHeader = AliceO2::Header::HeartbeatHeader;
 using HeartbeatTrailer = AliceO2::Header::HeartbeatTrailer;
 using DataHeader = AliceO2::Header::DataHeader;
 
-struct TestPayload {
- // std::vector<TestSerializedCluster> clusters;
- std::vector<double> clusters;
-};
-
-
 AliceO2::DataFlow::SubframeBuilderDevice::SubframeBuilderDevice()
   : O2Device()
 {
@@ -44,12 +38,15 @@ void AliceO2::DataFlow::SubframeBuilderDevice::InitTask()
     // the handler function needs to be registered or not.
     // ConditionalRun is not called anymore from the base class if the
     // callback is registered
+    LOG(INFO) << "Obtaining data from DataPublisher\n";
     OnData(mInputChannelName.c_str(), &AliceO2::DataFlow::SubframeBuilderDevice::HandleData);
+  } else {
+    LOG(INFO) << "Self triggered mode. Doing nothing for now.\n";
   }
 }
 
 // FIXME: how do we actually find out the payload size???
-size_t extractDetectorPayload(char **payload, char *buffer, size_t bufferSize) {
+int64_t extractDetectorPayload(char **payload, char *buffer, size_t bufferSize) {
   *payload = buffer + sizeof(HeartbeatHeader);
   return bufferSize - sizeof(HeartbeatHeader) - sizeof(HeartbeatTrailer);
 }
@@ -72,7 +69,8 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame(FairMQParts &in
 
   // subframe meta information as payload
   SubframeMetadata md;
-  md.startTime = (hbh->orbit / mOrbitsPerTimeframe) * mDuration;
+  // md.startTime = (hbh->orbit / mOrbitsPerTimeframe) * mDuration;
+  md.startTime = hbh->orbit * mDuration;
   md.duration = mDuration;
   LOG(INFO) << "Start time for subframe " << timeframeIdFromTimestamp(md.startTime, mDuration) << " " << md.startTime<< "\n";
 
@@ -85,10 +83,27 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame(FairMQParts &in
   // build multipart message from header and payload
   AddMessage(outgoing, dh, NewSimpleMessage(md));
 
-  char *payload = nullptr;
-  auto payloadSize = extractDetectorPayload(&payload,
+  char *sourcePayload = nullptr;
+  auto payloadSize = extractDetectorPayload(&sourcePayload,
                                             incomingBuffer,
                                             inParts.At(1)->GetSize());
+  LOG(INFO) << "Got "  << inParts.Size() << " parts\n";
+  for (auto pi = 0; pi < inParts.Size(); ++pi)
+  {
+    LOG(INFO) << " Part " << pi << ": " << inParts.At(pi)->GetSize() << " bytes \n";
+  }
+  if (payloadSize <= 0)
+  {
+    LOG(ERROR) << "Payload is too small: " << payloadSize << "\n";
+    return true;
+  }
+  else
+  {
+    LOG(INFO) << "Payload of size " << payloadSize << "received\n";
+  }
+
+  char *payload = new char[payloadSize]();
+  memcpy(payload, sourcePayload, payloadSize);
   DataHeader payloadheader(*AliceO2::Header::get<DataHeader>((byte*)inParts.At(0)->GetData()));
 
   payloadheader.subSpecification = 0;
@@ -97,7 +112,7 @@ bool AliceO2::DataFlow::SubframeBuilderDevice::BuildAndSendFrame(FairMQParts &in
   // FIXME: take care of multiple HBF per SubtimeFrame
   AddMessage(outgoing, payloadheader,
              NewMessage(payload, payloadSize,
-                        [](void* data, void* hint) { delete[] reinterpret_cast<char *>(hint); }, incomingBuffer));
+                        [](void* data, void* hint) { delete[] reinterpret_cast<char *>(hint); }, payload));
   // send message
   Send(outgoing, mOutputChannelName.c_str());
   outgoing.fParts.clear();

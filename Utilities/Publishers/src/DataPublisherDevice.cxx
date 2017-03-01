@@ -89,7 +89,7 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
 								   const byte* dataBuffer,
 								   size_t dataBufferSize)
 {
-  AliceO2::Header::hexDump("data buffer", dataBuffer, dataBufferSize);
+  //  AliceO2::Header::hexDump("data buffer", dataBuffer, dataBufferSize);
   const auto* dataHeader = AliceO2::Header::get<AliceO2::Header::DataHeader>(headerBuffer);
   const auto* hbfEnvelope = AliceO2::Header::get<AliceO2::Header::HeartbeatFrameEnvelope>(headerBuffer);
 
@@ -137,7 +137,9 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
 
   O2Message outgoing;
 
-  AliceO2::Header::hexDump("send buffer", &mFileBuffer, mFileBuffer.size());
+  LOG(DEBUG) << "Sending buffer of size " << mFileBuffer.size() << "\n";
+  LOG(DEBUG) << "Orbit number " << hbhOut->orbit << "\n";
+  //AliceO2::Header::hexDump("send buffer", &mFileBuffer, mFileBuffer.size());
   // build multipart message from header and payload
   // TODO: obviously there is a lot to do here, avoid copying etc, this
   // is just a proof of principle
@@ -150,8 +152,10 @@ bool AliceO2::Utilities::DataPublisherDevice::HandleO2LogicalBlock(const byte* h
 
   // the alternative would be
   // TODO: fix payload size in dh
-  AddMessage(outgoing, dh, NewSimpleMessage(mFileBuffer.data()));
-
+  char *buffer = new char[mFileBuffer.size()];
+  memcpy(buffer, mFileBuffer.data(), mFileBuffer.size());
+  AddMessage(outgoing, dh, NewMessage(buffer, mFileBuffer.size(),
+                        [](void* data, void* hint) { delete[] reinterpret_cast<char *>(data); }, nullptr));
 
   // send message
   Send(outgoing, mOutputChannelName.c_str());

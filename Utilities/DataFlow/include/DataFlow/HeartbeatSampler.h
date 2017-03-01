@@ -31,7 +31,7 @@ class HeartbeatSampler : public Base::O2Device
 public:
   typedef AliceO2::Base::O2Message O2Message;
 
-  static constexpr const char* OptionKeyOutputChannelName = "output-channel-name";
+  static constexpr const char* OptionKeyOutputChannelName = "out-chan-name";
   static constexpr const char* OptionKeyPeriod = "period";
 
   /// Default constructor
@@ -49,11 +49,11 @@ protected:
 
 private:
   /// publishing period (configurable)
-  uint32_t mPeriod;
+  uint32_t mPeriod = 89100;
   /// name of the (configurable)
-  std::string mOutputChannelName;
+  std::string mOutputChannelName = "output";
   /// number of elapsed periods
-  int mCount;
+  int mCount = 0;
 };
 
 }; // namespace DataFlow

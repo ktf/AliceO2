@@ -25,6 +25,7 @@
 namespace AliceO2 {
 namespace Base {
 
+
 /// just a typedef to express the fact that it is not just a FairMQParts vector,
 /// it has to follow the O2 convention of header-payload-header-payload
 using O2Message = FairMQParts;

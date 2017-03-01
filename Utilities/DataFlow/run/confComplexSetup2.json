@@ -20,15 +20,61 @@
             ]
         },
         {
-            "id": "subframeBuilderTPC",
+            "id": "DataPublisherDeviceTPC",
             "channels":
             [
             {
-                "name": "input-channel-name",
+                "name": "input",
                 "type": "sub",
                 "method": "connect",
                 "sockets":[
                   {"address": "tcp://127.0.0.1:5450"}
+                ]
+            },
+            {
+                "name": "output",
+                "type": "pub",
+                "method": "bind",
+                "sockets":
+                [
+                 { "address": "tcp://*:6550" }
+                ],
+                "sndBufSize": "10"
+            }]
+        },
+        {
+            "id": "DataPublisherDeviceITS",
+            "channels":
+            [
+            {
+                "name": "input",
+                "type": "sub",
+                "method": "connect",
+                "sockets":[
+                  {"address": "tcp://127.0.0.1:5450"}
+                ]
+            },
+            {
+                "name": "output",
+                "type": "pub",
+                "method": "bind",
+                "sockets":
+                [
+                 { "address": "tcp://*:7550" }
+                ],
+                "sndBufSize": "10"
+            }]
+        },
+        {
+            "id": "subframeBuilderTPC",
+            "channels":
+            [
+            {
+                "name": "input",
+                "type": "sub",
+                "method": "connect",
+                "sockets":[
+                  {"address": "tcp://127.0.0.1:6550"}
                 ]
             },
             {
@@ -82,6 +128,14 @@
             "id": "subframeBuilderITS",
             "channels":
             [
+            {
+                "name": "input",
+                "type": "sub",
+                "method": "connect",
+                "sockets":[
+                  {"address": "tcp://127.0.0.1:7550"}
+                ]
+            },
             {
                 "name": "output",
                 "type": "pub",
