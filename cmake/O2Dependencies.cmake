@@ -134,6 +134,12 @@ o2_define_bucket(
     DataFlow
     O2Device
     dl
+    RIO
+
+    INCLUDE_DIRECTORIES
+    ${FAIRROOT_INCLUDE_DIR}
+    ${CMAKE_SOURCE_DIR}/DataFormats/Headers/include
+    ${CMAKE_SOURCE_DIR}/Utilities/O2Device/include
 )
 
 o2_define_bucket(
