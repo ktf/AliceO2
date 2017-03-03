@@ -61,13 +61,15 @@ void AliceO2::Utilities::DataPublisherDevice::InitTask()
 
   if (!mFileName.empty()) {
     AppendFile(mFileName.c_str(), mFileBuffer);
-  } else if (strncmp(mDataDescription.str, "TPC", 16)) {
+  } else if (strncmp(mDataDescription.str, "TPCCLUSTER", 16)==0) {
     auto f = [](TPCTestCluster &cluster, int idx) {cluster.timeStamp = idx;};
     fakePayload<TPCTestCluster>(mFileBuffer, f, 1000);
+    LOG(INFO) << " faking TPCCluster payload \n";
     // For the moment, add the data as another part to this message
-  } else if (strncmp(mDataDescription.str, "ITS", 16)) {
+  } else if (strncmp(mDataDescription.str, "ITSRAW", 16)==0) {
     auto f = [](ITSRawData &cluster, int idx) {cluster.timeStamp = idx;};
     fakePayload<ITSRawData>(mFileBuffer, f, 500);
+    LOG(INFO) << " faking ITS payload \n";
   }
 
   mFileBuffer.resize(mFileBuffer.size() + sizeof(AliceO2::Header::HeartbeatTrailer));
