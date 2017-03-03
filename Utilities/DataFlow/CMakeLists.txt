@@ -21,8 +21,13 @@ set(SRCS
     src/HeartbeatSampler.cxx
     src/SubframeBuilderDevice.cxx
     src/TimeframeValidatorDevice.cxx
-    )
+    src/Timeframe.cxx
+)
 
+# define headers
+FILE(GLOB HEADERS include/${MODULE_NAME}/*.h)
+
+set(LINKDEF src/DataFlowLinkDef.h)
 set(LIBRARY_NAME ${MODULE_NAME})
 set(BUCKET_NAME ${MODULE_BUCKET_NAME})
 
@@ -58,3 +63,13 @@ ForEach (_file RANGE 0 ${_length})
       BUCKET_NAME ${BUCKET_NAME}
   )
 EndForEach (_file RANGE 0 ${_length})
+
+
+set(TEST_SRCS
+  test/TimeframeTest.cxx
+)
+
+O2_GENERATE_TESTS(
+  MODULE_LIBRARY_NAME ${LIBRARY_NAME}
+  BUCKET_NAME ${BUCKET_NAME}
+  TEST_SRCS ${TEST_SRCS})
