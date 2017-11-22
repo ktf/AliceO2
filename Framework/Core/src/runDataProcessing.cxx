@@ -213,6 +213,8 @@ int doParent(fd_set *in_fdset,
                 for (auto &deviceInfo : infos) {
                   deviceInfo.readyToQuit = true;
                 }
+              } else if (validFor == "ME") {
+                info.readyToQuit = true;
               }
             }
           } else if (!control.quiet && (strstr(token.c_str(), control.logFilter) != nullptr)) {
