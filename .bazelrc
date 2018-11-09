@@ -1,0 +1,2 @@
+build --cxxopt='-std=c++14'
+build --incompatible_remove_native_http_archive=false
