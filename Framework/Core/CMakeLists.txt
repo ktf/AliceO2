@@ -196,13 +196,6 @@ o2_add_test(unittest_DataSpecUtils NAME test_Framework_unittest_DataSpecUtils
             LABELS framework
             PUBLIC_LINK_LIBRARIES O2::Framework)
 
-o2_add_test(unittest_SimpleOptionsRetriever NAME
-            test_Framework_unittest_SimpleOptionsRetriever
-            SOURCES test/unittest_SimpleOptionsRetriever.cxx
-            COMPONENT_NAME Framework
-            LABELS framework
-            PUBLIC_LINK_LIBRARIES O2::Framework)
-
 # benchmarks
 
 foreach(b
