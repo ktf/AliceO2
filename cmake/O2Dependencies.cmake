@@ -2140,6 +2140,7 @@ o2_define_bucket(
   ReconstructionDataFormats # for test dependency only
   common_boost_bucket
   Boost::iostreams
+  Boost::system
   DataFormatsMID
 
   INCLUDE_DIRECTORIES

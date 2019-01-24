@@ -28,6 +28,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_
 # Set name of our project to "ALICEO2". Has to be done
 # after check of cmake version since this is a new feature
 project(ALICEO2)
+add_definitions(-DBOOST_ERROR_CODE_HEADER_ONLY)
 
 # Toplevel targets
 ADD_CUSTOM_TARGET(man ALL)
