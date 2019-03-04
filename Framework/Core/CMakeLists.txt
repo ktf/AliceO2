@@ -249,6 +249,7 @@ set(TEST_SRCS
       test/test_DanglingInputs.cxx
       test/test_DanglingOutputs.cxx
       test/test_DataAllocator.cxx
+      test/test_CCDBFetcher.cxx
       test/test_DataDescriptorMatcher.cxx
       test/test_DataProcessorSpec.cxx
       test/test_DataRefUtils.cxx
@@ -283,7 +284,7 @@ set(TEST_SRCS
       test/test_TimesliceIndex.cxx
       test/test_TMessageSerializer.cxx
       test/test_TableBuilder.cxx
-      #test/test_Task.cxx
+      test/test_Task.cxx
       test/test_TimeParallelPipelining.cxx
       test/test_TypeTraits.cxx
       test/test_Variants.cxx
