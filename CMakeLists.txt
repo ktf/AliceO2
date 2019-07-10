@@ -89,7 +89,7 @@ o2_target_man_page(man NAME FairMQDevice)
 # Testing and packaging only needed if we are the top level directory
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   # Documentation
-  add_subdirectory(doc)
+  #  add_subdirectory(doc)
   if(BUILD_TESTING)
     add_subdirectory(tests)
   endif()
