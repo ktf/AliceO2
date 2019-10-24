@@ -230,6 +230,7 @@ foreach(w
         CallbackService
         CustomGUIGL
         CustomGUISokol
+        CCDBFetcher
         DanglingInputs
         DanglingOutputs
         DataAllocator
