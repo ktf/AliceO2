@@ -250,6 +250,9 @@ bool DataProcessingDevice::ConditionalRun()
     if (info.state != InputChannelState::Running) {
       continue;
     }
+    if (mState.quitRequested) {
+      break;
+    }
     FairMQParts parts;
     auto result = this->Receive(parts, channel.name, 0, 0);
     if (result > 0) {
