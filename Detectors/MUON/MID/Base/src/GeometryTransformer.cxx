@@ -17,6 +17,7 @@
 
 #include <fstream>
 #include <string>
+#include <sstream>
 #include "TMath.h"
 #include "TGeoVolume.h"
 #include "TGeoManager.h"
