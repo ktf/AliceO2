@@ -10,8 +10,7 @@
 #ifndef O2_FRAMEWORK_EXPRESSIONS_H_
 #define O2_FRAMEWORK_EXPRESSIONS_H_
 
-#include "Framework/Kernels.h"
-
+#include <arrow/compute/kernel.h>
 #include <variant>
 #include <string>
 #include <memory>
@@ -19,6 +18,7 @@
 namespace o2::framework::expressions
 {
 
+#ifndef __CLING__
 /// A helper type for an expression tree node corresponding to a literal value
 struct LiteralNode {
   template <typename T>
@@ -28,6 +28,7 @@ struct LiteralNode {
   using var_t = std::variant<int, bool, float, double>;
   var_t value;
 };
+#endif // __CLING__
 
 /// An expression tree node corresponding to a column binding
 struct BindingNode {
@@ -55,6 +56,7 @@ struct BinaryOpNode {
   Op op;
 };
 
+#ifndef __CLING__
 struct ArrowDatumSpec {
   // datum spec either contains an index, a value of a literal or a binding label
   std::variant<std::monostate, size_t, LiteralNode::var_t, std::string> datum;
@@ -70,6 +72,7 @@ struct ArrowKernelSpec {
   ArrowDatumSpec right;
   ArrowDatumSpec result;
 };
+#endif // __CLING__
 
 /// A generic tree node
 struct Node {
