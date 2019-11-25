@@ -54,7 +54,7 @@ function(o2_add_library baseTargetName)
     A
     ""
     "TARGETVARNAME"
-    "SOURCES;PUBLIC_INCLUDE_DIRECTORIES;PUBLIC_LINK_LIBRARIES;PRIVATE_INCLUDE_DIRECTORIES"
+    "SOURCES;PUBLIC_INCLUDE_DIRECTORIES;PUBLIC_LINK_LIBRARIES;PRIVATE_INCLUDE_DIRECTORIES;PRIVATE_LINK_LIBRARIES"
     )
 
   if(A_UNPARSED_ARGUMENTS)
@@ -89,6 +89,17 @@ function(o2_add_library baseTargetName)
         message(FATAL_ERROR "Trying to use a non-namespaced target ${L}")
       endif()
       target_link_libraries(${target} PUBLIC ${L})
+    endforeach()
+  endif()
+
+  # Start by adding the dependencies to other targets
+  if(A_PRIVATE_LINK_LIBRARIES)
+    foreach(L IN LISTS A_PRIVATE_LINK_LIBRARIES)
+      string(FIND ${L} "::" NS)
+      if(${NS} EQUAL -1)
+        message(FATAL_ERROR "Trying to use a non-namespaced target ${L}")
+      endif()
+      target_link_libraries(${target} PRIVATE ${L})
     endforeach()
   endif()
 
