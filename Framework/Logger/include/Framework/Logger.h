@@ -19,12 +19,10 @@
 #include <fmt/format.h>
 #include <fmt/printf.h>
 FMT_BEGIN_NAMESPACE
-template <typename S, typename Char = FMT_CHAR(S)>
+template <typename S, typename Char = fmt::char_t<S>>
 inline int vfprintf(fair::Logger& logger,
                     const S& format,
-                    basic_format_args<typename basic_printf_context_t<
-                      internal::basic_buffer<Char>>::type>
-                      args)
+                    basic_format_args<basic_printf_context_t<Char>> args)
 {
   basic_memory_buffer<Char> buffer;
   printf(buffer, to_string_view(format), args);
@@ -32,17 +30,12 @@ inline int vfprintf(fair::Logger& logger,
   return static_cast<int>(buffer.size());
 }
 
-template <typename S, typename... Args>
-inline FMT_ENABLE_IF_T(internal::is_string<S>::value, int)
-  fprintf(fair::Logger& logger,
-          const S& format_str, const Args&... args)
-{
-  internal::check_format_string<Args...>(format_str);
-  typedef internal::basic_buffer<FMT_CHAR(S)> buffer;
-  typedef typename basic_printf_context_t<buffer>::type context;
-  format_arg_store<context, Args...> as{args...};
+template <typename S, typename... Args, typename Char = fmt::char_t<S>>
+inline int fprintf(fair::Logger& logger, const S& format_str,
+                   const Args&... args) {
+  using context = basic_printf_context_t<Char>;
   return vfprintf(logger, to_string_view(format_str),
-                  basic_format_args<context>(as));
+      {make_format_args<context>(args...)});
 }
 
 FMT_END_NAMESPACE
