@@ -539,14 +539,49 @@ struct FilteredIndexPolicy : IndexPolicyBase {
   gandiva::SelectionVector* mSelection = nullptr;
 };
 
-template <typename SP, typename IP, typename... C>
+template <typename IP, typename SP, typename... C>
 class TableBase;
 
-struct DefaultSourcePolicy {};
+struct TableInfo {
+  std::string label;
+  char origin[4];
+  char description[16];
+  std::shared_ptr<arrow::Table> table;
+};
+
+struct DefaultSourcePolicy {
+  std::vector<TableInfo> originals();
+  void bindOriginals(std::vector<std::shared_ptr<arrow::Table>> const&);
+};
+
+struct JoinSourcePolicy {
+  std::vector<TableInfo> originals();
+  void bindOriginals(std::vector<std::shared_ptr<arrow::Table>> const&);
+};
+
+struct ConcatSourcePolicy {
+  std::vector<TableInfo> originals();
+  void bindOriginals(std::vector<std::shared_ptr<arrow::Table>> const&);
+};
+
+struct FilteredSourcePolicy {
+  std::vector<TableInfo> originals();
+  void bindOriginals(std::vector<std::shared_ptr<arrow::Table>> const&);
+};
+
+/// A policy which builds the originals from the metadata associated to a table
+template <typename Metadata>
+struct MetadataSourcePolicy {
+  std::vector<TableInfo> originals() {
+    return {{Metadata::mLabel, Metadata::mOrigin, Metadata::mDescription, nullptr}};
+  };
+  void bindOriginals(std::vector<std::shared_ptr<arrow::Table>> const&);
+};
+
 struct DefaultIterationPolicy {};
 
 template <typename... Cs>
-using Table = TableBase<DefaultSourcePolicy, DefaultIterationPolicy, Cs...>;
+using Table = TableBase<DefaultIterationPolicy, DefaultSourcePolicy, Cs...>;
 
 template <typename IP, typename... C>
 struct RowViewBase : public IP, C... {
@@ -740,11 +775,9 @@ struct ArrowHelpers {
   static std::shared_ptr<arrow::Table> concatTables(std::vector<std::shared_ptr<arrow::Table>>&& tables);
 };
 
-
-
 /// A Table class which observes an arrow::Table and provides
 /// It is templated on a set of Column / DynamicColumn types.
-template <typename SourcePolicy, typename IterationPolicy,  typename... C>
+template <typename IterationPolicy, typename SourcePolicy,  typename... C>
 class TableBase
 {
  public:
@@ -870,7 +903,7 @@ struct PackToTable {
 
 template <typename... C>
 struct PackToTable<framework::pack<C...>> {
-  using table = o2::soa::Table<C...>;
+  using table = o2::soa::TableBase<DefaultIndexPolicy, DefaultSourcePolicy, C...>;
 };
 
 template <typename T>
@@ -878,9 +911,9 @@ struct FilterPersistentColumns {
   static_assert(framework::always_static_assert_v<T>, "Not a soa::Table");
 };
 
-template <typename... C>
-struct FilterPersistentColumns<soa::Table<C...>> {
-  using columns = typename soa::Table<C...>::columns;
+template <typename IP, typename SP, typename... C>
+struct FilterPersistentColumns<soa::TableBase<IP, SP, C...>> {
+  using columns = typename soa::TableBase<IP, SP, C...>::columns;
   using persistent_columns_pack = framework::selected_pack<is_persistent_t, C...>;
   using persistent_table_t = typename PackToTable<persistent_columns_pack>::table;
 };
@@ -1053,15 +1086,17 @@ class TableMetadata
     std::tuple<o2::soa::ColumnIterator<typename Bindings::type> const*...> boundIterators;                                 \
   }
 
+
+
 #define DECLARE_SOA_TABLE(_Name_, _Origin_, _Description_, ...)        \
-  using _Name_ = o2::soa::Table<__VA_ARGS__>;                          \
-                                                                       \
   struct _Name_##Metadata : o2::soa::TableMetadata<_Name_##Metadata> { \
     using table_t = _Name_;                                            \
     static constexpr char const* mLabel = #_Name_;                     \
     static constexpr char const mOrigin[4] = _Origin_;                 \
     static constexpr char const mDescription[16] = _Description_;      \
   };                                                                   \
+                                                                       \
+  using _Name_ = o2::soa::TableBase<DefaultIterationPolicy, MetadataSourcePolicy<_Name_##Metadata>, __VA_ARGS__>; \
                                                                        \
   template <>                                                          \
   struct MetadataTrait<_Name_> {                                       \
@@ -1081,10 +1116,10 @@ class TableMetadata
 namespace o2::soa
 {
 
-template <typename... C1, typename... C2>
-constexpr auto join(o2::soa::Table<C1...> const& t1, o2::soa::Table<C2...> const& t2)
+template <typename SP1, typename SP2, typename IP1, typename IP2, typename... C1, typename... C2>
+constexpr auto join(o2::soa::TableBase<IP1, SP1, C1...> const& t1, o2::soa::TableBase<IP2, SP2, C2...> const& t2)
 {
-  return o2::soa::Table<C1..., C2...>(ArrowHelpers::joinTables({t1.asArrowTable(), t2.asArrowTable()}));
+  return o2::soa::Table<JoinSourcePolicy<SP1::metadata_t, SP2::metadata_t>, C1..., C2...>(ArrowHelpers::joinTables({t1.asArrowTable(), t2.asArrowTable()}));
 }
 
 template <typename T1, typename T2, typename... Ts>
