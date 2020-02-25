@@ -539,8 +539,14 @@ struct FilteredIndexPolicy : IndexPolicyBase {
   gandiva::SelectionVector* mSelection = nullptr;
 };
 
-template <typename... C>
-class Table;
+template <typename SP, typename IP, typename... C>
+class TableBase;
+
+struct DefaultSourcePolicy {};
+struct DefaultIterationPolicy {};
+
+template <typename... Cs>
+using Table = TableBase<DefaultSourcePolicy, DefaultIterationPolicy, Cs...>;
 
 template <typename IP, typename... C>
 struct RowViewBase : public IP, C... {
@@ -734,10 +740,12 @@ struct ArrowHelpers {
   static std::shared_ptr<arrow::Table> concatTables(std::vector<std::shared_ptr<arrow::Table>>&& tables);
 };
 
+
+
 /// A Table class which observes an arrow::Table and provides
 /// It is templated on a set of Column / DynamicColumn types.
-template <typename... C>
-class Table
+template <typename SourcePolicy, typename IterationPolicy,  typename... C>
+class TableBase
 {
  public:
   using iterator = RowView<C...>;
@@ -750,7 +758,7 @@ class Table
   using columns = framework::pack<C...>;
   using persistent_columns_t = framework::selected_pack<is_persistent_t, C...>;
 
-  Table(std::shared_ptr<arrow::Table> table, uint64_t offset = 0)
+  TableBase(std::shared_ptr<arrow::Table> table, uint64_t offset = 0)
     : mTable(table),
       mColumnIndex{
         std::pair<C*, arrow::Column*>{nullptr,
@@ -765,8 +773,8 @@ class Table
   /// FIXME: this is to be able to construct a Filtered without explicit Join
   ///        so that Filtered<Table1,Table2, ...> always means a Join which
   ///        may or may not be a problem later
-  Table(std::vector<std::shared_ptr<arrow::Table>>&& tables, uint64_t offset = 0)
-    : Table(ArrowHelpers::joinTables(std::move(tables)), offset)
+  TableBase(std::vector<std::shared_ptr<arrow::Table>>&& tables, uint64_t offset = 0)
+    : TableBase(ArrowHelpers::joinTables(std::move(tables)), offset)
   {
   }
 
@@ -853,6 +861,7 @@ class Table
   /// Offset of the table within a larger table.
   uint64_t mOffset;
 };
+
 
 template <typename T>
 struct PackToTable {
