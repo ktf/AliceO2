@@ -1,0 +1,33 @@
+--- a/src/linux/fs.cpp	2020-05-12 01:25:25.665016659 +0200
++++ b/src/linux/fs.cpp	2020-05-12 01:24:54.339811616 +0200
+@@ -20,6 +20,7 @@
+ 
+ #include <linux/limits.h>
+ #include <linux/unistd.h>
++#include <sys/sysmacros.h>
+ 
+ #include <list>
+ #include <set>
+
+--- a/src/tests/containerizer/fs_tests.cpp	2020-05-12 01:34:35.202072785 +0200
++++ b/src/tests/containerizer/fs_tests.cpp	2020-05-12 01:41:35.062145960 +0200
+@@ -13,6 +13,7 @@
+ // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ // See the License for the specific language governing permissions and
+ // limitations under the License.
++#include <sys/sysmacros.h>
+ 
+ #include <paths.h>
+ 
+
+--- a/src/slave/containerizer/mesos/isolators/gpu/isolator.cpp	2020-05-12 02:03:28.832500915 +0200
++++ b/src/slave/containerizer/mesos/isolators/gpu/isolator.cpp	2020-05-12 02:03:55.961541359 +0200
+@@ -15,6 +15,7 @@
+ // limitations under the License.
+ 
+ #include <stdint.h>
++#include <sys/sysmacros.h>
+ 
+ #include <algorithm>
+ #include <list>
+
