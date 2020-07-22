@@ -1,0 +1,56 @@
+# An experiment using bazel to build O2
+name: Bazel CI
+
+on:
+  push: {}
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Target
+        required: true
+        default: "//..."
+      test_target:
+        description: Test Target
+        required: false
+        default: "//..."
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Mount bazel cache
+      uses: actions/cache@v1
+      with:
+        path: "/home/runner/.cache/bazel"
+        key: bazel
+
+    - name: Install bazelisk
+      run: |
+        sudo apt update -y
+        sudo apt install autopoint
+        curl -LO "https://github.com/bazelbuild/bazelisk/releases/download/v1.1.0/bazelisk-linux-amd64"
+        mkdir -p "${GITHUB_WORKSPACE}/bin/"
+        mv bazelisk-linux-amd64 "${GITHUB_WORKSPACE}/bin/bazel"
+        chmod +x "${GITHUB_WORKSPACE}/bin/bazel"
+
+    - name: Merge Bazel test branch
+      run: |
+        git config --global pull.rebase false
+        git config --global user.email "alibuild@cern.ch"
+        git config --global user.name "alibuild"
+        git pull origin bazel
+
+    - name: Build
+      run: |
+        TARGET=${{ github.event.inputs.target }}
+        "${GITHUB_WORKSPACE}/bin/bazel" build ${TARGET:-//...}
+
+    - name: Test
+      run: |
+        TARGET=${{ github.event.inputs.test_target }}
+        if [ ! "X$TARGET" = X ]; then
+          "${GITHUB_WORKSPACE}/bin/bazel" test ${TARGET:-//...}
+        fi
