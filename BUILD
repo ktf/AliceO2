@@ -380,58 +380,58 @@ configure_make(
 	       "mesos-master"],
 )
 
-filegroup(
-  name = "mesos-standard-config",
-  srcs = glob(["mesos-agent-config/etc/**"]),
-)
-
-genrule(
-  name = "copy-config",
-  srcs = [":mesos-standard-config"],
-  cmd = "ls && ls mesos-agent-config && mkdir $@ && rsync -av mesos-agent-config/etc/ $@/",
-  outs = ["//:mesos-install/etc"]
-)
-
-genrule(
-  name = "copy-mesos",
-  srcs = [":mesos"],
-  cmd = "mkdir $@ && rsync -av bazel-out/k8-fastbuild/bin/copy_mesos/mesos/ $@/ && rm -rf $@/libexec/mesos/tests/",
-  outs = ["//:mesos-install/usr"]
-)
-
-genrule(
-  name = "copy-aurora",
-  srcs = ["//:third_party/aurora/aurora-executor_0.17.0_amd64.deb"],
-  cmd = "ar xv $(location //:third_party/aurora/aurora-executor_0.17.0_amd64.deb) && xz -d data.tar.xz && tar xvf data.tar && cp -r usr/share/aurora/bin/ $@",
-  outs = ["//:mesos-install/copy-aurora"]
-)
-
-load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_deb")
-
-pkg_tar(
-  name = "mesos_tar",
-  package_dir = "/",
-  srcs = ["//:copy-config", "//:copy-mesos", "//:copy-aurora"],
-  remap_paths = {
-    "mesos/bin/": "usr/bin/",
-    "mesos/lib/": "usr/lib/",
-    "mesos/include": "usr/include",
-    "copy-aurora/": "usr/",
-  },
-  mode = "0755",
-)
-
-pkg_deb(
-  name = "alice-build-cluster",
-  architecture = "amd64",
-  built_using = "unzip (6.0.1)",
-  data = ":mesos_tar",
-  depends = [
-    "unzip",
-  ],
-  description = "ALICE Build Cluster setup",
-  homepage = "http://alisw.github.io",
-  maintainer = "Giulio Eulisse <giulio.eulisse@cern.ch>",
-  package = "alice-build-cluster",
-  version = "0.1.0",
-)
+#filegroup(
+#  name = "mesos-standard-config",
+#  srcs = glob(["mesos-agent-config/etc/**"]),
+#)
+#
+#genrule(
+#  name = "copy-config",
+#  srcs = [":mesos-standard-config"],
+#  cmd = "ls && ls mesos-agent-config && mkdir $@ && rsync -av mesos-agent-config/etc/ $@/",
+#  outs = ["//:mesos-install/etc"]
+#)
+#
+#genrule(
+#  name = "copy-mesos",
+#  srcs = [":mesos"],
+#  cmd = "mkdir $@ && rsync -av bazel-out/k8-fastbuild/bin/copy_mesos/mesos/ $@/ && rm -rf $@/libexec/mesos/tests/",
+#  outs = ["//:mesos-install/usr"]
+#)
+#
+#genrule(
+#  name = "copy-aurora",
+#  srcs = ["//:third_party/aurora/aurora-executor_0.17.0_amd64.deb"],
+#  cmd = "ar xv $(location //:third_party/aurora/aurora-executor_0.17.0_amd64.deb) && xz -d data.tar.xz && tar xvf data.tar && cp -r usr/share/aurora/bin/ $@",
+#  outs = ["//:mesos-install/copy-aurora"]
+#)
+#
+#load("@rules_pkg//:pkg.bzl", "pkg_tar", "pkg_deb")
+#
+#pkg_tar(
+#  name = "mesos_tar",
+#  package_dir = "/",
+#  srcs = ["//:copy-config", "//:copy-mesos", "//:copy-aurora"],
+#  remap_paths = {
+#    "mesos/bin/": "usr/bin/",
+#    "mesos/lib/": "usr/lib/",
+#    "mesos/include": "usr/include",
+#    "copy-aurora/": "usr/",
+#  },
+#  mode = "0755",
+#)
+#
+#pkg_deb(
+#  name = "alice-build-cluster",
+#  architecture = "amd64",
+#  built_using = "unzip (6.0.1)",
+#  data = ":mesos_tar",
+#  depends = [
+#    "unzip",
+#  ],
+#  description = "ALICE Build Cluster setup",
+#  homepage = "http://alisw.github.io",
+#  maintainer = "Giulio Eulisse <giulio.eulisse@cern.ch>",
+#  package = "alice-build-cluster",
+#  version = "0.1.0",
+#)

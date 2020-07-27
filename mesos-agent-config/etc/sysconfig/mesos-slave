@@ -1,0 +1,16 @@
+LIBPROCESS_SSL_KEY_FILE=/etc/grid-security/hostkey.pem
+LIBPROCESS_SSL_CERT_FILE=/etc/grid-security/hostcert.pem
+LIBPROCESS_SSL_VERIFY_CERT=false
+LIBPROCESS_SSL_SUPPORT_DOWNGRADE=true
+LIBPROCESS_SSL_ENABLED=true
+JAVA_HOME=/usr
+MESOS_WORK_DIR=/var/lib/mesos
+MESOS_MASTER=zk://alimesos01.cern.ch:2181,alimesos03.cern.ch:2181,alimesos03.cern.ch:2181/mesos
+MESOS_CONTAINERIZERS=docker,mesos
+MESOS_IMAGE_PROVIDERS=docker
+MESOS_ISOLATION=docker/runtime
+MESOS_LAUNCHER=linux
+MESOS_SYSTEMD_ENABLE_SUPPORT=true
+MESOS_LOG_DIR=/var/log/mesos
+MESOS_LOG_LEVEL=debug
+MESOS_ATTRIBUTES='host:alientest07'
