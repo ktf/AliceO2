@@ -30,6 +30,7 @@
 #include "Framework/VariantHelpers.h"
 #include "Framework/OutputObjHeader.h"
 #include "Framework/RootConfigParamHelpers.h"
+#include "Framework/RuntimeError.h"
 
 #include <arrow/compute/kernel.h>
 #include <arrow/table.h>
@@ -355,7 +356,7 @@ struct Partition {
     if (isSchemaCompatible(schema, ops)) {
       mTree = createExpressionTree(ops, schema);
     } else {
-      throw std::runtime_error("Partition filter does not match declared table type");
+      throw runtime_error("Partition filter does not match declared table type");
     }
   }
 
@@ -658,10 +659,10 @@ struct AnalysisDataProcessorBuilder {
                                                        &groups[index],
                                                        &offsets[index]);
             if (result.ok() == false) {
-              throw std::runtime_error("Cannot split collection");
+              throw runtime_error("Cannot split collection");
             }
             if (groups[index].size() != gt.tableSize()) {
-              throw std::runtime_error("Splitting collection resulted in different group number than there is rows in the grouping table.");
+              throw runtime_error("Splitting collection resulted in different group number than there is rows in the grouping table.");
             };
           }
         };
