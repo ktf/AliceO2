@@ -15,6 +15,7 @@
 #include "Framework/StructToTuple.h"
 #include "Framework/FunctionalHelpers.h"
 #include "Framework/VariantHelpers.h"
+#include "Framework/RuntimeError.h"
 #include "arrow/type_traits.h"
 
 // Apparently needs to be on top of the arrow includes.
@@ -214,7 +215,7 @@ struct BuilderUtils {
     auto valueBuilder = reinterpret_cast<ValueBuilderType*>(holder.builder->value_builder());
     status &= valueBuilder->AppendValues(&*ip.first, std::distance(ip.first, ip.second));
     if (!status.ok()) {
-      throw std::runtime_error("Unable to append values to valueBuilder!");
+      throw runtime_error("Unable to append values to valueBuilder!");
     }
     return;
   }
@@ -572,10 +573,10 @@ class TableBuilder
   {
     constexpr int nColumns = sizeof...(ARGS);
     if (nColumns != columnNames.size()) {
-      throw std::runtime_error("Mismatching number of column types and names");
+      throw runtime_error("Mismatching number of column types and names");
     }
     if (mHolders != nullptr) {
-      throw std::runtime_error("TableBuilder::persist can only be invoked once per instance");
+      throw runtime_error("TableBuilder::persist can only be invoked once per instance");
     }
   }
 
@@ -598,7 +599,7 @@ class TableBuilder
     mFinalizer = [schema = mSchema, &arrays = mArrays, holders = mHolders]() -> void {
       auto status = TableBuilderHelpers::finalize(arrays, *(HoldersTuple<ARGS...>*)holders, std::make_index_sequence<sizeof...(ARGS)>{});
       if (status == false) {
-        throw std::runtime_error("Unable to finalize");
+        throw runtime_error("Unable to finalize");
       }
     };
   }
@@ -660,7 +661,7 @@ class TableBuilder
     return [holders = mHolders](unsigned int slot, FillTuple const& t) -> void {
       auto status = TableBuilderHelpers::append(*(HoldersTuple<ARGS...>*)holders, std::index_sequence_for<ARGS...>{}, t);
       if (status == false) {
-        throw std::runtime_error("Unable to append");
+        throw runtime_error("Unable to append");
       }
     };
   }
