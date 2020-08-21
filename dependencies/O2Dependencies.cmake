@@ -152,4 +152,7 @@ find_package(O2GPU)
 
 find_package(FastJet)
 
+find_package (LibCAP MODULE)
+set_package_properties(LibCAP PROPERTIES TYPE OPTIONAL) 
+
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
