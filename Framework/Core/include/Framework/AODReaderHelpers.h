@@ -16,8 +16,12 @@
 #include "Framework/Logger.h"
 #include <uv.h>
 
-namespace o2{namespace framework
-{namespace readers{
+namespace o2
+{
+namespace framework
+{
+namespace readers
+{
 
 struct RuntimeWatchdog {
   int numberTimeFrames;
