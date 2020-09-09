@@ -17,13 +17,9 @@
 #include <uv.h>
 
 namespace o2
-{
-namespace framework
-{
-namespace readers
-{
-
-struct RuntimeWatchdog {
+{namespace framework
+{namespace readers
+{struct RuntimeWatchdog {
   int numberTimeFrames;
   uint64_t startTime;
   uint64_t lastTime;
