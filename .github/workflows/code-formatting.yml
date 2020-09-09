@@ -44,9 +44,7 @@ jobs:
           || [ "$RESULT_OUTPUT" == "clang-format did not modify any files" ] ; then
           echo "clang-format passed."
           git push --set-upstream origin :alibot-cleanup-${{ github.event.pull_request.number }} -f
-          cat << EOF
-          ::set-output name=clean::true
-          EOF
+          echo ::set-output name=clean::true
         else
           echo "clang-format failed."
           echo "To reproduce it locally please run"
@@ -59,9 +57,7 @@ jobs:
           git commit -m "Please consider the following formatting changes" -a
           git show
           git push --set-upstream origin alibot-cleanup-${{ github.event.pull_request.number }} -f
-          cat << EOF
-          ::set-output name=clean::false
-          EOF
+          echo ::set-output name=clean::false
         fi
 
     - name: Create Pull Request
