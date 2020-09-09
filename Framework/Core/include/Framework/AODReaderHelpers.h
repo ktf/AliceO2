@@ -44,7 +44,7 @@ struct RuntimeWatchdog {
     numberTimeFrames++;
     if(runTimeLimit <= 0){return true;}
 
-    auto nowTime = uv_hrtime();
+    auto nowTime = uv_hrtime ();
 
     // time spent to process the time frame
     double time_spent = numberTimeFrames < 1 ? (double)(nowTime - lastTime) / 1.E9 : 0.;
