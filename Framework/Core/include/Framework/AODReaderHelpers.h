@@ -23,15 +23,15 @@ namespace framework
 namespace readers
 {
 
-struct RuntimeWatchdog {
-  int numberTimeFrames;
+struct RuntimeWatchdog 
+{
+  int numberTimeFrames  ;
   uint64_t startTime;
   uint64_t lastTime;
   double runTime;
   uint64_t runTimeLimit;
 
-  RuntimeWatchdog(Long64_t limit)
-  {
+  RuntimeWatchdog(Long64_t limit) {
     numberTimeFrames = -1;
     startTime = uv_hrtime();
     lastTime = startTime;
