@@ -42,9 +42,7 @@ struct RuntimeWatchdog {
   bool update()
   {
     numberTimeFrames++;
-    if (runTimeLimit <= 0) {
-      return true;
-    }
+    if(runTimeLimit <= 0){return true;}
 
     auto nowTime = uv_hrtime();
 
