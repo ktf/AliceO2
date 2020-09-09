@@ -39,8 +39,7 @@ struct RuntimeWatchdog {
     runTimeLimit = limit;
   }
 
-  bool update()
-  {
+  bool update()  {
     numberTimeFrames++;
     if (runTimeLimit <= 0) {
       return true;
