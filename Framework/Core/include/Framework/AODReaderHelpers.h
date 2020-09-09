@@ -16,8 +16,7 @@
 #include "Framework/Logger.h"
 #include <uv.h>
 
-namespace o2{
-namespace framework
+namespace o2{namespace framework
 {namespace readers{
 
 struct RuntimeWatchdog {
