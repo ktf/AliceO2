@@ -29,7 +29,6 @@ struct RuntimeWatchdog {
   uint64_t lastTime;
   double runTime;
   uint64_t runTimeLimit;
-
   RuntimeWatchdog(Long64_t limit)
   {
     numberTimeFrames = -1;
