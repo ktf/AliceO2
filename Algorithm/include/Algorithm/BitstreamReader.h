@@ -20,8 +20,7 @@
 #include <bitset>
 
 namespace o2
-{
-namespace algorithm
+{namespace algorithm
 {
 
 /// @class BitStreamReader
