@@ -22,7 +22,9 @@
 // is part of the BaseHeader
 #include "Headers/DataHeader.h" // for o2::header::get
 
-namespace o2{namespace algorithm
+namespace o2
+{
+namespace algorithm
 {
 
 /**
