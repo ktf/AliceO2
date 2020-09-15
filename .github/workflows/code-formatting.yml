@@ -23,7 +23,7 @@ jobs:
         # We create a new branch which we will use for the eventual PR.
         git config --global user.email "alibuild@cern.ch"
         git config --global user.name "ALICE Action Bot"
-        git checkout -b alibot-cleanup-${{ github.event.pull_request.number }}
+        #git checkout -b alibot-cleanup-${{ github.event.pull_request.number }}
 
         BASE_COMMIT=${{ github.event.pull_request.base.sha }}
         echo "Running clang-format-8 against branch ${{ github.event.pull_request.base.ref }} , with hash ${{ github.event.pull_request.base.sha }}"
@@ -61,7 +61,6 @@ jobs:
           git commit -m "Please consider the following formatting changes" -a
           git show | cat
           git push --set-upstream origin HEAD:refs/heads/alibot-cleanup-${{ github.event.pull_request.number }} -f
-          git checkout "${{ github.event.pull_request.head.ref }}"
           git reset --hard "${{ github.event.pull_request.head.sha }}"
           echo ::set-output name=clean::false
         fi
