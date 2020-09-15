@@ -21,8 +21,7 @@
 
 //_________________________________________________________________________
 class AnalysisCut : public TNamed
-{
- public:
+{public:
   AnalysisCut();
   AnalysisCut(const char* name, const char* title);
   AnalysisCut(const AnalysisCut& c);
