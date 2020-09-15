@@ -65,7 +65,7 @@ jobs:
         fi
 
     - name: pull-request
-      uses: repo-sync/pull-request@v2
+      uses: ktf/pull-request@master
       with:
         source_branch: 'ktf:alibot-cleanup-${{ github.event.pull_request.number }}'
         destination_branch: '${{ github.event.pull_request.user.login }}:${{ github.event.pull_request.head.ref }}'
