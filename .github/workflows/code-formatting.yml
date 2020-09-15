@@ -67,7 +67,7 @@ jobs:
     - name: pull-request
       uses: repo-sync/pull-request@v2
       with:
-        source_branch: 'alibot-cleanup-${{ github.event.pull_request.number }}'
+        source_branch: 'ktf:alibot-cleanup-${{ github.event.pull_request.number }}'
         destination_branch: '${{ github.event.pull_request.user.login }}:${{ github.event.pull_request.head.ref }}'
         github_token: ${{ secrets.GITHUB_TOKEN }}
         pr_title: "Please consider the following formatting changes to #${{ github.event.pull_request.number }}"
