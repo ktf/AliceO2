@@ -19,9 +19,7 @@
 #include "HeaderStack.h"
 
 namespace o2
-{
-
-namespace algorithm
+{namespace algorithm
 {
 
 /**
