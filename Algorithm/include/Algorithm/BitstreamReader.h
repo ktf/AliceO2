@@ -19,10 +19,7 @@
 #include <type_traits>
 #include <bitset>
 
-namespace o2
-{
-namespace algorithm
-{
+namespace o2{namespace algorithm{
 
 /// @class BitStreamReader
 /// @brief Utility class to provide bitstream access to an underlying resource
