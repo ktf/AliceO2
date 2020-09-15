@@ -23,10 +23,7 @@
 #include "Headers/DataHeader.h" // for o2::header::get
 
 namespace o2
-{
-
-namespace algorithm
-{
+{namespace algorithm{
 
 /**
  * Generic utility for the O2 header stack, redirect to header specific callbacks
