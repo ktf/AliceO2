@@ -19,9 +19,7 @@
 #include <type_traits>
 
 namespace o2::algorithm
-{
-namespace flatten
-{
+{namespace flatten{
 
 /// Calculate cumulative value size of a variable number of arguments
 /// The function takes parameters by reference and calculates the memory size of
