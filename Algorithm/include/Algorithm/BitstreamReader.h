@@ -21,7 +21,8 @@
 
 namespace o2
 {
-namespace algorithm{
+namespace algorithm
+{
 
 /// @class BitStreamReader
 /// @brief Utility class to provide bitstream access to an underlying resource
