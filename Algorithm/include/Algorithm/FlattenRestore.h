@@ -18,7 +18,9 @@
 
 #include <type_traits>
 
-namespace o2::algorithm{namespace flatten
+namespace o2::algorithm
+{
+namespace flatten
 {
 
 /// Calculate cumulative value size of a variable number of arguments
