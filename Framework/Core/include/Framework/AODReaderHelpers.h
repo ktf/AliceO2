@@ -17,7 +17,8 @@
 #include <uv.h>
 
 namespace o2
-{namespace framework
+{
+namespace framework
 {
 namespace readers
 {
