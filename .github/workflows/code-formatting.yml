@@ -23,7 +23,7 @@ jobs:
         # We create a new branch which we will use for the eventual PR.
         git config --global user.email "alibuild@cern.ch"
         git config --global user.name "ALICE Action Bot"
-        #git checkout -b alibot-cleanup-${{ github.event.pull_request.number }}
+        git checkout -b alibot-cleanup-${{ github.event.pull_request.number }} ${{ github.event.pull_request.head.sha }}
 
         BASE_COMMIT=${{ github.event.pull_request.base.sha }}
         echo "Running clang-format-8 against branch ${{ github.event.pull_request.base.ref }} , with hash ${{ github.event.pull_request.base.sha }}"
@@ -61,25 +61,24 @@ jobs:
           git commit -m "Please consider the following formatting changes" -a
           git show | cat
           git push --set-upstream origin HEAD:refs/heads/alibot-cleanup-${{ github.event.pull_request.number }} -f
-          git reset --hard "${{ github.event.pull_request.head.sha }}"
           echo ::set-output name=clean::false
         fi
 
-#    - name: pull-request
-#      uses: repo-sync/pull-request@v2
-#      with:
-#        destination_branch: 'alibot-cleanup-${{ github.event.pull_request.number }}'
-#        source_branch: "${{ github.event.pull_request.user.login }}:${{ github.event.pull_request.head.ref }}"
-#        github_token: ${{ secrets.GITHUB_TOKEN }}
-#        pr_title: "Please consider the following formatting changes to #${{ github.event.pull_request.number }}"
-#        pr_body: "Please consider the following formatting changes"
-#      continue-on-error: true # We do not create PRs if the branch is not there.
-
-    - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v3
+    - name: pull-request
+      uses: repo-sync/pull-request@v2
       with:
-        base: "${{ github.event.pull_request.head.ref }}"
-        branch: "alibot-cleanup-${{ github.event.pull_request.number}}"
+        destination_branch: 'alibot-cleanup-${{ github.event.pull_request.number }}'
+        source_branch: '${{ github.event.pull_request.user.login }}:${{ github.event.pull_request.head.ref }}'
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        pr_title: "Please consider the following formatting changes to #${{ github.event.pull_request.number }}"
+        pr_body: "Please consider the following formatting changes"
+      continue-on-error: true # We do not create PRs if the branch is not there.
+
+#    - name: Create Pull Request
+#      uses: peter-evans/create-pull-request@v3
+#      with:
+#        base: "${{ github.event.pull_request.head.ref }}"
+#        branch: "alibot-cleanup-${{ github.event.pull_request.number}}"
 
     - name: Exit with error if the PR is not clean
       run: |
