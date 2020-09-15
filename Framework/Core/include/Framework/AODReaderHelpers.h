@@ -16,7 +16,9 @@
 #include "Framework/Logger.h"
 #include <uv.h>
 
-namespace o2::framework::readers{struct RuntimeWatchdog {
+namespace o2::framework::readers
+{
+struct RuntimeWatchdog {
   int numberTimeFrames;
   uint64_t startTime;
   uint64_t lastTime;
