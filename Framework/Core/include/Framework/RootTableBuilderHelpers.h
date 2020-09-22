@@ -56,7 +56,7 @@ struct TreeReaderValueTraits<TTreeReaderArray<VALUE>> {
   using ArrowType = arrow::ListType;
 };
 
-static constexpr int PREBUFFER_SIZE = 32*1024;
+static constexpr int PREBUFFER_SIZE = 32 * 1024;
 
 template <typename T>
 struct ReaderHolder {
