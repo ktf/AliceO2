@@ -12,9 +12,9 @@
 
 #include "Framework/DispatchControl.h"
 #include "Framework/FairMQDeviceProxy.h"
+#include "Framework/RuntimeError.h"
 #include "Framework/TMessageSerializer.h"
 #include "Framework/TypeTraits.h"
-#include "Framework/RuntimeError.h"
 #include "Headers/DataHeader.h"
 #include "MemoryResources/MemoryResources.h"
 
