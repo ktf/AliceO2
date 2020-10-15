@@ -95,7 +95,7 @@ DataProcessingDevice::DataProcessingDevice(DeviceSpec const& spec, ServiceRegist
 {
   /// FIXME: move erro handling to a service?
   if (mError != nullptr) {
-    mErrorHandling = [&errorCallback = mError,
+    mErrorHandling = [& errorCallback = mError,
                       &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
       ZoneScopedN("Error handling");
       auto& err = error_from_ref(e);
@@ -106,7 +106,7 @@ DataProcessingDevice::DataProcessingDevice(DeviceSpec const& spec, ServiceRegist
       errorCallback(errorContext);
     };
   } else {
-    mErrorHandling = [&errorPolicy = mErrorPolicy,
+    mErrorHandling = [& errorPolicy = mErrorPolicy,
                       &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
       ZoneScopedN("Error handling");
       auto& err = error_from_ref(e);
