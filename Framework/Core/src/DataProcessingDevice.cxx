@@ -637,7 +637,7 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts
   // and we do a few stats. We bind parts as a lambda captured variable, rather
   // than an input, because we do not want the outer loop actually be exposed
   // to the implementation details of the messaging layer.
-  auto getInputTypes = [&stats = context.registry->get<DataProcessingStats>(),
+  auto getInputTypes = [& stats = context.registry->get<DataProcessingStats>(),
                         &parts, &info, &context]() -> std::optional<std::vector<InputType>> {
     stats.inputParts = parts.Size();
 
