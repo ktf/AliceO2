@@ -504,7 +504,7 @@ void DataProcessingDevice::doPrepare(DataProcessorContext& context)
     // FIXME: this is definitely not what we want, but
     // it should get the analysis working.
     if (info.state == InputChannelState::Completed) {
-  	  *context.wasActive = true;
+      *context.wasActive = true;
     }
 
     if (info.state != InputChannelState::Completed && info.state != InputChannelState::Pull) {
