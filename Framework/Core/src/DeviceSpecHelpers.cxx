@@ -1098,27 +1098,27 @@ boost::program_options::options_description DeviceSpecHelpers::getForwardedDevic
   // - rate is an option of FairMQ device for ConditionalRun
   // - child-driver is not a FairMQ device option but used per device to start to process
   bpo::options_description forwardedDeviceOptions;
-  forwardedDeviceOptions.add_options()                                                                                     //
-    ("severity", bpo::value<std::string>()->default_value("info"), "severity level of the log")                            //
-    ("plugin,P", bpo::value<std::string>(), "FairMQ plugin list")                                                          //
-    ("plugin-search-path,S", bpo::value<std::string>(), "FairMQ plugins search path")                                      //
-    ("control-port", bpo::value<std::string>(), "Utility port to be used by O2 Control")                                   //
-    ("rate", bpo::value<std::string>(), "rate for a data source device (Hz)")                                              //
-    ("shm-monitor", bpo::value<std::string>(), "whether to use the shared memory monitor")                                 //
+  forwardedDeviceOptions.add_options()                                                                                                        //
+    ("severity", bpo::value<std::string>()->default_value("info"), "severity level of the log")                                               //
+    ("plugin,P", bpo::value<std::string>(), "FairMQ plugin list")                                                                             //
+    ("plugin-search-path,S", bpo::value<std::string>(), "FairMQ plugins search path")                                                         //
+    ("control-port", bpo::value<std::string>(), "Utility port to be used by O2 Control")                                                      //
+    ("rate", bpo::value<std::string>(), "rate for a data source device (Hz)")                                                                 //
+    ("shm-monitor", bpo::value<std::string>(), "whether to use the shared memory monitor")                                                    //
     ("channel-prefix", bpo::value<std::string>()->default_value(""), "prefix to use for multiplexing multiple workflows in the same session") //
-    ("shm-segment-size", bpo::value<std::string>(), "size of the shared memory segment in bytes")                          //
-    ("shm-mlock-segment", bpo::value<std::string>()->default_value("false"), "mlock shared memory segment")                //
-    ("shm-zero-segment", bpo::value<std::string>()->default_value("false"), "zero shared memory segment")                  //
-    ("shm-throw-bad-alloc", bpo::value<std::string>()->default_value("true"), "throw if insufficient shm memory")          //
-    ("shm-segment-id", bpo::value<std::string>()->default_value("0"), "shm segment id")                                    //
-    ("environment", bpo::value<std::string>(), "comma separated list of environment variables to set for the device")      //
-    ("post-fork-command", bpo::value<std::string>(), "post fork command to execute (e.g. numactl {pid}")                   //
-    ("session", bpo::value<std::string>(), "unique label for the shared memory session")                                   //
-    ("configuration,cfg", bpo::value<std::string>(), "configuration connection string")                                    //
-    ("monitoring-backend", bpo::value<std::string>(), "monitoring connection string")                                      //
-    ("infologger-mode", bpo::value<std::string>(), "INFOLOGGER_MODE override")                                             //
-    ("infologger-severity", bpo::value<std::string>(), "minimun FairLogger severity which goes to info logger")            //
-    ("child-driver", bpo::value<std::string>(), "external driver to start childs with (e.g. valgrind)");                   //
+    ("shm-segment-size", bpo::value<std::string>(), "size of the shared memory segment in bytes")                                             //
+    ("shm-mlock-segment", bpo::value<std::string>()->default_value("false"), "mlock shared memory segment")                                   //
+    ("shm-zero-segment", bpo::value<std::string>()->default_value("false"), "zero shared memory segment")                                     //
+    ("shm-throw-bad-alloc", bpo::value<std::string>()->default_value("true"), "throw if insufficient shm memory")                             //
+    ("shm-segment-id", bpo::value<std::string>()->default_value("0"), "shm segment id")                                                       //
+    ("environment", bpo::value<std::string>(), "comma separated list of environment variables to set for the device")                         //
+    ("post-fork-command", bpo::value<std::string>(), "post fork command to execute (e.g. numactl {pid}")                                      //
+    ("session", bpo::value<std::string>(), "unique label for the shared memory session")                                                      //
+    ("configuration,cfg", bpo::value<std::string>(), "configuration connection string")                                                       //
+    ("monitoring-backend", bpo::value<std::string>(), "monitoring connection string")                                                         //
+    ("infologger-mode", bpo::value<std::string>(), "INFOLOGGER_MODE override")                                                                //
+    ("infologger-severity", bpo::value<std::string>(), "minimun FairLogger severity which goes to info logger")                               //
+    ("child-driver", bpo::value<std::string>(), "external driver to start childs with (e.g. valgrind)");                                      //
 
   return forwardedDeviceOptions;
 }
