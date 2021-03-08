@@ -110,39 +110,39 @@ std::string Variant::asString() const
 }
 
 Variant::Variant(const Variant& other) : mType(other.mType)
-  {
-    // In case this is an array we need to duplicate it to avoid
-    // double deletion.
-    switch (mType) {
-      case variant_trait_v<const char*>:
-        mSize = other.mSize;
-        variant_helper<storage_t, const char*>::set(&mStore, other.get<const char*>());
-        return;
-      case variant_trait_v<int*>:
-        mSize = other.mSize;
-        variant_helper<storage_t, int*>::set(&mStore, other.get<int*>(), mSize);
-        return;
-      case variant_trait_v<float*>:
-        mSize = other.mSize;
-        variant_helper<storage_t, float*>::set(&mStore, other.get<float*>(), mSize);
-        return;
-      case variant_trait_v<double*>:
-        mSize = other.mSize;
-        variant_helper<storage_t, double*>::set(&mStore, other.get<double*>(), mSize);
-        return;
-      case variant_trait_v<bool*>:
-        mSize = other.mSize;
-        variant_helper<storage_t, bool*>::set(&mStore, other.get<bool*>(), mSize);
-        return;
-      case variant_trait_v<std::string*>:
-        mSize = other.mSize;
-        variant_helper<storage_t, std::string*>::set(&mStore, other.get<std::string*>(), mSize);
-        return;
-      default:
-        mStore = other.mStore;
-        mSize = other.mSize;
-    }
+{
+  // In case this is an array we need to duplicate it to avoid
+  // double deletion.
+  switch (mType) {
+    case variant_trait_v<const char*>:
+      mSize = other.mSize;
+      variant_helper<storage_t, const char*>::set(&mStore, other.get<const char*>());
+      return;
+    case variant_trait_v<int*>:
+      mSize = other.mSize;
+      variant_helper<storage_t, int*>::set(&mStore, other.get<int*>(), mSize);
+      return;
+    case variant_trait_v<float*>:
+      mSize = other.mSize;
+      variant_helper<storage_t, float*>::set(&mStore, other.get<float*>(), mSize);
+      return;
+    case variant_trait_v<double*>:
+      mSize = other.mSize;
+      variant_helper<storage_t, double*>::set(&mStore, other.get<double*>(), mSize);
+      return;
+    case variant_trait_v<bool*>:
+      mSize = other.mSize;
+      variant_helper<storage_t, bool*>::set(&mStore, other.get<bool*>(), mSize);
+      return;
+    case variant_trait_v<std::string*>:
+      mSize = other.mSize;
+      variant_helper<storage_t, std::string*>::set(&mStore, other.get<std::string*>(), mSize);
+      return;
+    default:
+      mStore = other.mStore;
+      mSize = other.mSize;
   }
+}
 
 Variant::Variant(Variant&& other) : mType(other.mType)
 {
@@ -254,6 +254,5 @@ Variant& Variant::operator=(Variant&& other)
       return *this;
   }
 }
-
 
 } // namespace o2::framework
