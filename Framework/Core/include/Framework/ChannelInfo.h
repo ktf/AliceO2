@@ -34,7 +34,7 @@ enum struct InputChannelState {
 struct InputChannelInfo {
   InputChannelState state = InputChannelState::Running;
   uint32_t hasPendingEvents = 0;
-  FairMQChannel *channel = nullptr;
+  FairMQChannel* channel = nullptr;
 };
 
 } // namespace o2::framework
