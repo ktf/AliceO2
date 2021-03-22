@@ -664,7 +664,7 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
   // to the implementation details of the messaging layer.
   auto getInputTypes = [&stats = context.registry->get<DataProcessingStats>(),
                         &info, &context]() -> std::optional<std::vector<InputType>> {
-    auto &parts = info.parts;
+    auto& parts = info.parts;
     stats.inputParts = parts.Size();
 
     TracyPlot("messages received", (int64_t)parts.Size());
