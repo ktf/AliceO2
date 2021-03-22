@@ -526,7 +526,7 @@ void DataProcessingDevice::doPrepare(DataProcessorContext& context)
     if (info.hasPendingEvents == 0) {
       socket.Events(&info.hasPendingEvents);
       // If we do not read, we can continue.
-      if ((info.hasPendingEvents & 1) == 0) {
+      if ((info.hasPendingEvents & 1) == 0 && (info.parts.Size() == 0)) {
         continue;
       }
     }
@@ -538,11 +538,15 @@ void DataProcessingDevice::doPrepare(DataProcessorContext& context)
     // we get a message. In order not to overflow the DPL queue we process
     // one message at the time and we keep track of wether there were more
     // to process.
+    bool newMessages = false;
     while (true) {
-      FairMQParts parts;
-      result = info.channel->Receive(parts, 0);
+      int result = info.parts.Size();
+      if (result == 0) {
+        result = info.channel->Receive(info.parts, 0);
+        newMessages = true;
+      }
       if (result >= 0) {
-        DataProcessingDevice::handleData(context, parts, info);
+        DataProcessingDevice::handleData(context, info);
         // Receiving data counts as activity now, so that
         // We can make sure we process all the pending
         // messages without hanging on the uv_run.
@@ -555,7 +559,7 @@ void DataProcessingDevice::doPrepare(DataProcessorContext& context)
     // if more events are pending due to zeromq level triggered approach.
     socket.Events(&info.hasPendingEvents);
     if (info.hasPendingEvents) {
-      *context.wasActive |= true;
+      *context.wasActive |= newMessages;
     }
   }
 }
@@ -626,15 +630,23 @@ void DataProcessingDevice::ResetTask()
   mRelayer->clear();
 }
 
+struct WaitBackpressurePolicy {
+  void backpressure(InputChannelInfo const& info)
+  {
+    // FIXME: fill metrics rather than log.
+    LOGP(WARN, "Backpressure on channel {}. Waiting.", info.channel->GetName());
+  }
+};
+
 /// This is the inner loop of our framework. The actual implementation
 /// is divided in two parts. In the first one we define a set of lambdas
 /// which describe what is actually going to happen, hiding all the state
 /// boilerplate which the user does not need to care about at top level.
-void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts& parts, InputChannelInfo& info)
+void DataProcessingDevice::handleData(DataProcessorContext& context, InputChannelInfo& info)
 {
   ZoneScopedN("DataProcessingDevice::handleData");
   assert(context.spec->inputChannels.empty() == false);
-  assert(parts.Size() > 0);
+  assert(info.parts.Size() > 0);
 
   // Initial part. Let's hide all the unnecessary and have
   // simple lambdas for each of the steps I am planning to have.
@@ -651,7 +663,8 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts
   // than an input, because we do not want the outer loop actually be exposed
   // to the implementation details of the messaging layer.
   auto getInputTypes = [&stats = context.registry->get<DataProcessingStats>(),
-                        &parts, &info, &context]() -> std::optional<std::vector<InputType>> {
+                        &info, &context]() -> std::optional<std::vector<InputType>> {
+    auto &parts = info.parts;
     stats.inputParts = parts.Size();
 
     TracyPlot("messages received", (int64_t)parts.Size());
@@ -697,19 +710,26 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts
     registry.get<DataProcessingStats>().errorCount++;
   };
 
-  auto handleValidMessages = [&parts, &context = context, &relayer = *context.relayer, &reportError](std::vector<InputType> const& types) {
+  auto handleValidMessages = [&info, &context = context, &relayer = *context.relayer, &reportError](std::vector<InputType> const& types) {
+    static WaitBackpressurePolicy policy;
     // We relay execution to make sure we have a complete set of parts
     // available.
-    for (size_t pi = 0; pi < (parts.Size() / 2); ++pi) {
+    for (size_t pi = 0; pi < (info.parts.Size() / 2); ++pi) {
       switch (types[pi]) {
         case InputType::Data: {
           auto headerIndex = 2 * pi;
           auto payloadIndex = 2 * pi + 1;
           assert(payloadIndex < parts.Size());
-          auto relayed = relayer.relay(std::move(parts.At(headerIndex)),
-                                       std::move(parts.At(payloadIndex)));
-          if (relayed == DataRelayer::WillNotRelay) {
-            reportError("Unable to relay part.");
+          auto relayed = relayer.relay(info.parts.At(headerIndex),
+                                       info.parts.At(payloadIndex));
+          switch (relayed) {
+            case DataRelayer::Backpressured:
+              policy.backpressure(info);
+              break;
+            case DataRelayer::Dropped:
+            case DataRelayer::Invalid:
+            case DataRelayer::WillRelay:
+              break;
           }
         } break;
         case InputType::SourceInfo: {
@@ -721,6 +741,9 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts
         } break;
       }
     }
+    auto it = std::remove_if(info.parts.begin(), info.parts.end(), [](auto& msg) -> bool { return msg.get() == nullptr; });
+    auto r = std::distance(it, info.parts.end());
+    info.parts.fParts.erase(it, info.parts.end());
   };
 
   // Second part. This is the actual outer loop we want to obtain, with

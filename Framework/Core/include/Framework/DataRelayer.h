@@ -49,8 +49,10 @@ class DataRelayer
   /// methods need to be called.
   constexpr static ServiceKind service_kind = ServiceKind::Global;
   enum RelayChoice {
-    WillRelay,
-    WillNotRelay
+    WillRelay,     /// Ownership of the data has been taken
+    Invalid,       /// The incoming data was not valid and has been dropped
+    Backpressured, /// The incoming data was not relayed, because we are backpressured
+    Dropped        /// The incoming data was not relayed and has been dropped
   };
 
   struct ActivityStats {
@@ -78,8 +80,8 @@ class DataRelayer
   /// This is used to ask for relaying a given (header,payload) pair.
   /// Notice that we expect that the header is an O2 Header Stack
   /// with a DataProcessingHeader inside so that we can assess time.
-  RelayChoice relay(std::unique_ptr<FairMQMessage>&& header,
-                    std::unique_ptr<FairMQMessage>&& payload);
+  RelayChoice relay(std::unique_ptr<FairMQMessage>& header,
+                    std::unique_ptr<FairMQMessage>& payload);
 
   /// @returns the actions ready to be performed.
   void getReadyToProcess(std::vector<RecordAction>& completed);

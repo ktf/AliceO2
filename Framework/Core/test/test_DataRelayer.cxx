@@ -60,12 +60,14 @@ BOOST_AUTO_TEST_CASE(TestNoWait)
   FairMQMessagePtr header = transport->CreateMessage(stack.size());
   FairMQMessagePtr payload = transport->CreateMessage(1000);
   memcpy(header->GetData(), stack.data(), stack.size());
-  relayer.relay(std::move(header), std::move(payload));
+  relayer.relay(header, payload);
   std::vector<RecordAction> ready;
   relayer.getReadyToProcess(ready);
   BOOST_REQUIRE_EQUAL(ready.size(), 1);
   BOOST_CHECK_EQUAL(ready[0].slot.index, 0);
   BOOST_CHECK_EQUAL(ready[0].op, CompletionPolicy::CompletionOp::Consume);
+  BOOST_CHECK_EQUAL(header.get(), nullptr);
+  BOOST_CHECK_EQUAL(payload.get(), nullptr);
   auto result = relayer.getInputsForTimeslice(ready[0].slot);
   // one MessageSet with one PartRef with header and payload
   BOOST_REQUIRE_EQUAL(result.size(), 1);
@@ -101,12 +103,14 @@ BOOST_AUTO_TEST_CASE(TestNoWaitMatcher)
   FairMQMessagePtr header = transport->CreateMessage(stack.size());
   FairMQMessagePtr payload = transport->CreateMessage(1000);
   memcpy(header->GetData(), stack.data(), stack.size());
-  relayer.relay(std::move(header), std::move(payload));
+  relayer.relay(header, payload);
   std::vector<RecordAction> ready;
   relayer.getReadyToProcess(ready);
   BOOST_REQUIRE_EQUAL(ready.size(), 1);
   BOOST_CHECK_EQUAL(ready[0].slot.index, 0);
   BOOST_CHECK_EQUAL(ready[0].op, CompletionPolicy::CompletionOp::Consume);
+  BOOST_CHECK_EQUAL(header.get(), nullptr);
+  BOOST_CHECK_EQUAL(payload.get(), nullptr);
   auto result = relayer.getInputsForTimeslice(ready[0].slot);
   // one MessageSet with one PartRef with header and payload
   BOOST_REQUIRE_EQUAL(result.size(), 1);
@@ -149,7 +153,9 @@ BOOST_AUTO_TEST_CASE(TestRelay)
     FairMQMessagePtr header = transport->CreateMessage(stack.size());
     FairMQMessagePtr payload = transport->CreateMessage(1000);
     memcpy(header->GetData(), stack.data(), stack.size());
-    relayer.relay(std::move(header), std::move(payload));
+    relayer.relay(header, payload);
+    BOOST_CHECK_EQUAL(header.get(), nullptr);
+    BOOST_CHECK_EQUAL(payload.get(), nullptr);
   };
 
   // Let's create a dummy O2 Message with two headers in the stack:
@@ -220,7 +226,9 @@ BOOST_AUTO_TEST_CASE(TestRelayBug)
     FairMQMessagePtr header = transport->CreateMessage(stack.size());
     FairMQMessagePtr payload = transport->CreateMessage(1000);
     memcpy(header->GetData(), stack.data(), stack.size());
-    relayer.relay(std::move(header), std::move(payload));
+    relayer.relay(header, payload);
+    BOOST_CHECK_EQUAL(header.get(), nullptr);
+    BOOST_CHECK_EQUAL(payload.get(), nullptr);
   };
 
   // Let's create a dummy O2 Message with two headers in the stack:
@@ -298,7 +306,7 @@ BOOST_AUTO_TEST_CASE(TestCache)
     FairMQMessagePtr header = transport->CreateMessage(stack.size());
     FairMQMessagePtr payload = transport->CreateMessage(1000);
     memcpy(header->GetData(), stack.data(), stack.size());
-    relayer.relay(std::move(header), std::move(payload));
+    relayer.relay(header, payload);
     assert(header.get() == nullptr);
     assert(payload.get() == nullptr);
   };
@@ -371,7 +379,7 @@ BOOST_AUTO_TEST_CASE(TestPolicies)
     FairMQMessagePtr header = transport->CreateMessage(stack.size());
     FairMQMessagePtr payload = transport->CreateMessage(1000);
     memcpy(header->GetData(), stack.data(), stack.size());
-    return relayer.relay(std::move(header), std::move(payload));
+    return relayer.relay(header, payload);
   };
 
   // This fills the cache, and then empties it.
@@ -435,7 +443,7 @@ BOOST_AUTO_TEST_CASE(TestClear)
     FairMQMessagePtr header = transport->CreateMessage(stack.size());
     FairMQMessagePtr payload = transport->CreateMessage(1000);
     memcpy(header->GetData(), stack.data(), stack.size());
-    return relayer.relay(std::move(header), std::move(payload));
+    return relayer.relay(header, payload);
   };
 
   // This fills the cache, and then empties it.
@@ -446,4 +454,55 @@ BOOST_AUTO_TEST_CASE(TestClear)
   std::vector<RecordAction> ready;
   relayer.getReadyToProcess(ready);
   BOOST_REQUIRE_EQUAL(ready.size(), 0);
+}
+
+/// Test that the clear method actually works.
+BOOST_AUTO_TEST_CASE(TestTooMany)
+{
+  Monitoring metrics;
+  InputSpec spec1{"clusters", "TPC", "CLUSTERS"};
+  InputSpec spec2{"tracks", "TPC", "TRACKS"};
+
+  std::vector<InputRoute> inputs = {
+    InputRoute{spec1, 0, "Fake1", 0},
+    InputRoute{spec2, 1, "Fake2", 0},
+  };
+
+  std::vector<ForwardRoute> forwards;
+  TimesliceIndex index;
+
+  auto policy = CompletionPolicyHelpers::processWhenAny();
+  DataRelayer relayer(policy, inputs, metrics, index);
+  // Only two messages to fill the cache.
+  relayer.setPipelineLength(1);
+
+  // Let's create a dummy O2 Message with two headers in the stack:
+  // - DataHeader matching the one provided in the input
+  DataHeader dh1;
+  dh1.dataDescription = "CLUSTERS";
+  dh1.dataOrigin = "TPC";
+  dh1.subSpecification = 0;
+
+  DataHeader dh2;
+  dh2.dataDescription = "TRACKS";
+  dh2.dataOrigin = "TPC";
+  dh2.subSpecification = 0;
+
+  auto transport = FairMQTransportFactory::CreateTransportFactory("zeromq");
+
+  Stack s1{dh1, DataProcessingHeader{0, 1}};
+  FairMQMessagePtr header = transport->CreateMessage(s1.size());
+  FairMQMessagePtr payload = transport->CreateMessage(1000);
+  memcpy(header->GetData(), s1.data(), s1.size());
+  relayer.relay(header, payload);
+  BOOST_CHECK_EQUAL(header.get(), nullptr);
+  BOOST_CHECK_EQUAL(payload.get(), nullptr);
+  // This fills the cache, and then empties it.
+  Stack s2{dh1, DataProcessingHeader{1, 1}};
+  FairMQMessagePtr header2 = transport->CreateMessage(s2.size());
+  FairMQMessagePtr payload2 = transport->CreateMessage(1000);
+  memcpy(header2->GetData(), s2.data(), s2.size());
+  relayer.relay(header2, payload2);
+  BOOST_CHECK_EQUAL(header2.get(), nullptr);
+  BOOST_CHECK_EQUAL(payload2.get(), nullptr);
 }

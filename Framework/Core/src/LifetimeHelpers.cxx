@@ -106,6 +106,7 @@ ExpirationHandler::Creator LifetimeHelpers::timeDrivenCreation(std::chrono::micr
         break;
       case TimesliceIndex::ActionTaken::DropInvalid:
       case TimesliceIndex::ActionTaken::DropObsolete:
+      case TimesliceIndex::ActionTaken::Wait:
         break;
     }
     return slot;

@@ -31,13 +31,6 @@ void customize(std::vector<ConfigParamSpec>& options)
   options.push_back(ConfigParamSpec{"aBool", VariantType::Bool, true, {"a boolean option"}});
 }
 
-// This completion policy will only be applied to the device called `D` and
-// will process an InputRecord which had any of its constituent updated.
-void customize(std::vector<CompletionPolicy>& policies)
-{
-  policies.push_back(CompletionPolicyHelpers::defineByName("D", CompletionPolicy::CompletionOp::Process));
-}
-
 #include "Framework/runDataProcessing.h"
 
 AlgorithmSpec simplePipe(std::string const& what, int minDelay)
@@ -45,7 +38,7 @@ AlgorithmSpec simplePipe(std::string const& what, int minDelay)
   return AlgorithmSpec{adaptStateful([what, minDelay]() {
     srand(getpid());
     return adaptStateless([what, minDelay](DataAllocator& outputs, RawDeviceService& device) {
-      device.device()->WaitFor(std::chrono::seconds(rand() % 2));
+      device.device()->WaitFor(std::chrono::seconds(minDelay));
       auto& bData = outputs.make<int>(OutputRef{what}, 1);
     });
   })};
@@ -70,7 +63,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
     {"B",
      {InputSpec{"x", "TST", "A1", Lifetime::Timeframe, {ConfigParamSpec{"somestring", VariantType::String, "", {"Some input param"}}}}},
      {OutputSpec{{"b1"}, "TST", "B1"}},
-     simplePipe("b1", 0)},
+     simplePipe("b1", 1)},
     {"C",
      Inputs{InputSpec{"x", "TST", "A2"}},
      Outputs{OutputSpec{{"c1"}, "TST", "C1"}},
@@ -81,5 +74,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
        InputSpec{"c", "TST", "C1"},
      },
      Outputs{},
-     AlgorithmSpec{adaptStateless([]() {})}}};
+     AlgorithmSpec{adaptStateless([](InputRecord& inputs) {
+       auto ref = inputs.get("b");
+       auto header = o2::header::get<const DataProcessingHeader*>(ref.header);
+       LOG(INFO) << header->startTime;
+     })}}};
 }
