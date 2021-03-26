@@ -2080,7 +2080,9 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   std::vector<DataProcessorInfo> dataProcessorInfos;
   if (isatty(STDIN_FILENO) == false) {
     std::vector<DataProcessorSpec> importedWorkflow;
-    WorkflowSerializationHelpers::import(std::cin, importedWorkflow, dataProcessorInfos);
+    if (std::cin.rdbuf()->in_avail()) {
+      WorkflowSerializationHelpers::import(std::cin, importedWorkflow, dataProcessorInfos);
+    }
 
     size_t workflowHashB = 0;
     for (auto& dp : importedWorkflow) {
