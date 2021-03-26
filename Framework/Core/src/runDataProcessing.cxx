@@ -2090,7 +2090,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
     if (std::cin.rdbuf()->in_avail()) {
       WorkflowSerializationHelpers::import(std::cin, importedWorkflow, dataProcessorInfos, commandInfo);
     }
-    
+
     size_t workflowHashB = 0;
     for (auto& dp : importedWorkflow) {
       workflowHashB += hash_fn(dp.name);
