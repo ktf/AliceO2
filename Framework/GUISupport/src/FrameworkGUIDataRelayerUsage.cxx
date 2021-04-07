@@ -144,8 +144,7 @@ void displayDataRelayer(DeviceMetricsInfo const& metrics,
       assert(metricInfo.storeIdx < metrics.stringMetrics.size());
       auto& data = metrics.stringMetrics[metricInfo.storeIdx];
       char const* value = data[(metricInfo.pos - 1) % data.size()].data;
-      if (strncmp("null", value, 4) == 0) 
-      {
+      if (strncmp("null", value, 4) == 0) {
         continue;
       }
       switch (vi) {
