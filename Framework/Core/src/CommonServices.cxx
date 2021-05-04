@@ -131,7 +131,7 @@ o2::framework::ServiceSpec CommonServices::datatakingContextSpec()
                        context.runNumber = services.get<RawDeviceService>().device()->fConfig->GetProperty<std::string>("runNumber", "unspecified");
                        // FIXME: we actually need to get the orbit, not only to know where it is
                        std::string orbitResetTimeUrl = services.get<RawDeviceService>().device()->fConfig->GetProperty<std::string>("orbit-reset-time", "ccdb://CTP/Calib/OrbitResetTime");
-                       auto is_number = [](const std::string &s) ->bool {
+                       auto is_number = [](const std::string& s) -> bool {
                          return !s.empty() && std::all_of(s.begin(), s.end(), ::isdigit);
                        };
 
