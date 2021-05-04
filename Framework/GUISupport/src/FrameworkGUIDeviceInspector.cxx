@@ -205,7 +205,7 @@ void displayDeviceInspector(DeviceSpec const& spec,
 #ifdef __APPLE__
     std::string defaultAppleDebugCommand =
       "osascript -e 'tell application \"Terminal\" to activate'"
-      " -e 'tell application \"Terminal\" to do script \"lldb -p \" & (system attribute \"O2DEBUGGEDPID\")'";
+      " -e 'tell application \"Terminal\" to do script \"lldb -p \" & (system attribute \"O2DEBUGGEDPID\") & \"; exit\"'";
     setenv("O2DPLDEBUG", defaultAppleDebugCommand.c_str(), 0);
 #else
     setenv("O2DPLDEBUG", "xterm -hold -e gdb attach $O2DEBUGGEDPID &", 0);
