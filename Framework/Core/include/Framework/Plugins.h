@@ -47,16 +47,16 @@ struct DPLPluginHandle {
   }                                                                                                      \
   }
 
-#define DEFINE_DPL_PLUGINS_BEGIN()                                                                       \
-  extern "C" {                                                                                           \
-  DPLPluginHandle* dpl_plugin_callback(DPLPluginHandle* previous)                                        \
-  {                                                                                                      
+#define DEFINE_DPL_PLUGINS_BEGIN()                                \
+  extern "C" {                                                    \
+  DPLPluginHandle* dpl_plugin_callback(DPLPluginHandle* previous) \
+  {
 
-#define DEFINE_DPL_PLUGIN_INSTANCE(NAME, KIND)                                                           \
-    previous = DPLPluginHandle{new NAME{}, strdup(#NAME), o2::framework::DplPluginKind::KIND, previous};
+#define DEFINE_DPL_PLUGIN_INSTANCE(NAME, KIND) \
+  previous = DPLPluginHandle{new NAME{}, strdup(#NAME), o2::framework::DplPluginKind::KIND, previous};
 
-#define DEFINE_DPL_PLUGINS_END()                                                                         \
-    return previous;                                                                                     \
+#define DEFINE_DPL_PLUGINS_END() \
+  return previous;               \
   }
 
 namespace o2::framework

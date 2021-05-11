@@ -178,7 +178,7 @@ struct ServiceExitHandle {
 };
 
 struct ServicePlugin {
-  virtual ServiceSpec *create() = 0;
+  virtual ServiceSpec* create() = 0;
 };
 
 } // namespace o2::framework
