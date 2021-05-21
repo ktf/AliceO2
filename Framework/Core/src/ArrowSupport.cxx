@@ -218,27 +218,29 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        now = uv_hrtime();
                        static RateLimitingState lastReportedState = RateLimitingState::UNKNOWN;
                        static uint64_t lastReportTime = 0;
-                       static int64_t availableSharedMemory = 2000;
+                       constexpr int64_t MAX_SHARED_MEMORY = 2000;
+                       constexpr int64_t QUANTUM_SHARED_MEMORY = 500;
+                       static int64_t availableSharedMemory = MAX_SHARED_MEMORY;
                        static int64_t offeredSharedMemory = 0;
                        static size_t lastDeviceOffered = 0;
                        /// We loop over the devices, starting from where we stopped last time
                        /// offering 1 GB of shared memory to each reader.
                        for (size_t di = 0; di < specs.size(); di++) {
-                         if (availableSharedMemory < 1000) {
+                         if (availableSharedMemory < QUANTUM_SHARED_MEMORY) {
                            break;
                          }
                          size_t candidate = (lastDeviceOffered + 1 + di) % specs.size();
                          if (specs[candidate].name != "internal-dpl-aod-reader") {
                            continue;
                          }
-                         LOG(info) << "Offering 1000MB to " << specs[candidate].id;
-                         manager.queueMessage(specs[candidate].id.c_str(), "/shm-offer 1000");
-                         availableSharedMemory -= 1000;
-                         offeredSharedMemory += 1000;
+                         LOGP(info, "Offering {}MB to {}", QUANTUM_SHARED_MEMORY, specs[candidate].id);
+                         manager.queueMessage(specs[candidate].id.c_str(), fmt::format("/shm-offer {}", MAX_SHARED_MEMORY).data());
+                         availableSharedMemory -= QUANTUM_SHARED_MEMORY;
+                         offeredSharedMemory += QUANTUM_SHARED_MEMORY;
                          lastDeviceOffered = candidate;
                        }
 
-                       availableSharedMemory = 2000 + totalBytesDestroyed / 1000000 - offeredSharedMemory;
+                       availableSharedMemory = MAX_SHARED_MEMORY + totalBytesDestroyed / 1000000 - offeredSharedMemory;
                      },
                      [](ProcessingContext& ctx, void* service) {
                        using DataHeader = o2::header::DataHeader;
