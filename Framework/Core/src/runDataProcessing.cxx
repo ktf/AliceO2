@@ -641,6 +641,20 @@ void ws_connect_callback(uv_stream_t* server, int status)
   }
 }
 
+struct StreamConfigContext {
+  std::string configuration;
+  int fd;
+};
+
+void stream_config(uv_work_t *req) {
+  StreamConfigContext *context = (StreamConfigContext*)req->data;
+  size_t result = write(context->fd, context->configuration.data(), context->configuration.size());
+  if (result != context->configuration.size()) {
+    LOG(ERROR) << "Unable to pass configuration to children";
+  }
+  close(context->fd); // Not allowing further communication...
+}
+
 /// This will start a new device by forking and executing a
 /// new child
 void spawnDevice(std::string const& forwardedStdin,
@@ -741,22 +755,26 @@ void spawnDevice(std::string const& forwardedStdin,
       service.postForkParent(serviceRegistry);
     }
   }
+  static bool once = false;
 
-  struct sigaction sa_handle_int;
-  sa_handle_int.sa_handler = handle_sigint;
-  sigemptyset(&sa_handle_int.sa_mask);
-  sa_handle_int.sa_flags = SA_RESTART;
-  if (sigaction(SIGINT, &sa_handle_int, nullptr) == -1) {
-    perror("Unable to install signal handler");
-    exit(1);
-  }
-  struct sigaction sa_handle_term;
-  sa_handle_term.sa_handler = handle_sigint;
-  sigemptyset(&sa_handle_term.sa_mask);
-  sa_handle_term.sa_flags = SA_RESTART;
-  if (sigaction(SIGTERM, &sa_handle_int, nullptr) == -1) {
-    perror("Unable to install signal handler");
-    exit(1);
+  if (once) {
+    struct sigaction sa_handle_int;
+    sa_handle_int.sa_handler = handle_sigint;
+    sigemptyset(&sa_handle_int.sa_mask);
+    sa_handle_int.sa_flags = SA_RESTART;
+    if (sigaction(SIGINT, &sa_handle_int, nullptr) == -1) {
+      perror("Unable to install signal handler");
+      exit(1);
+    }
+    struct sigaction sa_handle_term;
+    sa_handle_term.sa_handler = handle_sigint;
+    sigemptyset(&sa_handle_term.sa_mask);
+    sa_handle_term.sa_flags = SA_RESTART;
+    if (sigaction(SIGTERM, &sa_handle_int, nullptr) == -1) {
+      perror("Unable to install signal handler");
+      exit(1);
+    }
+    once = true;
   }
 
   LOG(INFO) << "Starting " << spec.id << " on pid " << id;
@@ -781,11 +799,11 @@ void spawnDevice(std::string const& forwardedStdin,
   close(childstdin[0]);
   close(childstdout[1]);
   close(childstderr[1]);
-  size_t result = write(childstdin[1], forwardedStdin.data(), forwardedStdin.size());
-  if (result != forwardedStdin.size()) {
-    LOG(ERROR) << "Unable to pass configuration to children";
-  }
-  close(childstdin[1]); // Not allowing further communication...
+
+  uv_work_t *req = (uv_work_t*)malloc(sizeof(uv_work_t));
+  req->data = new StreamConfigContext{forwardedStdin, childstdin[1]};
+  uv_queue_work(loop, req, stream_config, nullptr);
+  uv_run(loop, UV_RUN_ONCE);
 
   // Setting them to non-blocking to avoid haing the driver hang when
   // reading from child.
