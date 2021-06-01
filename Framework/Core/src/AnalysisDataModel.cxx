@@ -9,7 +9,8 @@
 // or submit itself to any jurisdiction.
 #include "Framework/AnalysisDataModel.h"
 
-namespace o2::soa {
+namespace o2::soa
+{
 template struct Join<aod::BCs, aod::Timestamps>;
 template struct Join<aod::Tracks, aod::TracksCov, aod::TracksExtra>;
 template struct Join<aod::FwdTracks, aod::FwdTracksCov>;
@@ -19,4 +20,4 @@ template struct Join<aod::Collisions, aod::Run2MatchedSparse>;
 template struct Join<aod::Collisions, aod::Run3MatchedSparse>;
 
 template struct Join<aod::TracksExtension, aod::StoredTracks>;
-}
+} // namespace o2::soa
