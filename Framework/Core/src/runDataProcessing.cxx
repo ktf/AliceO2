@@ -2264,7 +2264,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
     DataProcessorSpec const& a = workflow[i];
     // The output proxy is always last so that we
     // can do the forwarding.
-    if (a.name == "dpl-output-proxy" && i!=j) {
+    if (a.name == "dpl-output-proxy" && i != j) {
       return true;
     }
     DataProcessorSpec const& b = workflow[j];
