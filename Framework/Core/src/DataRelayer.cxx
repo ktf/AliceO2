@@ -197,6 +197,14 @@ DataRelayer::RelayChoice
   DataRelayer::relay(std::unique_ptr<FairMQMessage>&& header,
                      std::unique_ptr<FairMQMessage>&& payload)
 {
+  return relay(std::move(header), &payload, 1);
+}
+
+DataRelayer::RelayChoice
+  DataRelayer::relay(std::unique_ptr<FairMQMessage>&& header,
+                     std::unique_ptr<FairMQMessage>* payloads,
+                     size_t numPayloads)
+{
   std::scoped_lock<LockableBase(std::recursive_mutex)> lock(mMutex);
   // STATE HOLDING VARIABLES
   // This is the class level state of the relaying. If we start supporting
@@ -265,7 +273,8 @@ DataRelayer::RelayChoice
   // Actually save the header / payload in the slot
   auto saveInSlot = [&header,
                      &cachedStateMetrics = mCachedStateMetrics,
-                     &payload,
+                     &payloads,
+                     &numPayloads,
                      &cache,
                      &numInputTypes,
                      &metrics](TimesliceId timeslice, int input, TimesliceSlot slot) {
@@ -274,9 +283,13 @@ DataRelayer::RelayChoice
     cachedStateMetrics[cacheIdx] = CacheEntryStatus::PENDING;
     // TODO: make sure that multiple parts can only be added within the same call of
     // DataRelayer::relay
-    PartRef entry{std::move(header), std::move(payload)};
+    PartRef entry{std::move(header), std::move(payloads[0])};
     parts.emplace_back(std::move(entry));
-    assert(header.get() == nullptr && payload.get() == nullptr);
+    auto rest = payloads + 1;
+    for (size_t pi = 0; pi < numPayloads / 2; ++pi) {
+      PartRef entry{std::move(rest[pi * 2]), std::move(rest[pi * 2 + 1])};
+      parts.emplace_back(std::move(entry));
+    }
   };
 
   auto updateStatistics = [& stats = mStats](TimesliceIndex::ActionTaken action) {

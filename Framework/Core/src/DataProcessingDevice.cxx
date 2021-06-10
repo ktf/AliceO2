@@ -807,7 +807,12 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts
         LOGP(error, "Header stack does not contain DataProcessingHeader");
         continue;
       }
-      results[hi] = InputType::Data;
+      // We can set the type for the next splitPayloadParts
+      // because we are guaranteed they are all the same.
+      size_t finalSplitPayloadIndex = hi + dh->splitPayloadParts;
+      for (; hi < finalSplitPayloadIndex; ++hi) {
+        results[hi] = InputType::Data;
+      }
     }
     return results;
   };
@@ -825,8 +830,10 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, FairMQParts
           auto headerIndex = 2 * pi;
           auto payloadIndex = 2 * pi + 1;
           assert(payloadIndex < parts.Size());
+          auto dh = o2::header::get<DataHeader*>(parts.At(headerIndex)->GetData());
           auto relayed = relayer.relay(std::move(parts.At(headerIndex)),
-                                       std::move(parts.At(payloadIndex)));
+                                       &parts.At(payloadIndex), dh->splitPayloadParts - 1);
+          pi += dh->splitPayloadParts - 1;
           if (relayed == DataRelayer::WillNotRelay) {
             reportError("Unable to relay part.");
           }

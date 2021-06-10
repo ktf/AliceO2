@@ -83,6 +83,13 @@ class DataRelayer
   ActivityStats processDanglingInputs(std::vector<ExpirationHandler> const&,
                                       ServiceRegistry& context, bool createNew);
 
+  /// This is to relay a whole span on FairMQMessages, where the first message
+  /// is the header which is common across all subsequent elements.
+  /// Notice that we expect that the header is an O2 Header Stack
+  RelayChoice relay(std::unique_ptr<FairMQMessage>&& header,
+                    std::unique_ptr<FairMQMessage>* payloads,
+                    size_t size);
+
   /// This is used to ask for relaying a given (header,payload) pair.
   /// Notice that we expect that the header is an O2 Header Stack
   /// with a DataProcessingHeader inside so that we can assess time.
