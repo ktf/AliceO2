@@ -288,7 +288,6 @@ static void BM_RelaySplitParts(benchmark::State& state)
       memcpy(header1->GetData(), stack1.data(), stack1.size());
       splitParts.emplace_back(std::move(header1));
       splitParts.emplace_back(std::move(payload1));
-
     }
     state.ResumeTiming();
 
