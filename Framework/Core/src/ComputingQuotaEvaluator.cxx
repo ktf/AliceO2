@@ -156,11 +156,14 @@ void ComputingQuotaEvaluator::handleExpired()
   auto& monitoring = mRegistry.get<o2::monitoring::Monitoring>();
   /// Whenever an offer is expired, we give back the resources
   /// to the driver.
+  static uint64_t expiredOffers = 0;
+  
   for (auto& ref : mExpiredOffers) {
     auto& offer = mOffers[ref.index];
     // FIXME: offers should go through the driver client, not the monitoring
     // api.
     auto& monitoring = mRegistry.get<o2::monitoring::Monitoring>();
+    monitoring.send(o2::monitoring::Metric{expiredOffers++, "resource-offer-expired"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
     monitoring.send(o2::monitoring::Metric{(uint64_t)offer.sharedMemory, "arrow-bytes-destroyed"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
     //    LOGP(INFO, "Offer expired {} {}", offer.sharedMemory, offer.cpu);
     //    driverClient.tell("expired shmem {}", offer.sharedMemory);
