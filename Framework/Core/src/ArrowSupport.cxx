@@ -106,7 +106,8 @@ std::vector<MetricIndices> createDefaultIndices(std::vector<DeviceMetricsInfo>& 
   return results;
 }
 
-uint64_t calculateAvailableSharedMemory(ServiceRegistry& registry) {
+uint64_t calculateAvailableSharedMemory(ServiceRegistry& registry)
+{
   return registry.get<RateLimitConfig>().maxMemory;
 }
 
@@ -236,7 +237,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        static uint64_t lastReportTime = 0;
                        static int64_t MAX_SHARED_MEMORY = calculateAvailableSharedMemory(registry);
                        constexpr int64_t QUANTUM_SHARED_MEMORY = 500;
-                      
+
                        static int64_t availableSharedMemory = MAX_SHARED_MEMORY;
                        static int64_t offeredSharedMemory = 0;
                        static int64_t lastDeviceOffered = 0;
