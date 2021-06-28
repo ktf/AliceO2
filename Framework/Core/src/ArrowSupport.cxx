@@ -79,8 +79,8 @@ o2::framework::ServiceSpec ArrowSupport::rateLimitingSpec()
                      nullptr,
                      [](ServiceRegistry& registry, boost::program_options::variables_map const& vm) {
                        if (!vm["aod-memory-rate-limit"].defaulted()) {
-                         memLimit = std::stoll(vm["aod-memory-rate-limit"].as<std::string const>());
-                         // registry.registerService(ServiceRegistryHelpers::handleForService<RateLimitConfig>(new RateLimitConfig{memLimit}));
+                         auto config = new RateLimitConfig{std::stoll(vm["aod-memory-rate-limit"].as<std::string>()) / 1000000};
+                         registry.registerService(ServiceRegistryHelpers::handleForService<RateLimitConfig>(config));
                        }
                      },
                      nullptr,
@@ -104,6 +104,10 @@ std::vector<MetricIndices> createDefaultIndices(std::vector<DeviceMetricsInfo>& 
     results.push_back(indices);
   }
   return results;
+}
+
+uint64_t calculateAvailableSharedMemory(ServiceRegistry& registry) {
+  return registry.get<RateLimitConfig>().maxMemory;
 }
 
 o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
@@ -230,8 +234,9 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        now = uv_hrtime();
                        static RateLimitingState lastReportedState = RateLimitingState::UNKNOWN;
                        static uint64_t lastReportTime = 0;
-                       constexpr int64_t MAX_SHARED_MEMORY = 2000;
+                       static int64_t MAX_SHARED_MEMORY = calculateAvailableSharedMemory(registry);
                        constexpr int64_t QUANTUM_SHARED_MEMORY = 500;
+                      
                        static int64_t availableSharedMemory = MAX_SHARED_MEMORY;
                        static int64_t offeredSharedMemory = 0;
                        static int64_t lastDeviceOffered = 0;
