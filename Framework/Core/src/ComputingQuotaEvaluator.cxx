@@ -157,7 +157,7 @@ void ComputingQuotaEvaluator::handleExpired()
   /// Whenever an offer is expired, we give back the resources
   /// to the driver.
   static uint64_t expiredOffers = 0;
-  
+
   for (auto& ref : mExpiredOffers) {
     auto& offer = mOffers[ref.index];
     // FIXME: offers should go through the driver client, not the monitoring
