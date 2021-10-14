@@ -426,6 +426,10 @@ void DataProcessingDevice::InitTask()
         LOG(debug) << x.first << " is to send data. Not polling." << std::endl;
         continue;
       }
+      if (x.first.rfind("from_") != 0) {
+        LOGP(INFO, "{} is not a DPL socket. Not polling.", x.first);
+        continue;
+      }
       // We assume there is always a ZeroMQ socket behind.
       int zmq_fd = 0;
       size_t zmq_fd_len = sizeof(zmq_fd);
