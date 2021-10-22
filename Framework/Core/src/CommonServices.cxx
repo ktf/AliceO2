@@ -524,7 +524,7 @@ auto sendRelayerMetrics(ServiceRegistry& registry, DataProcessingStats& stats) -
   }
 
   if (stats.consumedTimeframes) {
-    monitoring.send(Metric{stats.consumedTimeframes, "consumed-timeframes"}.addTag(Key::Subsystem, Value::DPL));
+    monitoring.send(Metric{(uint64_t)stats.consumedTimeframes, "consumed-timeframes"}.addTag(Key::Subsystem, Value::DPL));
   }
 
   stats.lastSlowMetricSentTimestamp.store(stats.beginIterationTimestamp.load());
