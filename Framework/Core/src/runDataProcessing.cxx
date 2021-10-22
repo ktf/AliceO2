@@ -1122,6 +1122,7 @@ void dumpMetricsCallback(uv_timer_t* handle)
   performanceMetrics.push_back("aod-bytes-read-compressed");
   performanceMetrics.push_back("aod-file-read-info");
   performanceMetrics.push_back("table-bytes-.*");
+  performanceMetrics.push_back("total-timeframes.*");
   ResourcesMonitoringHelper::dumpMetricsToJSON(*(context->metrics),
                                                context->driver->metrics, *(context->specs), performanceMetrics);
 }
