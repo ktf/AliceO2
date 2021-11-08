@@ -1287,8 +1287,8 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
 
       for (size_t pi = 0; pi < currentSetOfInputs[ii].size(); ++pi) {
         auto& messageSet = currentSetOfInputs[ii];
-        auto & header = messageSet.header(pi);
-        auto & payload = messageSet.payload(pi);
+        auto& header = messageSet.header(pi);
+        auto& payload = messageSet.payload(pi);
 
         if (header.get() == nullptr) {
           // Missing an header is not an error anymore.
