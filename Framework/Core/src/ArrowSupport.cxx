@@ -105,19 +105,19 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
   using o2::monitoring::tags::Value;
 
   return ServiceSpec{
-    .name = "arrow-backend",
-    .init = CommonMessageBackendsHelpers<ArrowContext>::createCallback(),
-    .configure = CommonServices::noConfiguration(),
-    .preProcessing = CommonMessageBackendsHelpers<ArrowContext>::clearContext(),
-    .postProcessing = CommonMessageBackendsHelpers<ArrowContext>::sendCallback(),
-    .preEOS = CommonMessageBackendsHelpers<ArrowContext>::clearContextEOS(),
-    .postEOS = CommonMessageBackendsHelpers<ArrowContext>::sendCallbackEOS(),
-    .metricHandling = [](ServiceRegistry& registry,
-                         std::vector<DeviceMetricsInfo>& allDeviceMetrics,
-                         std::vector<DeviceSpec>& specs,
-                         std::vector<DeviceInfo>& infos,
-                         DeviceMetricsInfo& driverMetrics,
-                         size_t timestamp) {
+           .name = "arrow-backend",
+           .init = CommonMessageBackendsHelpers<ArrowContext>::createCallback(),
+           .configure = CommonServices::noConfiguration(),
+           .preProcessing = CommonMessageBackendsHelpers<ArrowContext>::clearContext(),
+           .postProcessing = CommonMessageBackendsHelpers<ArrowContext>::sendCallback(),
+           .preEOS = CommonMessageBackendsHelpers<ArrowContext>::clearContextEOS(),
+           .postEOS = CommonMessageBackendsHelpers<ArrowContext>::sendCallbackEOS(),
+           .metricHandling = [](ServiceRegistry& registry,
+                                std::vector<DeviceMetricsInfo>& allDeviceMetrics,
+                                std::vector<DeviceSpec>& specs,
+                                std::vector<DeviceInfo>& infos,
+                                DeviceMetricsInfo& driverMetrics,
+                                size_t timestamp) {
                        int64_t totalBytesCreated = 0;
                        int64_t shmOfferConsumed = 0;
                        int64_t totalBytesDestroyed = 0;
@@ -352,7 +352,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        unusedOfferedMemoryMetric(driverMetrics, unusedOfferedMemory, timestamp);
 
                        offeredSharedMemoryMetric(driverMetrics, offeredSharedMemory, timestamp); },
-    .postDispatching = [](ProcessingContext& ctx, void* service) {
+           .postDispatching = [](ProcessingContext& ctx, void* service) {
                        using DataHeader = o2::header::DataHeader;
                        ArrowContext* arrow = reinterpret_cast<ArrowContext*>(service);
                        auto totalBytes = 0;
@@ -389,7 +389,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        monitoring.send(Metric{(uint64_t)arrow->bytesDestroyed(), "arrow-bytes-destroyed"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
                        monitoring.send(Metric{(uint64_t)arrow->messagesDestroyed(), "arrow-messages-destroyed"}.addTag(Key::Subsystem, monitoring::tags::Value::DPL));
                        monitoring.flushBuffer(); },
-    .driverInit = [](ServiceRegistry& registry, boost::program_options::variables_map const& vm) {
+           .driverInit = [](ServiceRegistry& registry, boost::program_options::variables_map const& vm) {
                        auto config = new RateLimitConfig{};
                        int readers = std::stoll(vm["readers"].as<std::string>());
                        if (vm.count("aod-memory-rate-limit") && vm["aod-memory-rate-limit"].defaulted() == false) {
@@ -409,7 +409,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                          registry.registerService(ServiceRegistryHelpers::handleForService<RateLimitConfig>(config));
                          once = true;
                        } },
-    .adjustTopology = [](WorkflowSpecNode& node, ConfigContext const& ctx) {
+           .adjustTopology = [](WorkflowSpecNode& node, ConfigContext const& ctx) {
       auto& workflow = node.specs;
       auto spawner = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec& spec) { return spec.name == "internal-dpl-aod-spawner"; });
       auto builder = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec& spec) { return spec.name == "internal-dpl-aod-index-builder"; });
@@ -532,9 +532,9 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
           // add TFNumber as input to the writer
           outputsInputsAOD.emplace_back(InputSpec{"tfn", "TFN", "TFNumber"});
           workflow.push_back(CommonDataProcessors::getGlobalAODSink(dod, outputsInputsAOD));
-        }
-      } },
-    .kind = ServiceKind::Global};
+        } }},
+         .kind = ServiceKind::Global
+};
 }
 
 } // namespace o2::framework
