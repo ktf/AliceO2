@@ -507,6 +507,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
 
       if (writer != workflow.end()) {
         workflow.erase(writer);
+      }
         // replace writer as some outputs may have become dangling and some are now consumed
         auto [outputsInputs, outputTypes] = WorkflowHelpers::analyzeOutputs(workflow);
 
