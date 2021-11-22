@@ -226,7 +226,15 @@ BOOST_AUTO_TEST_CASE(TestSimpleConnection)
   WorkflowHelpers::injectServiceDevices(workflow, *context);
   // The fourth one is the dummy sink for the
   // timeframe reporting messages
-  BOOST_CHECK_EQUAL(workflow.size(), 4);
+  std::vector<std::string> names;
+  for (auto& spec : workflow) {
+    names.push_back(spec.name);
+  }
+  std::vector<std::string> expectedNames = {"A",
+                                            "B",
+                                            "internal-dpl-clock",
+                                            "internal-dpl-injected-dummy-sink"};
+  BOOST_TEST(names == expectedNames, boost::test_tools::per_element());
   WorkflowHelpers::constructGraph(workflow, logicalEdges,
                                   outputs,
                                   availableForwardsInfo);
@@ -488,6 +496,21 @@ BOOST_AUTO_TEST_CASE(TestExternalInput)
                                   availableForwardsInfo);
 }
 
+std::vector<InputSpec> computeDanglingOutputs(WorkflowSpec& workflow)
+{
+
+  auto outputsInputs = o2::framework::WorkflowHelpers::analyzeOutputs(workflow);
+
+  std::vector<InputSpec> results;
+  for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
+    if (outputsInputs[ii].lifetime == Lifetime::Dangling) {
+      results.emplace_back(outputsInputs[ii]);
+    }
+  }
+
+  return results;
+}
+
 BOOST_AUTO_TEST_CASE(DetermineDanglingOutputs)
 {
   WorkflowSpec workflow0{
@@ -511,24 +534,25 @@ BOOST_AUTO_TEST_CASE(DetermineDanglingOutputs)
     {"A", Inputs{}, {OutputSpec{"TST", "A"}, OutputSpec{"TST", "B"}, OutputSpec{"TST", "C"}}},
     {"B", {InputSpec{"a", "TST", "A"}}, Outputs{}}};
 
-  auto dangling0 = WorkflowHelpers::computeDanglingOutputs(workflow0);
+  auto dangling0 = computeDanglingOutputs(workflow0);
   std::vector<InputSpec> expected0{};
   BOOST_TEST(dangling0 == expected0, boost::test_tools::per_element());
 
-  auto dangling1 = WorkflowHelpers::computeDanglingOutputs(workflow1);
-  std::vector<InputSpec> expected1{InputSpec{"dangling0", "TST", "A"}};
+  auto dangling1 = computeDanglingOutputs(workflow1);
+  std::vector<InputSpec> expected1{InputSpec{"dangling0", "TST", "A", Lifetime::Dangling}};
   BOOST_TEST(dangling1 == expected1, boost::test_tools::per_element());
 
-  auto dangling2 = WorkflowHelpers::computeDanglingOutputs(workflow2);
-  std::vector<InputSpec> expected2{InputSpec{"dangling0", "TST", "A"}};
+  auto dangling2 = computeDanglingOutputs(workflow2);
+  std::vector<InputSpec> expected2{InputSpec{"dangling0", "TST", "A", Lifetime::Dangling}};
   BOOST_TEST(dangling2 == expected2, boost::test_tools::per_element());
 
-  auto dangling3 = WorkflowHelpers::computeDanglingOutputs(workflow3);
-  std::vector<InputSpec> expected3{InputSpec{"dangling0", "TST", "B"}};
+  auto dangling3 = computeDanglingOutputs(workflow3);
+  std::vector<InputSpec> expected3{InputSpec{"dangling0", "TST", "B", Lifetime::Dangling}};
   BOOST_TEST(dangling3 == expected3, boost::test_tools::per_element());
 
-  auto dangling4 = WorkflowHelpers::computeDanglingOutputs(workflow4);
-  std::vector<InputSpec> expected4{InputSpec{"dangling0", "TST", "B"}, InputSpec{"dangling1", "TST", "C"}};
+  auto dangling4 = computeDanglingOutputs(workflow4);
+  std::vector<InputSpec> expected4{InputSpec{"dangling0", "TST", "B", Lifetime::Dangling},
+                                   InputSpec{"dangling1", "TST", "C", Lifetime::Dangling}};
   BOOST_TEST(dangling4 == expected4, boost::test_tools::per_element());
 }
 
@@ -566,10 +590,11 @@ BOOST_AUTO_TEST_CASE(TestOriginWildcard)
   auto context = makeEmptyConfigContext();
   WorkflowHelpers::injectServiceDevices(workflow, *context);
   BOOST_CHECK_EQUAL(workflow.size(), 4);
-  BOOST_REQUIRE(workflow.size() >= 4);
+  BOOST_REQUIRE(workflow.size() >= 3);
   BOOST_CHECK_EQUAL(workflow[0].name, "A");
   BOOST_CHECK_EQUAL(workflow[1].name, "B");
   BOOST_CHECK_EQUAL(workflow[2].name, "internal-dpl-clock");
+  BOOST_REQUIRE(workflow.size() >= 4);
   BOOST_CHECK_EQUAL(workflow[3].name, "internal-dpl-injected-dummy-sink");
   for (size_t wi = 4; wi < workflow.size(); ++wi) {
     BOOST_CHECK_EQUAL(workflow[wi].name, "");

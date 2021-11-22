@@ -509,23 +509,23 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
         workflow.erase(writer);
       }
         // replace writer as some outputs may have become dangling and some are now consumed
-        auto [outputsInputs, outputTypes] = WorkflowHelpers::analyzeOutputs(workflow);
+      auto outputsInputs = WorkflowHelpers::analyzeOutputs(workflow);
 
-        // create DataOutputDescriptor
-        std::shared_ptr<DataOutputDirector> dod = WorkflowHelpers::getDataOutputDirector(ctx.options(), outputsInputs, outputTypes);
+      // create DataOutputDescriptor
+      std::shared_ptr<DataOutputDirector> dod = WorkflowHelpers::getDataOutputDirector(ctx.options(), outputsInputs);
 
-        // select outputs of type AOD which need to be saved
-        // ATTENTION: if there are dangling outputs the getGlobalAODSink
-        // has to be created in any case!
-        std::vector<InputSpec> outputsInputsAOD;
-        for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
-          if ((outputTypes[ii] & WorkflowHelpers::ANALYSIS) == WorkflowHelpers::ANALYSIS) {
-            auto ds = dod->getDataOutputDescriptors(outputsInputs[ii]);
-            if (!ds.empty() || (outputTypes[ii] & WorkflowHelpers::DANGLING) == WorkflowHelpers::DANGLING) {
-              outputsInputsAOD.emplace_back(outputsInputs[ii]);
-            }
+      // select outputs of type AOD which need to be saved
+      // ATTENTION: if there are dangling outputs the getGlobalAODSink
+      // has to be created in any case!
+      std::vector<InputSpec> outputsInputsAOD;
+      for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
+        if (DataSpecUtils::partialMatch(outputsInputs[ii], header::DataOrigin{"AOD"})) {
+          auto ds = dod->getDataOutputDescriptors(outputsInputs[ii]);
+          if (!ds.empty() || (outputsInputs[ii].lifetime == Lifetime::Dangling)) {
+            outputsInputsAOD.emplace_back(outputsInputs[ii]);
           }
         }
+      }
 
         // file sink for any AOD output
         if (!outputsInputsAOD.empty()) {
