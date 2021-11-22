@@ -139,11 +139,6 @@ struct TopoIndexInfo {
   friend std::ostream& operator<<(std::ostream& out, TopoIndexInfo const& info);
 };
 
-struct OutputObj {
-  InputSpec spec;
-  bool isdangling;
-};
-
 enum struct WorkflowParsingState : int {
   Valid,
   Empty,
@@ -151,12 +146,6 @@ enum struct WorkflowParsingState : int {
 
 /// A set of internal helper classes to manipulate a Workflow
 struct WorkflowHelpers {
-  enum OutputType : char {
-    UNKNOWN = 0,
-    DANGLING = 1,
-    ANALYSIS = 2,
-  };
-
   /// Topological sort for a graph of @a nodeCount nodes.
   ///
   /// @a edgeIn pointer to the index of the input node for the first edge
@@ -219,19 +208,10 @@ struct WorkflowHelpers {
     const std::vector<DeviceConnectionEdge>& edges,
     const std::vector<size_t>& index);
 
-  static std::shared_ptr<DataOutputDirector> getDataOutputDirector(ConfigParamRegistry const& options, std::vector<InputSpec> const& OutputsInputs, std::vector<unsigned char> const& outputTypes);
+  static std::shared_ptr<DataOutputDirector> getDataOutputDirector(ConfigParamRegistry const& options, std::vector<InputSpec> const& OutputsInputs);
 
-  /// Given @a workflow it gathers all the OutputSpec and in addition provides
-  /// the information whether and output is dangling and/or of type AOD
-  /// An Output is dangling if it does not have a corresponding InputSpec.
-  /// The type of the output is encoded in an unsigend char whichs values are defined by
-  /// 0 + isdangling*1 + isAOD*2
-  /// @return a vector of InputSpec of all outputs and a vector of unsigned char
-  /// with the encoded output type
-  static std::tuple<std::vector<InputSpec>, std::vector<unsigned char>> analyzeOutputs(WorkflowSpec const& workflow);
-
-  /// returns only dangling outputs
-  static std::vector<InputSpec> computeDanglingOutputs(WorkflowSpec const& workflow);
+  /// @return a vector of InputSpec of all outputs
+  static std::vector<InputSpec> analyzeOutputs(WorkflowSpec& workflow);
 };
 
 } // namespace o2::framework
