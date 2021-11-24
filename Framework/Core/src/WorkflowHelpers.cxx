@@ -209,8 +209,8 @@ void WorkflowHelpers::addMissingOutputsToBuilder(std::vector<InputSpec>&& reques
 void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext const& ctx)
 {
   auto fakeCallback = AlgorithmSpec{[](InitContext& ic) {
-    LOG(INFO) << "This is not a real device, merely a placeholder for external inputs";
-    LOG(INFO) << "To be hidden / removed at some point.";
+    LOG(info) << "This is not a real device, merely a placeholder for external inputs";
+    LOG(info) << "To be hidden / removed at some point.";
     // mark this dummy process as ready-to-quit
     ic.services().get<ControlService>().readyToQuit(QuitRequest::Me);
 
