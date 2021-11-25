@@ -288,7 +288,7 @@ void WSDPLHandler::endHeaders()
       }
     }
   } else {
-    LOG(INFO) << "Connection not bound to a PID";
+    LOG(info) << "Connection not bound to a PID";
     GuiRenderer* renderer = new GuiRenderer;
     renderer->gui = mServerContext->gui;
     renderer->handler = this;
@@ -298,7 +298,7 @@ void WSDPLHandler::endHeaders()
     mHandler = std::make_unique<GUIWebSocketHandler>(*mServerContext, renderer);
     mHandler->headers(mHeaders);
     mServerContext->gui->renderers.insert(renderer);
-    LOGP(INFO, "RemoteGUI connected, {} running", mServerContext->gui->renderers.size());
+    LOGP(info, "RemoteGUI connected, {} running", mServerContext->gui->renderers.size());
   }
 }
 
@@ -451,7 +451,7 @@ void WSDPLClient::header(std::string_view const& k, std::string_view const& v)
 void WSDPLClient::dumpHeaders()
 {
   for (auto [k, v] : mHeaders) {
-    LOG(INFO) << k << ": " << v;
+    LOG(info) << k << ": " << v;
   }
 }
 
@@ -474,7 +474,7 @@ void WSDPLClient::endHeaders()
     throw runtime_error_f(R"(Invalid accept received: "%s", expected "%s")", mHeaders["sec-websocket-accept"].c_str(), expectedAccept.c_str());
   }
 
-  LOG(INFO) << "Correctly handshaken websocket connection.";
+  LOG(info) << "Correctly handshaken websocket connection.";
   /// Create an appropriate reply
   mHandshaken = true;
   mHandshake();
