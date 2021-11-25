@@ -17,6 +17,7 @@
 #include "DriverServerContext.h"
 #include "DriverClientContext.h"
 #include "GuiCallbackContext.h"
+#include "ControlWebSocketHandler.h"
 #include "HTTPParser.h"
 #include <algorithm>
 #include <atomic>
@@ -288,6 +289,16 @@ void WSDPLHandler::endHeaders()
     }
   } else {
     LOG(INFO) << "Connection not bound to a PID";
+    GuiRenderer* renderer = new GuiRenderer;
+    renderer->gui = mServerContext->gui;
+    renderer->handler = this;
+    uv_timer_init(mServerContext->loop, &(renderer->drawTimer));
+    renderer->drawTimer.data = renderer;
+    uv_timer_start(&(renderer->drawTimer), remoteGuiCallback, 0, 200);
+    mHandler = std::make_unique<GUIWebSocketHandler>(*mServerContext, renderer);
+    mHandler->headers(mHeaders);
+    mServerContext->gui->renderers.insert(renderer);
+    LOGP(INFO, "RemoteGUI connected, {} running", mServerContext->gui->renderers.size());
   }
 }
 
