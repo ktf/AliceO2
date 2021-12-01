@@ -25,8 +25,25 @@ ChannelConfigurationPolicy defaultDispatcherPolicy(ConfigContext const& configCo
   spec.sendBufferSize = options.isDefault("fairmq-send-buffer-size") ? 256 : options.get<int>("fairmq-send-buffer-size");
   spec.ipcPrefix = options.get<std::string>("fairmq-ipc-prefix");
   policy.match = ChannelConfigurationPolicyHelpers::matchByProducerName("Dispatcher");
-  policy.modifyInput = ChannelConfigurationPolicyHelpers::pullInput(spec);
-  policy.modifyOutput = ChannelConfigurationPolicyHelpers::pushOutput(spec);
+  // Notice we swap the Bind / Connect method and let the pusher to connect so that
+  // the queue is correctly filled even if the peers are not yet fully setup.
+  policy.modifyInput = [spec](InputChannelSpec& channel) {
+    channel.method = ChannelMethod::Bind;
+    channel.type = ChannelType::Pull;
+    channel.rateLogging = spec.rateLogging;
+    channel.recvBufferSize = spec.recvBufferSize;
+    channel.sendBufferSize = spec.sendBufferSize;
+    channel.ipcPrefix = spec.ipcPrefix;
+  };
+
+  policy.modifyOutput = [spec](OutputChannelSpec& channel) {
+    channel.method = ChannelMethod::Connect;
+    channel.type = ChannelType::Push;
+    channel.rateLogging = spec.rateLogging;
+    channel.recvBufferSize = spec.recvBufferSize;
+    channel.sendBufferSize = spec.sendBufferSize;
+    channel.ipcPrefix = spec.ipcPrefix;
+  };
   return policy;
 }
 
