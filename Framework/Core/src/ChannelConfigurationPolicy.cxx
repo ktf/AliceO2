@@ -21,8 +21,8 @@ ChannelConfigurationPolicy defaultDispatcherPolicy(ConfigContext const& configCo
   FairMQChannelConfigSpec spec;
   auto &options = configContext.options();
   spec.rateLogging = options.get<int>("fairmq-rate-logging");
-  spec.recvBufferSize = options.isDefault("fairmq-recv-buffer-size") ? 256 : options.get<int>("fairmq-recv-buffer-size");
-  spec.sendBufferSize = options.isDefault("fairmq-send-buffer-size") ? 256 : options.get<int>("fairmq-send-buffer-size");
+  spec.recvBufferSize = options.get<int>("fairmq-recv-buffer-size");
+  spec.sendBufferSize = options.get<int>("fairmq-send-buffer-size");
   spec.ipcPrefix = options.get<std::string>("fairmq-ipc-prefix");
   policy.match = ChannelConfigurationPolicyHelpers::matchByProducerName("Dispatcher");
   // Notice we swap the Bind / Connect method and let the pusher to connect so that
