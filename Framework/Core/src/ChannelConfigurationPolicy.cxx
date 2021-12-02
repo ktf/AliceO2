@@ -19,7 +19,7 @@ ChannelConfigurationPolicy defaultDispatcherPolicy(ConfigContext const& configCo
 {
   ChannelConfigurationPolicy policy;
   FairMQChannelConfigSpec spec;
-  auto &options = configContext.options();
+  auto& options = configContext.options();
   spec.rateLogging = options.get<int>("fairmq-rate-logging");
   spec.recvBufferSize = options.get<int>("fairmq-recv-buffer-size");
   spec.sendBufferSize = options.get<int>("fairmq-send-buffer-size");
