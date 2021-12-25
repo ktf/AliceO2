@@ -96,7 +96,7 @@ void DataProcessor::doSend(FairMQDevice& device, ArrowContext& context, ServiceR
     std::unique_ptr<FairMQMessage> payload = messageRef.buffer->Finalise();
     // FIXME: for the moment we simply send empty bodies.
     const DataHeader* cdh = o2::header::get<DataHeader*>(messageRef.header->GetData());
-    const DataProcessingHeader *cdph = o2::header::get<DataProcessingHeader*>(messageRef.header->GetData()); 
+    const DataProcessingHeader* cdph = o2::header::get<DataProcessingHeader*>(messageRef.header->GetData());
     if (cdph->startTime != lastTimeframeSent) {
       flushOnTimeframe = true;
     }
