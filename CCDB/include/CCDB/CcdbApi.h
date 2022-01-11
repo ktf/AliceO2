@@ -24,6 +24,7 @@
 #include <TObject.h>
 #include <TMessage.h>
 #include "CCDB/CcdbObjectInfo.h"
+#include "MemoryResources/MemoryResources.h"
 #include <CommonUtils/ConfigurableParam.h>
 #include <type_traits>
 #include <vector>
@@ -322,18 +323,18 @@ class CcdbApi //: public DatabaseInterface
                              std::map<std::string, std::string>* headers, std::string const& etag,
                              const std::string& createdNotAfter, const std::string& createdNotBefore) const;
 
-  std::vector<char> loadFileToMemory(const std::string& path, std::map<std::string, std::string>* localHeaders = nullptr) const;
-  std::vector<char> loadFileToMemory(std::string const& path,
-                                     std::map<std::string, std::string> const& metadata, long timestamp,
-                                     std::map<std::string, std::string>* headers, std::string const& etag,
-                                     const std::string& createdNotAfter, const std::string& createdNotBefore) const;
-  std::vector<char> navigateURLsAndLoadFileToMemory(CURL* curl_handle, std::string const& url, std::map<string, string>* headers) const;
+  void loadFileToMemory(o2::vector<char>& dest, const std::string& path, std::map<std::string, std::string>* localHeaders = nullptr) const;
+  void loadFileToMemory(o2::vector<char>& dest, std::string const& path,
+                        std::map<std::string, std::string> const& metadata, long timestamp,
+                        std::map<std::string, std::string>* headers, std::string const& etag,
+                        const std::string& createdNotAfter, const std::string& createdNotBefore) const;
+  void navigateURLsAndLoadFileToMemory(o2::vector<char>& dest, CURL* curl_handle, std::string const& url, std::map<string, string>* headers) const;
 
   // the failure to load the file to memory is signaled by 0 size and non-0 capacity
-  static bool isMemoryFileInvalid(const std::vector<char>& v) { return v.size() == 0 && v.capacity() > 0; }
+  static bool isMemoryFileInvalid(const o2::vector<char>& v) { return v.size() == 0 && v.capacity() > 0; }
 
   template <typename T>
-  static T* extractFromMemoryBlob(std::vector<char>& blob)
+  static T* extractFromMemoryBlob(o2::vector<char>& blob)
   {
     auto obj = static_cast<T*>(interpretAsTMemFileAndExtract(blob.data(), blob.size(), typeid(T)));
     if constexpr (std::is_base_of<o2::conf::ConfigurableParam, T>::value) {
