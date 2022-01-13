@@ -31,7 +31,6 @@ struct CCDBFetcherHelper {
   std::unordered_map<std::string, std::string> mapURL2UUID;
   std::unordered_map<std::string, DataAllocator::CacheId> mapURL2DPLCache;
 
-
   o2::ccdb::CcdbApi api;
   std::vector<OutputRoute> routes;
   std::map<int64_t, CCDBCacheInfo> cache;
@@ -39,7 +38,7 @@ struct CCDBFetcherHelper {
 
 AlgorithmSpec CCDBHelpers::fetchFromCCDB()
 {
-  return adaptStateful([](ConfigParamRegistry const&options, DeviceSpec const& spec) { 
+  return adaptStateful([](ConfigParamRegistry const& options, DeviceSpec const& spec) { 
       std::shared_ptr<CCDBFetcherHelper> helper = std::make_shared<CCDBFetcherHelper>();
       auto backend = options.get<std::string>("condition-backend");
       LOGP(info, "CCDB Backend at: {}", backend);
