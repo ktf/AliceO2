@@ -346,7 +346,6 @@ class CcdbApi //: public DatabaseInterface
   }
 #endif
 
-
  private:
   /**
    * Initialize in local mode; Objects will be retrieved from snapshot
