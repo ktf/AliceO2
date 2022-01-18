@@ -26,7 +26,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
   return WorkflowSpec{
     {
       "A",
-      {InputSpec{"somecondition", "TOF", "LHCphase", 0, Lifetime::Condition, ccdbParamSpec("TOF/LHCphase")}},
+      {InputSpec{"somecondition", "TOF", "LHCphase", 0, Lifetime::Condition, ccdbParamSpec("TOF/LHCphase", {{"some", "metadata"}})}},
       {OutputSpec{"TST", "A1", 0, Lifetime::Timeframe}},
       AlgorithmSpec{
         adaptStateless([](DataAllocator& outputs, InputRecord& inputs, ControlService& control) {
