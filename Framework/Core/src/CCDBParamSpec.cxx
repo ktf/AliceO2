@@ -28,12 +28,15 @@ ConfigParamSpec ccdbRunDependent(bool defaultValue)
 
 ConfigParamSpec ccdbMetadataSpec(std::string const& key, std::string const& defaultValue)
 {
-  return ConfigParamSpec{fmt::format("ccdb-metadata-{}", key), 
-                                     VariantType::String, defaultValue, 
-                                     {fmt::format("CCDB metadata {}", key)}, ConfigParamKind::kGeneric};
+  return ConfigParamSpec{fmt::format("ccdb-metadata-{}", key),
+                         VariantType::String,
+                         defaultValue,
+                         {fmt::format("CCDB metadata {}", key)},
+                         ConfigParamKind::kGeneric};
 }
 
-std::vector<ConfigParamSpec> ccdbParamSpec(std::string const& path, std::vector<CCDBMetadata> metadata) {
+std::vector<ConfigParamSpec> ccdbParamSpec(std::string const& path, std::vector<CCDBMetadata> metadata)
+{
   return ccdbParamSpec(path, false, metadata);
 }
 
@@ -45,7 +48,7 @@ std::vector<ConfigParamSpec> ccdbParamSpec(std::string const& path, bool runDepe
     runDependent = true;
   }
   std::vector<ConfigParamSpec> result{ccdbPathSpec(path), ccdbRunDependent(runDependent)};
-  for (auto &[key, value] : metadata) {
+  for (auto& [key, value] : metadata) {
     result.push_back(ccdbMetadataSpec(key, value));
   }
   return result;
