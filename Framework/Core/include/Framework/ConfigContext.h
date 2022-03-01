@@ -30,7 +30,7 @@ class ConfigContext
   [[nodiscard]] bool helpOnCommandLine() const;
 
   [[nodiscard]] int argc() const { return mArgc; }
-  [[nodiscard]] char* const*  argv() const { return mArgv; }
+  [[nodiscard]] char* const* argv() const { return mArgv; }
 
  private:
   ConfigParamRegistry& mOptions;
