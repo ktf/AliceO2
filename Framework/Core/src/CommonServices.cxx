@@ -501,8 +501,7 @@ o2::framework::ServiceSpec CommonServices::ccdbSupportSpec()
       LOG(info) << "CCDB support enabled: " << dh->firstTForbit;
       stfDist.id = dph->startTime;
       stfDist.firstOrbit = dh->firstTForbit;
-      stfDist.runNumber = dh->runNumber;
-    },
+      stfDist.runNumber = dh->runNumber; },
     .kind = ServiceKind::Global};
 }
 
