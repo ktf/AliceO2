@@ -719,14 +719,15 @@ void spawnDevice(DeviceRef ref,
   // We are the child: prepare options and reexec.
   if (id == 0) {
     // We allow being debugged and do not terminate on SIGTRAP
-    signal(SIGTRAP, SIG_IGN);
-    // Add our own stacktrace dumping
-    signal(SIGSEGV, handle_crash);
-    signal(SIGABRT, handle_crash);
-    signal(SIGBUS, handle_crash);
-    signal(SIGILL, handle_crash);
-    signal(SIGFPE, handle_crash);
-
+    signal(SIGTRAP, SIG_IGN); 
+    if (getenv("O2_NO_CATCHALL_EXCEPTIONS") == 0 || strcmp(getenv("O2_NO_CATCHALL_EXCEPTIONS"), "0") == 0) {
+      // Add our own stacktrace dumping
+      signal(SIGSEGV, handle_crash);
+      signal(SIGABRT, handle_crash);
+      signal(SIGBUS, handle_crash);
+      signal(SIGILL, handle_crash);
+      signal(SIGFPE, handle_crash);
+    }
     // This is the child.
     // For stdout / stderr, we close the read part of the pipe, the
     // old descriptor, and then replace it with the write part of the pipe.
