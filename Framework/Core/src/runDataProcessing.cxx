@@ -719,7 +719,7 @@ void spawnDevice(DeviceRef ref,
   // We are the child: prepare options and reexec.
   if (id == 0) {
     // We allow being debugged and do not terminate on SIGTRAP
-    signal(SIGTRAP, SIG_IGN); 
+    signal(SIGTRAP, SIG_IGN);
     if (getenv("O2_NO_CATCHALL_EXCEPTIONS") == 0 || strcmp(getenv("O2_NO_CATCHALL_EXCEPTIONS"), "0") == 0) {
       // Add our own stacktrace dumping
       signal(SIGSEGV, handle_crash);
