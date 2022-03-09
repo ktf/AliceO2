@@ -673,6 +673,17 @@ void handleChildrenStdio(uv_loop_t* loop,
   }
 }
 
+void handle_crash(int /* sig */)
+{
+  // dump demangled stack trace
+  void* array[1024];
+
+  backtrace(array, 1024);
+
+  demangled_backtrace_symbols(array, 1000, STDERR_FILENO);
+  _exit(1);
+}
+
 /// This will start a new device by forking and executing a
 /// new child
 void spawnDevice(DeviceRef ref,
@@ -709,6 +720,12 @@ void spawnDevice(DeviceRef ref,
   if (id == 0) {
     // We allow being debugged and do not terminate on SIGTRAP
     signal(SIGTRAP, SIG_IGN);
+    // Add our own stacktrace dumping
+    signal(SIGSEGV, handle_crash);
+    signal(SIGABRT, handle_crash);
+    signal(SIGBUS, handle_crash);
+    signal(SIGILL, handle_crash);
+    signal(SIGFPE, handle_crash);
 
     // This is the child.
     // For stdout / stderr, we close the read part of the pipe, the
