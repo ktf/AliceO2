@@ -207,7 +207,7 @@ void WorkflowHelpers::addMissingOutputsToBuilder(std::vector<InputSpec> const& r
 std::string defaultConditionBackend()
 {
   if (getenv("DDS_SESSION_ID") != nullptr || getenv("OCC_CONTROL_PORT") != nullptr) {
-      return "o2-ccdb.internal";
+    return "o2-ccdb.internal";
   }
   return "http://alice-ccdb.cern.ch";
 }
