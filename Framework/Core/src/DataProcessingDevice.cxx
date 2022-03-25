@@ -111,7 +111,7 @@ DataProcessingDevice::DataProcessingDevice(RunningDeviceRef ref, ServiceRegistry
                       &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
       ZoneScopedN("Error handling");
       auto& err = error_from_ref(e);
-      LOGP(ERROR, "Exception caught: {} ", err.what);
+      LOGP(error, "Exception caught: {} ", err.what);
       backtrace_symbols_fd(err.backtrace, err.maxBacktrace, STDERR_FILENO);
       serviceRegistry.get<DataProcessingStats>().exceptionCount++;
       ErrorContext errorContext{record, serviceRegistry, e};
@@ -122,7 +122,7 @@ DataProcessingDevice::DataProcessingDevice(RunningDeviceRef ref, ServiceRegistry
                       &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
       ZoneScopedN("Error handling");
       auto& err = error_from_ref(e);
-      LOGP(ERROR, "Exception caught: {} ", err.what);
+      LOGP(error, "Exception caught: {} ", err.what);
       backtrace_symbols_fd(err.backtrace, err.maxBacktrace, STDERR_FILENO);
       serviceRegistry.get<DataProcessingStats>().exceptionCount++;
       switch (errorPolicy) {
@@ -148,14 +148,14 @@ DataProcessingDevice::DataProcessingDevice(RunningDeviceRef ref, ServiceRegistry
   int res = uv_async_init(mState.loop, mAwakeHandle, on_communication_requested);
   mAwakeHandle->data = &mState;
   if (res < 0) {
-    LOG(ERROR) << "Unable to initialise subscription";
+    LOG(error) << "Unable to initialise subscription";
   }
 
   /// This should post a message on the queue...
   SubscribeToNewTransition("dpl", [wakeHandle = mAwakeHandle, deviceContext = &mDeviceContext](fair::mq::Transition t) {
     int res = uv_async_send(wakeHandle);
     if (res < 0) {
-      LOG(ERROR) << "Unable to notify subscription";
+      LOG(error) << "Unable to notify subscription";
     }
     LOG(debug) << "State transition requested";
   });
@@ -427,7 +427,7 @@ void DataProcessingDevice::InitTask()
         continue;
       }
       if (x.first.rfind("from_") != 0) {
-        LOGP(INFO, "{} is not a DPL socket. Not polling.", x.first);
+        LOGP(info, "{} is not a DPL socket. Not polling.", x.first);
         continue;
       }
       // We assume there is always a ZeroMQ socket behind.
@@ -970,7 +970,7 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
           switch (relayed) {
             case DataRelayer::Backpressured:
               if (info.normalOpsNotified == true && info.backpressureNotified == false) {
-                LOGP(WARN, "Backpressure on channel {}. Waiting.", info.channel->GetName());
+                LOGP(warn, "Backpressure on channel {}. Waiting.", info.channel->GetName());
                 info.backpressureNotified = true;
                 info.normalOpsNotified = false;
               }
@@ -1012,7 +1012,7 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
     auto r = std::distance(it, parts.fParts.end());
     parts.fParts.erase(it, parts.end());
     if (parts.fParts.size()) {
-      LOG(DEBUG) << parts.fParts.size() << " messages backpressured";
+      LOG(debug) << parts.fParts.size() << " messages backpressured";
     }
   };
 
@@ -1233,18 +1233,18 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
         if (header.get() == nullptr) {
           // FIXME: this should not happen, however it's actually harmless and
           //        we can simply discard it for the moment.
-          // LOG(ERROR) << "Missing header! " << dh->dataDescription;
+          // LOG(error) << "Missing header! " << dh->dataDescription;
           continue;
         }
 
         auto fdph = o2::header::get<DataProcessingHeader*>(header.get()->GetData());
         if (fdph == nullptr) {
-          LOG(ERROR) << "Data is missing DataProcessingHeader";
+          LOG(error) << "Data is missing DataProcessingHeader";
           continue;
         }
         auto fdh = o2::header::get<DataHeader*>(header.get()->GetData());
         if (fdh == nullptr) {
-          LOG(ERROR) << "Data is missing DataHeader";
+          LOG(error) << "Data is missing DataHeader";
           continue;
         }
         // We need to find the forward route only for the first
@@ -1427,7 +1427,7 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
 
 void DataProcessingDevice::error(const char* msg)
 {
-  LOG(ERROR) << msg;
+  LOG(error) << msg;
   mServiceRegistry.get<DataProcessingStats>().errorCount++;
 }
 
