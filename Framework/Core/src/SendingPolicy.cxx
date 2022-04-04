@@ -27,10 +27,14 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
   return {SendingPolicy{
             .name = "dispatcher",
             .matcher = [](DeviceSpec const& spec, ConfigContext const&) { return spec.name == "Dispatcher" || DeviceSpecHelpers::hasLabel(spec, "Dispatcher"); },
-            .send = [](FairMQDevice& device, FairMQParts& parts, std::string const& channel) { device.Send(parts, channel, 0, -1); }},
+            .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, RouteIndex routeIndex) { 
+              auto *channel = proxy.getChannel(routeIndex);
+              channel->Send(parts, -1); }},
           SendingPolicy{
             .name = "default",
             .matcher = [](DeviceSpec const&, ConfigContext const&) { return true; },
-            .send = [](FairMQDevice& device, FairMQParts& parts, std::string const& channel) { device.Send(parts, channel, 0); }}};
+            .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, RouteIndex routeIndex) { 
+              auto *channel = proxy.getChannel(routeIndex);
+              channel->Send(parts, 0); }}};
 }
 } // namespace o2::framework

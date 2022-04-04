@@ -8,23 +8,22 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
-#ifndef O2_FRAMEWORK_COMMONMESSAGEBACKENDS_H_
-#define O2_FRAMEWORK_COMMONMESSAGEBACKENDS_H_
+#ifndef O2_FRAMEWORK_ROUTESTATE_H_
+#define O2_FRAMEWORK_ROUTESTATE_H_
 
-#include "Framework/ServiceSpec.h"
-#include "Framework/TypeIdHelpers.h"
+namespace fair::mq
+{
+class Channel;
+class TransportFactory;
+} // namespace fair::mq
 
 namespace o2::framework
 {
-
-/// A few ServiceSpecs data sending backends
-struct CommonMessageBackends {
-  static ServiceSpec fairMQDeviceProxy();
-  static ServiceSpec fairMQBackendSpec();
-  static ServiceSpec stringBackendSpec();
-  static ServiceSpec rawBufferBackendSpec();
+/// Keeps current state of a given route.
+struct RouteState {
+  fair::mq::Channel* channel = nullptr;
+  int present;
 };
 
 } // namespace o2::framework
-
-#endif // O2_FRAMEWORK_COMMONMESSAGEBACKENDS_H_
+#endif // O2_FRAMEWORK_ROUTESTATE_H_
