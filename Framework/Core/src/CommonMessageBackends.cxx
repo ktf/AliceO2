@@ -44,19 +44,19 @@ namespace o2::framework
 class EndOfStreamContext;
 class ProcessingContext;
 
-o2::framework::ServiceSpec CommonMessageBackends::fairMQDeviceProxy() {
+o2::framework::ServiceSpec CommonMessageBackends::fairMQDeviceProxy()
+{
   return ServiceSpec{
     .name = "fairmq-device-proxy",
-    .init = [](ServiceRegistry& , DeviceState& , fair::mq::ProgOptions& options) -> ServiceHandle {
-      auto *proxy = new FairMQDeviceProxy();
+    .init = [](ServiceRegistry&, DeviceState&, fair::mq::ProgOptions& options) -> ServiceHandle {
+      auto* proxy = new FairMQDeviceProxy();
       return ServiceHandle{.hash = TypeIdHelpers::uniqueId<FairMQDeviceProxy>(), .instance = proxy, .kind = ServiceKind::Serial};
     },
-    .start = [](ServiceRegistry&services, void* instance) {
+    .start = [](ServiceRegistry& services, void* instance) {
       auto* proxy = static_cast<FairMQDeviceProxy*>(instance);
       auto& routes = services.get<DeviceSpec const>().outputs;
       auto* device = services.get<RawDeviceService>().device();
-      proxy->bindRoutes(routes, *device);
-    },
+      proxy->bindRoutes(routes, *device); },
   };
 }
 
