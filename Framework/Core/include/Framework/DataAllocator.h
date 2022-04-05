@@ -28,6 +28,7 @@
 #include "Framework/ServiceRegistry.h"
 #include "Framework/RuntimeError.h"
 #include "Framework/RouteState.h"
+#include "Framework/Logger.h"
 
 #include "Headers/DataHeader.h"
 #include <TClass.h>
