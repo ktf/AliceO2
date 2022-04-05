@@ -70,8 +70,8 @@ o2::framework::ServiceSpec CommonMessageBackends::fairMQBackendSpec()
       auto& spec = services.get<DeviceSpec const>();
       auto& dataSender = services.get<DataSender>();
 
-      auto dispatcher = [&dataSender](FairMQParts&& parts, RouteIndex routeIndex, unsigned int) {
-        dataSender.send(parts, routeIndex);
+      auto dispatcher = [&proxy, &dataSender](FairMQParts&& parts, RouteIndex routeIndex, unsigned int) {
+        dataSender.send(parts, proxy.getChannelIndex(routeIndex));
       };
 
       auto matcher = [policy = spec.dispatchPolicy](o2::header::DataHeader const& header) {

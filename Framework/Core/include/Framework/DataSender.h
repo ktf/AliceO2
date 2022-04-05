@@ -33,7 +33,7 @@ class DataSender
  public:
   DataSender(ServiceRegistry& registry,
              SendingPolicy const& policy);
-  void send(FairMQParts&, RouteIndex index);
+  void send(FairMQParts&, ChannelIndex index);
   std::unique_ptr<FairMQMessage> create(RouteIndex index);
 
  private:

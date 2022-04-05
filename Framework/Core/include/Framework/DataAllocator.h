@@ -279,7 +279,7 @@ class DataAllocator
   template <typename T>
   void snapshot(const Output& spec, T const& object)
   {
-    auto proxy = mRegistry->get<MessageContext>().proxy();
+    auto &proxy = mRegistry->get<MessageContext>().proxy();
     FairMQMessagePtr payloadMessage;
     auto serializationType = o2::header::gSerializationMethodNone;
     RouteIndex routeIndex = matchDataHeader(spec, mRegistry->get<TimingInfo>().timeslice);

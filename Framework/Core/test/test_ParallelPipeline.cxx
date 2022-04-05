@@ -105,6 +105,7 @@ std::vector<DataProcessorSpec> defineDataProcessing(ConfigContext const&)
   {
     size_t pipeline = 0;
     for (auto const& subspec : subspecs) {
+      LOGP(error, "subspec: {} {}", pipeline, subspec);
       (*checkMap)[subspec] = pipeline;
       pipeline++;
       if (pipeline >= nPipelines) {
@@ -184,6 +185,10 @@ std::vector<DataProcessorSpec> defineDataProcessing(ConfigContext const&)
       callbacks.set(CallbackService::Id::EndOfStream, [checkMap](EndOfStreamContext& ctx) {
         for (auto const& [subspec, pipeline] : *checkMap) {
           // we require all checks to be invalidated
+          LOGP(error, "pipeline {}: {}", pipeline, subspec);
+        }
+        for (auto const& [subspec, pipeline] : *checkMap) {
+          // we require all checks to be invalidated
           ASSERT_ERROR(pipeline == -1);
         }
         checkMap->clear();
@@ -192,12 +197,15 @@ std::vector<DataProcessorSpec> defineDataProcessing(ConfigContext const&)
         ASSERT_ERROR(checkMap->size() == 0);
       });
       return adaptStateless([checkMap, bindings = std::move(bindings)](InputRecord& inputs) {
+        LOG(info) << "invoked";
         bool haveDataIn = false;
+        size_t index = 0;
         for (auto const& input : inputs) {
           if (!DataRefUtils::isValid(input)) {
+            LOGP(error, "Invalid input {}", index);
             continue;
           }
-          LOG(debug) << "consuming : " << *input.spec << ": " << *((int*)input.payload);
+          LOG(info) << "consuming : " << *input.spec << ": " << *((int*)input.payload);
           auto const* dataheader = DataRefUtils::getHeader<o2::header::DataHeader*>(input);
           if (input.spec->binding.compare(0, 6, "datain") == 0) {
             if (input.spec->binding != bindings.at(dataheader->subSpecification)) {
@@ -209,6 +217,7 @@ std::vector<DataProcessorSpec> defineDataProcessing(ConfigContext const&)
             // must be after invalidation
             auto pipeline = checkMap->at(dataheader->subSpecification);
             // invalidate, we check in the end of stream callback that all are invalidated
+            LOGP(error, "invalidating {}", dataheader->subSpecification);
             (*checkMap)[dataheader->subSpecification] = -1;
             // check if we can access channels by binding
             if (inputs.isValid(bindings.at(dataheader->subSpecification))) {

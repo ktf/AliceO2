@@ -28,18 +28,23 @@ class FairMQDeviceProxy
 {
  public:
   FairMQDeviceProxy() = default;
+  FairMQDeviceProxy(FairMQDeviceProxy const&) = delete;
   void bindRoutes(std::vector<OutputRoute> const& routes, FairMQDevice& device);
 
   /// Retrieve the transport associated to a given route.
   fair::mq::TransportFactory* getTransport(RouteIndex routeIndex) const;
+  /// ChannelIndex from a RouteIndex
+  ChannelIndex getChannelIndex(RouteIndex routeIndex) const;
   /// Retrieve the channel associated to a given route.
-  fair::mq::Channel* getChannel(RouteIndex routeIndex) const;
+  fair::mq::Channel* getChannel(ChannelIndex channelIndex) const;
 
   std::unique_ptr<FairMQMessage> createMessage(RouteIndex routeIndex) const;
   std::unique_ptr<FairMQMessage> createMessage(RouteIndex routeIndex, const size_t size) const;
+  size_t getNumChannels() const { return mChannels.size(); }
 
  private:
   std::vector<RouteState> mRoutes;
+  std::vector<fair::mq::Channel*> mChannels;
 };
 
 } // namespace o2::framework

@@ -74,9 +74,9 @@ std::unique_ptr<FairMQMessage> DataSender::create(RouteIndex routeIndex)
   return mProxy.getTransport(routeIndex)->CreateMessage();
 }
 
-void DataSender::send(FairMQParts& parts, RouteIndex routeIndex)
+void DataSender::send(FairMQParts& parts, ChannelIndex channelIndex)
 {
-  mPolicy.send(mProxy, parts, routeIndex);
+  mPolicy.send(mProxy, parts, channelIndex);
 }
 
 } // namespace o2::framework

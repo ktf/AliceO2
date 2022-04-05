@@ -11,18 +11,15 @@
 #ifndef O2_FRAMEWORK_ROUTESTATE_H_
 #define O2_FRAMEWORK_ROUTESTATE_H_
 
-namespace fair::mq
-{
-class Channel;
-class TransportFactory;
-} // namespace fair::mq
+#include "Framework/RoutingIndices.h"
 
 namespace o2::framework
 {
 /// Keeps current state of a given route.
 struct RouteState {
-  fair::mq::Channel* channel = nullptr;
-  int present;
+  // The channel associated with this route.
+  ChannelIndex channel = {-1};
+  int present = false;
 };
 
 } // namespace o2::framework

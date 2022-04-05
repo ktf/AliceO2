@@ -18,14 +18,26 @@
 namespace o2::framework
 {
 
-fair::mq::Channel* FairMQDeviceProxy::getChannel(RouteIndex index) const
+ChannelIndex FairMQDeviceProxy::getChannelIndex(RouteIndex index) const
 {
+  assert(mRoutes.size());
+  assert(index.value < mRoutes.size());
+  assert(mRoutes[index.value].channel.value != -1);
+  assert(mChannels.size());
+  assert(mRoutes[index.value].channel.value < mChannels.size());
   return mRoutes[index.value].channel;
+}
+
+fair::mq::Channel* FairMQDeviceProxy::getChannel(ChannelIndex index) const
+{
+  assert(mChannels.size());
+  assert(index.value < mChannels.size());
+  return mChannels[index.value];
 }
 
 FairMQTransportFactory* FairMQDeviceProxy::getTransport(RouteIndex index) const
 {
-  return mRoutes[index.value].channel->Transport();
+  return getChannel(getChannelIndex(index))->Transport();
 }
 
 std::unique_ptr<FairMQMessage> FairMQDeviceProxy::createMessage(RouteIndex routeIndex) const
@@ -42,11 +54,26 @@ void FairMQDeviceProxy::bindRoutes(std::vector<OutputRoute> const& outputs, fair
 {
   mRoutes.reserve(outputs.size());
   size_t ri = 0;
+  std::unordered_map<std::string, ChannelIndex> channelNameToChannel;
   for (auto& route : outputs) {
-    LOGP(debug, "Binding route {} to index {}", route.channel, ri);
+    // If the channel is not yet registered, register it.
+    // If the channel is already registered, use the existing index.
+    auto channelPos = channelNameToChannel.find(route.channel);
+    ChannelIndex channelIndex;
+  
+    if (channelPos == channelNameToChannel.end()) {
+      channelIndex = ChannelIndex{(int)mChannels.size()};
+      mChannels.push_back(&device.fChannels.at(route.channel).at(0));
+      channelNameToChannel[route.channel] = channelIndex;
+      LOGP(debug, "Binding channel {} to channel index {}", route.channel, channelIndex.value);
+    } else {
+      LOGP(debug, "Using index {} for channel {}", channelPos->second.value, route.channel);
+      channelIndex = channelPos->second;
+    }
+    LOGP(debug, "Binding route {}@{}%{} to index {} and channelIndex {}", route.matcher, route.timeslice, route.maxTimeslices, ri, channelIndex.value);
+    mRoutes.emplace_back(RouteState{channelIndex, false});
     ri++;
-    auto* channel = &device.fChannels.at(route.channel).at(0);
-    mRoutes.emplace_back(RouteState{channel, false});
   }
+  assert(mRoutes.size() == outputs.size());
 }
 } // namespace o2::framework
