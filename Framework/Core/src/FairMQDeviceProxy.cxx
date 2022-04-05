@@ -62,7 +62,7 @@ void FairMQDeviceProxy::bindRoutes(std::vector<OutputRoute> const& outputs, fair
     // If the channel is already registered, use the existing index.
     auto channelPos = channelNameToChannel.find(route.channel);
     ChannelIndex channelIndex;
-  
+
     if (channelPos == channelNameToChannel.end()) {
       channelIndex = ChannelIndex{(int)mChannels.size()};
       mChannels.push_back(&device.fChannels.at(route.channel).at(0));

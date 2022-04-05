@@ -199,7 +199,7 @@ void DataAllocator::adopt(const Output& spec, TableBuilder* tb)
   LOG(error) << "matched route index " << routeIndex.value;
   auto header = headerMessageFromOutput(spec, routeIndex, o2::header::gSerializationMethodArrow, 0);
   auto& context = mRegistry->get<ArrowContext>();
-  auto *transport = context.proxy().getTransport(routeIndex);
+  auto* transport = context.proxy().getTransport(routeIndex);
   assert(transport != nullptr);
 
   auto creator = [transport](size_t s) -> std::unique_ptr<FairMQMessage> {

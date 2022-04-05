@@ -35,9 +35,9 @@ using DataHeader = o2::header::DataHeader;
 namespace o2::framework
 {
 
-void DataProcessor::doSend(DataSender& sender, MessageContext& context, ServiceRegistry&services)
+void DataProcessor::doSend(DataSender& sender, MessageContext& context, ServiceRegistry& services)
 {
-  auto &proxy = services.get<FairMQDeviceProxy>();
+  auto& proxy = services.get<FairMQDeviceProxy>();
   std::vector<FairMQParts> outputsPerChannel;
   outputsPerChannel.resize(proxy.getNumChannels());
   LOGP(error, "outputsPerChannel.size() = {}", outputsPerChannel.size());
@@ -52,7 +52,7 @@ void DataProcessor::doSend(DataSender& sender, MessageContext& context, ServiceR
     }
   }
   for (int ci = 0; ci < outputsPerChannel.size(); ++ci) {
-    auto &parts = outputsPerChannel[ci];
+    auto& parts = outputsPerChannel[ci];
     if (parts.Size() == 0) {
       continue;
     }
@@ -60,9 +60,9 @@ void DataProcessor::doSend(DataSender& sender, MessageContext& context, ServiceR
   }
 }
 
-void DataProcessor::doSend(DataSender& sender, StringContext& context, ServiceRegistry&services)
+void DataProcessor::doSend(DataSender& sender, StringContext& context, ServiceRegistry& services)
 {
-  FairMQDeviceProxy &proxy = services.get<FairMQDeviceProxy>();
+  FairMQDeviceProxy& proxy = services.get<FairMQDeviceProxy>();
   for (auto& messageRef : context) {
     FairMQParts parts;
     FairMQMessagePtr payload(sender.create(messageRef.routeIndex));
@@ -89,7 +89,7 @@ void DataProcessor::doSend(DataSender& sender, ArrowContext& context, ServiceReg
   auto& monitoring = registry.get<Monitoring>();
 
   std::regex invalid_metric(" ");
-  FairMQDeviceProxy &proxy = registry.get<FairMQDeviceProxy>();
+  FairMQDeviceProxy& proxy = registry.get<FairMQDeviceProxy>();
   for (auto& messageRef : context) {
     FairMQParts parts;
     // Depending on how the arrow table is constructed, we finalize
@@ -150,7 +150,7 @@ void DataProcessor::doSend(DataSender& sender, ArrowContext& context, ServiceReg
 
 void DataProcessor::doSend(DataSender& sender, RawBufferContext& context, ServiceRegistry& registry)
 {
-  FairMQDeviceProxy &proxy = registry.get<FairMQDeviceProxy>();
+  FairMQDeviceProxy& proxy = registry.get<FairMQDeviceProxy>();
   for (auto& messageRef : context) {
     FairMQParts parts;
     FairMQMessagePtr payload(sender.create(messageRef.routeIndex));

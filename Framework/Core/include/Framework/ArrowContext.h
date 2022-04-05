@@ -32,7 +32,7 @@ class FairMQResizableBuffer;
 class ArrowContext
 {
  public:
-  ArrowContext(FairMQDeviceProxy &proxy)
+  ArrowContext(FairMQDeviceProxy& proxy)
     : mProxy{proxy}
   {
   }
@@ -129,7 +129,7 @@ class ArrowContext
   }
 
  private:
-  FairMQDeviceProxy &mProxy;
+  FairMQDeviceProxy& mProxy;
   Messages mMessages;
   size_t mBytesSent = 0;
   size_t mBytesDestroyed = 0;
