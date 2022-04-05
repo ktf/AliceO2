@@ -37,7 +37,9 @@ fair::mq::Channel* FairMQDeviceProxy::getChannel(ChannelIndex index) const
 
 FairMQTransportFactory* FairMQDeviceProxy::getTransport(RouteIndex index) const
 {
-  return getChannel(getChannelIndex(index))->Transport();
+  auto transport = getChannel(getChannelIndex(index))->Transport();
+  assert(transport);
+  return transport;
 }
 
 std::unique_ptr<FairMQMessage> FairMQDeviceProxy::createMessage(RouteIndex routeIndex) const
@@ -74,6 +76,11 @@ void FairMQDeviceProxy::bindRoutes(std::vector<OutputRoute> const& outputs, fair
     mRoutes.emplace_back(RouteState{channelIndex, false});
     ri++;
   }
+  for (auto& route : mRoutes) {
+    assert(route.channel.value != -1);
+    assert(route.channel.value < mChannels.size());
+  }
+  LOGP(error, "Total channels found {}, total routes {}", mChannels.size(), mRoutes.size());
   assert(mRoutes.size() == outputs.size());
 }
 } // namespace o2::framework

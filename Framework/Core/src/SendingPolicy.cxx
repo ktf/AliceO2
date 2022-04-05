@@ -28,13 +28,15 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
             .name = "dispatcher",
             .matcher = [](DeviceSpec const& spec, ConfigContext const&) { return spec.name == "Dispatcher" || DeviceSpecHelpers::hasLabel(spec, "Dispatcher"); },
             .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, ChannelIndex channelIndex) {
+              LOG(error) << "Sending messages for channelIndex " << channelIndex.value;
               auto *channel = proxy.getChannel(channelIndex);
               channel->Send(parts, -1); }},
           SendingPolicy{
             .name = "default",
             .matcher = [](DeviceSpec const&, ConfigContext const&) { return true; },
             .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, ChannelIndex channelIndex) { 
+              LOG(error) << "Sending messages for channelIndex " << channelIndex.value;
               auto *channel = proxy.getChannel(channelIndex);
-              channel->Send(parts, 0); }}};
+              channel->Send(parts); }}};
 }
 } // namespace o2::framework

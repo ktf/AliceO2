@@ -47,9 +47,9 @@ void customize(std::vector<SendingPolicy>& policies)
 {
   policies.push_back(SendingPolicy{
     .matcher = DeviceMatchers::matchByName("A"),
-    .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, RouteIndex routeIndex) {
+    .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, ChannelIndex channelIndex) {
       LOG(info) << "A custom policy for sending invoked!";
-      auto* channel = proxy.getChannel(routeIndex);
+      auto* channel = proxy.getChannel(channelIndex);
       channel->Send(parts, 0);
     }});
 }

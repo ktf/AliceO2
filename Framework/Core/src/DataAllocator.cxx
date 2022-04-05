@@ -270,6 +270,7 @@ void DataAllocator::snapshot(const Output& spec, const char* payload, size_t pay
   auto& timingInfo = mRegistry->get<TimingInfo>();
 
   RouteIndex routeIndex = matchDataHeader(spec, timingInfo.timeslice);
+  LOG(error) << "matched route index " << routeIndex.value;
   FairMQMessagePtr payloadMessage(proxy.createMessage(routeIndex, payloadSize));
   memcpy(payloadMessage->GetData(), payload, payloadSize);
 

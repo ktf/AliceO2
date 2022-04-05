@@ -40,6 +40,7 @@ void DataProcessor::doSend(DataSender& sender, MessageContext& context, ServiceR
   auto &proxy = services.get<FairMQDeviceProxy>();
   std::vector<FairMQParts> outputsPerChannel;
   outputsPerChannel.resize(proxy.getNumChannels());
+  LOGP(error, "outputsPerChannel.size() = {}", outputsPerChannel.size());
   auto contextMessages = context.getMessagesForSending();
   for (auto& message : contextMessages) {
     //     monitoringService.send({ message->parts.Size(), "outputs/total" });
