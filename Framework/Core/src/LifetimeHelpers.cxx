@@ -101,7 +101,7 @@ ExpirationHandler::Creator LifetimeHelpers::timeDrivenCreation(std::chrono::micr
   auto start = getCurrentTime();
   auto last = std::make_shared<decltype(start)>(start);
   // FIXME: should create timeslices when period expires....
-  return [last, period](ChannelIndex, TimesliceIndex& index) -> TimesliceSlot {
+  return [last, period](ChannelIndex channelIndex, TimesliceIndex& index) -> TimesliceSlot {
     // Nothing to do if the time has not expired yet.
     auto current = getCurrentTime();
     auto delta = current - *last;
@@ -138,6 +138,10 @@ ExpirationHandler::Creator LifetimeHelpers::timeDrivenCreation(std::chrono::micr
       case TimesliceIndex::ActionTaken::Wait:
         break;
     }
+
+    LOG(debug) << "Oldest possible input is " << *last;
+    auto newOldest = index.setOldestPossibleInput({*last}, channelIndex);
+    index.updateOldestPossibleOutput();
     return slot;
   };
 }
