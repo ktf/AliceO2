@@ -528,7 +528,6 @@ o2::framework::ServiceSpec CommonServices::ccdbSupportSpec()
     .kind = ServiceKind::Global};
 }
 
-
 // Decongestion service
 // If we do not have any Timeframe input, it means we must be creating timeslices
 // in order and that we should propagate the oldest possible timeslice at the end
