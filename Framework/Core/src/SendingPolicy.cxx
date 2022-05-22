@@ -13,6 +13,7 @@
 #include "Framework/DeviceSpec.h"
 #include "Framework/DataRefUtils.h"
 #include "Framework/DataProcessingHeader.h"
+#include "Headers/DataHeaderHelpers.h"
 #include "Headers/STFHeader.h"
 #include "DeviceSpecHelpers.h"
 #include <fairmq/Device.h>
@@ -31,6 +32,30 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
               auto *channel = proxy.getOutputChannel(channelIndex);
               channel->Send(parts, -1); }},
           SendingPolicy{
+            .name = "debug",
+            .matcher = [](DeviceSpec const&, ConfigContext const&) { return getenv("DPL_DEBUG_SENDING"); },
+            .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, ChannelIndex channelIndex) { 
+              auto *channel = proxy.getOutputChannel(channelIndex);
+              auto timeout = 1000;
+              LOGP(info, "About to send {} parts to channel {}", parts.Size(), channelIndex.value);
+              for (size_t i = 0; i < parts.Size()/2; ++i) {
+                auto dh = o2::header::get<o2::header::DataHeader*>(parts.At(i*2)->GetData());
+                if (dh) {
+                  LOGP(info, "- Header {} {}", parts.At(i*2), *dh);
+                } else {
+                  LOGP(info, "- Header {}", parts.At(i*2));
+                }
+              }
+            
+              auto res = channel->Send(parts, timeout);
+              if (res == (size_t)fair::mq::TransferCode::timeout) {
+                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on {}.", timeout/1000, channel->GetName()); 
+                channel->Send(parts);
+                LOGP(info, "Downstream backpressure on {} recovered.", channel->GetName()); 
+              } else if (res == (size_t) fair::mq::TransferCode::error) {
+                LOGP(fatal, "Error while sending on channel {}", channel->GetName());
+              } }},
+          SendingPolicy{
             .name = "default",
             .matcher = [](DeviceSpec const&, ConfigContext const&) { return true; },
             .send = [](FairMQDeviceProxy& proxy, FairMQParts& parts, ChannelIndex channelIndex) { 
@@ -43,6 +68,7 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
                 LOGP(info, "Downstream backpressure on {} recovered.", channel->GetName()); 
               } else if (res == (size_t) fair::mq::TransferCode::error) {
                 LOGP(fatal, "Error while sending on channel {}", channel->GetName());
-              } }}};
+              } }}
+  };
 }
 } // namespace o2::framework
