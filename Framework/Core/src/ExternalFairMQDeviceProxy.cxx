@@ -99,7 +99,7 @@ void sendOnChannel(FairMQDevice& device, FairMQParts& messages, std::string cons
       break;
     }
   }
-  
+
   // FIXME: we need a better logic for avoiding message spam
   if (timeout > 1 && timeout <= maxTimeout) {
     LOG(warning) << "dispatching on channel " << channel << " was delayed by " << timeout << " ms";
