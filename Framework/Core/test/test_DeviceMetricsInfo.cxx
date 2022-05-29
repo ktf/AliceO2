@@ -154,6 +154,73 @@ BOOST_AUTO_TEST_CASE(TestDeviceMetricsInfo)
   BOOST_CHECK_EQUAL(info.metrics[4].storeIdx, 1);
   BOOST_CHECK_EQUAL(info.metrics[4].pos, 1);
   BOOST_CHECK_EQUAL(std::string(info.stringMetrics[1][0].data), std::string("alien:///alice/data/2015/LHC15o/000244918/pass5_lowIR/PWGZZ/Run3_Conversion/96_20201013-1346_child_1/0028/AO2D.root:/,631838549,ALICE::CERN::EOS"));
+
+  // Parse a vector metric
+  memset(&match, 0, sizeof(match));
+  metric = "[METRIC] array/w,0 2 1789372895 hostname=test.cern.ch";
+  result = DeviceMetricsHelper::parseMetric(metric, match);
+  BOOST_CHECK_EQUAL(result, true);
+  result = DeviceMetricsHelper::processMetric(match, info);
+  BOOST_CHECK_EQUAL(result, true);
+  BOOST_CHECK_EQUAL(info.metricLabels.size(), 6);
+  BOOST_CHECK_EQUAL(info.metricPrefixes.size(), 6);
+  BOOST_CHECK_EQUAL(info.metricLabelsAlphabeticallySortedIdx.size(), 6);
+  BOOST_CHECK_EQUAL(info.metrics.size(), 6);
+  BOOST_CHECK_EQUAL(info.intMetrics.size(), 3);
+
+  memset(&match, 0, sizeof(match));
+  metric = "[METRIC] array/h,0 3 1789372895 hostname=test.cern.ch";
+  result = DeviceMetricsHelper::parseMetric(metric, match);
+  BOOST_CHECK_EQUAL(result, true);
+  result = DeviceMetricsHelper::processMetric(match, info);
+  BOOST_CHECK_EQUAL(result, true);
+  BOOST_CHECK_EQUAL(info.metricLabels.size(), 7);
+  BOOST_CHECK_EQUAL(info.metricPrefixes.size(), 6);
+  BOOST_CHECK_EQUAL(info.metricLabelsAlphabeticallySortedIdx.size(), 7);
+  BOOST_CHECK_EQUAL(info.metrics.size(), 7);
+  BOOST_CHECK_EQUAL(info.intMetrics.size(), 4);
+
+  memset(&match, 0, sizeof(match));
+  metric = "[METRIC] array/0,0 0 1789372895 hostname=test.cern.ch";
+  result = DeviceMetricsHelper::parseMetric(metric, match);
+  BOOST_CHECK_EQUAL(result, true);
+  result = DeviceMetricsHelper::processMetric(match, info);
+  BOOST_CHECK_EQUAL(result, true);
+  BOOST_CHECK_EQUAL(info.metricLabels.size(), 8);
+  BOOST_CHECK_EQUAL(info.metricPrefixes.size(), 6);
+
+  memset(&match, 0, sizeof(match));
+  metric = "[METRIC] array/1,0 1 1789372895 hostname=test.cern.ch";
+  result = DeviceMetricsHelper::parseMetric(metric, match);
+  BOOST_CHECK_EQUAL(result, true);
+  result = DeviceMetricsHelper::processMetric(match, info);
+  BOOST_CHECK_EQUAL(result, true);
+  BOOST_CHECK_EQUAL(info.metricLabels.size(), 9);
+  BOOST_CHECK_EQUAL(info.metricPrefixes.size(), 6);
+
+  memset(&match, 0, sizeof(match));
+  metric = "[METRIC] array/2,0 2 1789372895 hostname=test.cern.ch";
+  result = DeviceMetricsHelper::parseMetric(metric, match);
+  BOOST_CHECK_EQUAL(result, true);
+  result = DeviceMetricsHelper::processMetric(match, info);
+  BOOST_CHECK_EQUAL(result, true);
+  BOOST_CHECK_EQUAL(info.metricLabels.size(), 10);
+  BOOST_CHECK_EQUAL(info.metricPrefixes.size(), 6);
+
+  BOOST_CHECK_EQUAL(info.metricPrefixes[0].begin, 7);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[0].end, 8);
+  BOOST_CHECK_EQUAL(info.metricLabels[info.metricLabelsAlphabeticallySortedIdx[7].index].size, 4);
+  BOOST_CHECK_EQUAL(std::string_view(info.metricLabels[info.metricLabelsAlphabeticallySortedIdx[7].index].label, 4), "bkey");
+  BOOST_CHECK_EQUAL(info.metricPrefixes[1].begin, 0);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[1].end, 1);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[2].begin, 8);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[2].end, 9);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[3].begin, 9);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[3].end, 10);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[4].begin, 1);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[4].end, 2);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[5].begin, 2);
+  BOOST_CHECK_EQUAL(info.metricPrefixes[5].end, 7);
 }
 
 BOOST_AUTO_TEST_CASE(TestDeviceMetricsInfo2)

@@ -572,8 +572,15 @@ void displayMetrics(gui::WorkspaceGUIState& state,
         auto& spec = specs[di];
         for (size_t li = 0; li != metricInfo.metricLabels.size(); ++li) {
           char const* metricLabel = metricInfo.metricLabels[li].label;
+          // find the equal range for the label
+          auto low = std::lower_bound(order.begin(), order.end(), spec.label, [](int a, std::string const& b) {
+            return metricDisplayState[a].legend < b;
+          });
+          auto up = std::upper_bound(low, order.end(), spec.label, [](std::string const& a, int b) {
+            return a < metricDisplayState[b].legend;
+          });
           std::string legend = fmt::format("{}/{}", spec.label, metricLabel);
-          auto old = std::lower_bound(order.begin(), order.end(), legend, [](int a, std::string const& b) {
+          auto old = std::lower_bound(low, up, legend, [](int a, std::string const& b) {
             return metricDisplayState[a].legend < b;
           });
           if (old != order.end() && metricDisplayState[*old].legend == legend) {
