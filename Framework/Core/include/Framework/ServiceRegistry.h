@@ -136,7 +136,6 @@ struct ServiceRegistry {
   /// Callback invoked after the late forwarding has been done
   void postForwardingCallbacks(ProcessingContext&);
 
-
   /// Invoke callbacks on stop.
   void postStopCallbacks();
   /// Invoke callbacks on exit.
