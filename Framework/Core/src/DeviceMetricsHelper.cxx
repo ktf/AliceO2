@@ -203,7 +203,7 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
   auto slash = key.find_first_of("/");
   if (slash == std::string_view::npos) {
     slash = 1;
-  } 
+  }
   auto prefix = std::string_view(key.data(), slash);
 
   // Find the prefix.
@@ -221,7 +221,7 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
   auto cmpFn = [&labels = info.metricLabels](MetricLabelIndex const& a, std::string_view b) -> bool {
     return std::string_view(labels[a.index].label, labels[a.index].size) < b;
   };
-  
+
   auto mi = std::lower_bound(info.metricLabelsAlphabeticallySortedIdx.begin() + (hasPrefix ? info.metricPrefixes[pi->index].begin : 0),
                              info.metricLabelsAlphabeticallySortedIdx.begin() + (hasPrefix ? info.metricPrefixes[pi->index].end : info.metricLabelsAlphabeticallySortedIdx.size()),
                              key,
@@ -244,7 +244,7 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
       }
     };
     // Create a new metric
-    MetricInfo metricInfo {
+    MetricInfo metricInfo{
       .pos = 0,
       .type = match.type,
       .filledMetrics = 0,
@@ -302,14 +302,14 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
 
       auto sortedInsert = std::distance(info.metricLabelsPrefixesSortedIdx.begin(), pi);
       info.metricLabelsPrefixesSortedIdx.insert(info.metricLabelsPrefixesSortedIdx.begin() + sortedInsert, metricPrefixIdx);
-      
+
       auto previousEnd = 0;
       if (sortedInsert != 0) {
         previousEnd = info.metricPrefixes[info.metricLabelsPrefixesSortedIdx[sortedInsert - 1].index].end;
       }
       info.metricPrefixes[info.metricLabelsPrefixesSortedIdx[sortedInsert].index].begin = previousEnd;
       info.metricPrefixes[info.metricLabelsPrefixesSortedIdx[sortedInsert].index].end = previousEnd + 1;
-      for (size_t i = sortedInsert+1; i < info.metricLabelsPrefixesSortedIdx.size(); i++) {
+      for (size_t i = sortedInsert + 1; i < info.metricLabelsPrefixesSortedIdx.size(); i++) {
         info.metricPrefixes[info.metricLabelsPrefixesSortedIdx[i].index].begin++;
         info.metricPrefixes[info.metricLabelsPrefixesSortedIdx[i].index].end++;
       }
@@ -321,7 +321,7 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
         info.metricPrefixes[info.metricLabelsPrefixesSortedIdx[i].index].end++;
       }
     }
-    
+
     // Add the the actual Metric info to the store
     metricIndex = info.metrics.size();
     assert(metricInfo.storeIdx != -1);
