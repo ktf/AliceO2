@@ -219,7 +219,7 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
 
   // Find the metric based on the label. Create it if not found.
   auto cmpFn = [&labels = info.metricLabels, offset = hasPrefix ? prefix.size() : 0](MetricLabelIndex const& a, std::string_view b) -> bool {
-    return std::string_view(labels[a.index].label + offset, labels[a.index].size - offset) < std::string_view(b.data() + offset, b.size()-offset);
+    return std::string_view(labels[a.index].label + offset, labels[a.index].size - offset) < std::string_view(b.data() + offset, b.size() - offset);
   };
 
   auto rb = info.metricLabelsAlphabeticallySortedIdx.begin() + (hasPrefix ? info.metricPrefixes[pi->index].begin : 0);
