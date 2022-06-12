@@ -152,7 +152,7 @@ static auto updatePrefix = [](std::string_view prefix, DeviceMetricsInfo& info, 
   }
 };
 
-static constexpr int DPL_MAX_METRICS_PER_DEVICE = 1024*128;
+static constexpr int DPL_MAX_METRICS_PER_DEVICE = 1024 * 128;
 
 static auto initMetric = [](DeviceMetricsInfo& info) -> void {
   // Add the timestamp buffer for it
@@ -167,7 +167,7 @@ static auto initMetric = [](DeviceMetricsInfo& info) -> void {
     for (size_t i = 0; i < info.metricLabels.size(); i++) {
       std::cout << info.metricLabels[i].label << std::endl;
     }
-    throw runtime_error_f("Too many metrics for a given device. Max is DPL_MAX_METRICS_PER_DEVICE=%d.", DPL_MAX_METRICS_PER_DEVICE );
+    throw runtime_error_f("Too many metrics for a given device. Max is DPL_MAX_METRICS_PER_DEVICE=%d.", DPL_MAX_METRICS_PER_DEVICE);
   }
 };
 
