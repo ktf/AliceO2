@@ -1322,10 +1322,15 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
             nPayloadsPerHeader = 1;
             ii += (nMessages / 2) - 1;
           }
+          auto onDrop = [&registry = context.registry, &record](TimesliceSlot slot) {
+            LOGP(info, "Dropping message from slot {}. Forwarding as needed.", slot.index);
+            forwardInputs(registry, slot, record, false, true);
+          };
           auto relayed = relayer.relay(parts.At(headerIndex)->GetData(),
                                        &parts.At(headerIndex),
                                        nMessages,
-                                       nPayloadsPerHeader);
+                                       nPayloadsPerHeader,
+                                       [](TimesliceSlot slot) { LOGP(error, "Dropping slot {} which was marked as invalid", slot.index); });
           switch (relayed) {
             case DataRelayer::Backpressured:
               if (info.normalOpsNotified == true && info.backpressureNotified == false) {
