@@ -19,10 +19,12 @@
 #include "Framework/MessageSet.h"
 #include "Framework/TimesliceIndex.h"
 #include "Framework/Tracing.h"
+#include "Framework/TimesliceSlot.h"
 
 #include <cstddef>
 #include <mutex>
 #include <vector>
+#include <functional>
 
 #include <fairmq/FwdDecls.h>
 
@@ -100,7 +102,8 @@ class DataRelayer
   RelayChoice relay(void const* rawHeader,
                     std::unique_ptr<fair::mq::Message>* messages,
                     size_t nMessages,
-                    size_t nPayloads = 1);
+                    size_t nPayloads = 1,
+                    std::function<void(TimesliceSlot)> onDrop = nullptr);
 
   /// This is to set the oldest possible @a timeslice this relayer can
   /// possibly see on an input channel @a channel.

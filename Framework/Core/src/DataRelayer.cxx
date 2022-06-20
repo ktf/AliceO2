@@ -310,7 +310,8 @@ DataRelayer::RelayChoice
   DataRelayer::relay(void const* rawHeader,
                      std::unique_ptr<fair::mq::Message>* messages,
                      size_t nMessages,
-                     size_t nPayloads)
+                     size_t nPayloads,
+                     std::function<void(TimesliceSlot)> onDrop)
 {
   std::scoped_lock<LockableBase(std::recursive_mutex)> lock(mMutex);
   DataProcessingHeader const* dph = o2::header::get<DataProcessingHeader*>(rawHeader);
@@ -365,11 +366,15 @@ DataRelayer::RelayChoice
   // We need to prune the cache from the old stuff, if any. Otherwise we
   // simply store the payload in the cache and we mark relevant bit in the
   // hence the first if.
-  auto pruneCache = [&cache,
+  auto pruneCache = [&onDrop,
+                     &cache,
                      &cachedStateMetrics = mCachedStateMetrics,
                      &numInputTypes,
                      &index,
                      &metrics](TimesliceSlot slot) {
+    if (onDrop) {
+      onDrop(slot);
+    }
     assert(cache.empty() == false);
     assert(index.size() * numInputTypes == cache.size());
     // Prune old stuff from the cache, hopefully deleting it...
