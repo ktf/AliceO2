@@ -311,7 +311,7 @@ DataRelayer::RelayChoice
                      std::unique_ptr<fair::mq::Message>* messages,
                      size_t nMessages,
                      size_t nPayloads,
-                     std::function<void(TimesliceSlot)> onDrop)
+                     std::function<void(TimesliceSlot, std::vector<MessageSet>&, TimesliceIndex::OldestOutputInfo)> onDrop)
 {
   std::scoped_lock<LockableBase(std::recursive_mutex)> lock(mMutex);
   DataProcessingHeader const* dph = o2::header::get<DataProcessingHeader*>(rawHeader);
@@ -371,9 +371,24 @@ DataRelayer::RelayChoice
                      &cachedStateMetrics = mCachedStateMetrics,
                      &numInputTypes,
                      &index,
+                     this,
                      &metrics](TimesliceSlot slot) {
     if (onDrop) {
-      onDrop(slot);
+      auto oldestPossibleTimeslice = index.getOldestPossibleOutput();
+      // State of the computation
+      std::vector<MessageSet> dropped(numInputTypes);
+      for (size_t ai = 0, ae = numInputTypes; ai != ae; ++ai) {
+        auto cacheId = slot.index * numInputTypes + ai;
+        cachedStateMetrics[cacheId] = CacheEntryStatus::RUNNING;
+        // TODO: in the original implementation of the cache, there have been only two messages per entry,
+        // check if the 2 above corresponds to the number of messages.
+        if (cache[cacheId].size() > 0) {
+          dropped[ai] = std::move(cache[cacheId]);
+        }
+      }
+      if (dropped.size() > 0) {
+        onDrop(slot, dropped, oldestPossibleTimeslice);
+      }
     }
     assert(cache.empty() == false);
     assert(index.size() * numInputTypes == cache.size());

@@ -38,6 +38,7 @@
 #include "Framework/Logger.h"
 #include "Framework/DriverClient.h"
 #include "Framework/Monitoring.h"
+#include "Framework/TimesliceIndex.h"
 #include "PropertyTreeHelpers.h"
 #include "DataProcessingStatus.h"
 #include "Framework/DataProcessingHelpers.h"
@@ -494,7 +495,8 @@ static auto toBeforwardedMessageSet = [](ChannelIndex& cachedForwardingChoice,
 // the inputs which are shared between this device and others
 // to the next one in the daisy chain.
 // FIXME: do it in a smarter way than O(N^2)
-static auto forwardInputs = [](ServiceRegistry& registry, TimesliceSlot slot, std::vector<MessageSet>& currentSetOfInputs, bool copy, bool consume = true) {
+static auto forwardInputs = [](ServiceRegistry& registry, TimesliceSlot slot, std::vector<MessageSet>& currentSetOfInputs,
+                               TimesliceIndex::OldestOutputInfo oldestTimeslice, bool copy, bool consume = true) {
   ZoneScopedN("forward inputs");
   LOGP(debug, "DataProcessingDevice::tryDispatchComputation::forwardInputs");
   auto& proxy = registry.get<FairMQDeviceProxy>();
@@ -557,7 +559,6 @@ static auto forwardInputs = [](ServiceRegistry& registry, TimesliceSlot slot, st
     if (!info.dplChannel) {
       continue;
     }
-    auto oldestTimeslice = registry.get<TimesliceIndex>().getOldestPossibleOutput();
     DataProcessingHelpers::sendOldestPossibleTimeframe(info.channel, oldestTimeslice.timeslice.value);
     LOGP(debug, "Forwarding to channel {} oldest possible timeslice {}", info.name, oldestTimeslice.timeslice.value);
   }
@@ -1468,14 +1469,15 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
             nPayloadsPerHeader = 1;
             ii += (nMessages / 2) - 1;
           }
-          auto onDrop = [&registry = context.registry](TimesliceSlot slot) {
+          auto onDrop = [&registry = *context.registry](TimesliceSlot slot, std::vector<MessageSet>& dropped, TimesliceIndex::OldestOutputInfo oldestOutputInfo) {
             LOGP(info, "Dropping message from slot {}. Forwarding as needed.", slot.index);
+            forwardInputs(registry, slot, dropped, oldestOutputInfo, false, true);
           };
           auto relayed = relayer.relay(parts.At(headerIndex)->GetData(),
                                        &parts.At(headerIndex),
                                        nMessages,
                                        nPayloadsPerHeader,
-                                       [](TimesliceSlot slot) { LOGP(error, "Dropping slot {} which was marked as invalid", slot.index); });
+                                       onDrop);
           switch (relayed) {
             case DataRelayer::Backpressured:
               if (info.normalOpsNotified == true && info.backpressureNotified == false) {
@@ -1819,7 +1821,8 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
       LOGP(debug, "  - Action is to Discard");
       context.registry->postDispatchingCallbacks(processContext);
       if (context.deviceContext->spec->forwards.empty() == false) {
-        forwardInputs(*context.registry, action.slot, currentSetOfInputs, false);
+        auto& timesliceIndex = context.registry->get<TimesliceIndex>();
+        forwardInputs(*context.registry, action.slot, currentSetOfInputs, timesliceIndex.getOldestPossibleOutput(), false);
         continue;
       }
     }
@@ -1832,7 +1835,8 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
 
     if (context.canForwardEarly && hasForwards && consumeSomething) {
       LOGP(debug, "  - Early forwarding");
-      forwardInputs(*context.registry, action.slot, currentSetOfInputs, true, action.op == CompletionPolicy::CompletionOp::Consume);
+      auto& timesliceIndex = context.registry->get<TimesliceIndex>();
+      forwardInputs(*context.registry, action.slot, currentSetOfInputs, timesliceIndex.getOldestPossibleOutput(), true, action.op == CompletionPolicy::CompletionOp::Consume);
     }
     markInputsAsDone(action.slot);
 
@@ -1908,7 +1912,8 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
     }
     if ((context.canForwardEarly == false) && hasForwards && consumeSomething) {
       LOGP(debug, "Late forwarding");
-      forwardInputs(*context.registry, action.slot, currentSetOfInputs, false, action.op == CompletionPolicy::CompletionOp::Consume);
+      auto& timesliceIndex = context.registry->get<TimesliceIndex>();
+      forwardInputs(*context.registry, action.slot, currentSetOfInputs, timesliceIndex.getOldestPossibleOutput(), false, action.op == CompletionPolicy::CompletionOp::Consume);
     }
     context.registry->postForwardingCallbacks(processContext);
     if (action.op == CompletionPolicy::CompletionOp::Consume) {

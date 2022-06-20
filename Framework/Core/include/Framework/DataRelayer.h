@@ -98,12 +98,13 @@ class DataRelayer
   ///              which is the standard header-payload message pair, in this
   ///              case nMessages / 2 pairs will be inserted and considered
   ///              separate parts
+  /// @a onDrop function to be called if an message is dropped
   /// Notice that we expect that the header is an O2 Header Stack
   RelayChoice relay(void const* rawHeader,
                     std::unique_ptr<fair::mq::Message>* messages,
                     size_t nMessages,
                     size_t nPayloads = 1,
-                    std::function<void(TimesliceSlot)> onDrop = nullptr);
+                    std::function<void(TimesliceSlot, std::vector<MessageSet>&, TimesliceIndex::OldestOutputInfo info)> onDrop = nullptr);
 
   /// This is to set the oldest possible @a timeslice this relayer can
   /// possibly see on an input channel @a channel.
