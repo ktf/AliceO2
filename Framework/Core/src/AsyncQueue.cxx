@@ -10,6 +10,7 @@
 // or submit itself to any jurisdiction.
 
 #include "Framework/AsyncQueue.h"
+#include "Framework/Logger.h"
 #include <numeric>
 
 namespace o2::framework
@@ -53,8 +54,14 @@ auto AsyncQueueHelpers::run(AsyncQueue& queue) -> void
   });
   order.erase(newEnd, order.end());
 
+  if (order.empty()) {
+    return;
+  }
+  LOGP(debug, "AsyncQueue: Running {} tasks in iteration {}", order.size(), queue.iteration++);
   for (auto i : order) {
+    LOGP(debug, "Running task {} ({})", queue.prototypes[queue.tasks[i].id.value].name, i);
     queue.tasks[i].task();
+    LOGP(debug, "Done running {}", i);
   }
   queue.tasks.clear();
 }

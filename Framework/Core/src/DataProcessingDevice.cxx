@@ -42,6 +42,7 @@
 #include "Framework/TimesliceIndex.h"
 #include "PropertyTreeHelpers.h"
 #include "DataProcessingStatus.h"
+#include "DecongestionService.h"
 #include "Framework/DataProcessingHelpers.h"
 #include "DataRelayerHelpers.h"
 #include "ProcessingPoliciesHelpers.h"
@@ -985,12 +986,6 @@ void DataProcessingDevice::Run()
         mState.severityStack.push_back((int)fair::Logger::GetConsoleSeverity());
         fair::Logger::SetConsoleSeverity(fair::Severity::trace);
       }
-      // Run the asynchronous queue just before sleeping again, so that:
-      // - we can trigger further events from the queue
-      // - we can guarantee this is the last thing we do in the loop (
-      //   assuming no one else is adding to the queue before this point).
-      auto& queue = mServiceRegistry.get<AsyncQueue>();
-      AsyncQueueHelpers::run(queue);
       uv_run(mState.loop, shouldNotWait ? UV_RUN_NOWAIT : UV_RUN_ONCE);
       if ((mState.loopReason & mState.tracingFlags) != 0) {
         mState.severityStack.push_back((int)fair::Logger::GetConsoleSeverity());
@@ -1076,6 +1071,14 @@ void DataProcessingDevice::Run()
       }
     } else {
       mWasActive = false;
+    }
+    // Run the asynchronous queue just before sleeping again, so that:
+    // - we can trigger further events from the queue
+    // - we can guarantee this is the last thing we do in the loop (
+    //   assuming no one else is adding to the queue before this point).
+    if (!mWasActive) {
+      auto& queue = mServiceRegistry.get<AsyncQueue>();
+      AsyncQueueHelpers::run(queue);
     }
     FrameMark;
   }
@@ -1478,6 +1481,16 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
           }
           auto onDrop = [&registry = *context.registry](TimesliceSlot slot, std::vector<MessageSet>& dropped, TimesliceIndex::OldestOutputInfo oldestOutputInfo) {
             LOGP(info, "Dropping message from slot {}. Forwarding as needed.", slot.index);
+            auto& asyncQueue = registry.get<AsyncQueue>();
+            auto& decongestion = registry.get<DecongestionService>();
+            // This is required to avoid that the DecongestionService sends the
+            // oldest possible timetimeslice before pruned elements in the cache
+            // can be removed.
+            AsyncQueueHelpers::post(
+              asyncQueue, decongestion.oldestPossibleTimesliceTask, []() {
+                LOGP(debug, "Skip DecongestionService broadcasting of oldest possible timeslice and do it a the moment of dropping the messages.");
+              },
+              20);
             forwardInputs(registry, slot, dropped, oldestOutputInfo, false, true);
           };
           auto relayed = relayer.relay(parts.At(headerIndex)->GetData(),

@@ -386,7 +386,8 @@ DataRelayer::RelayChoice
           dropped[ai] = std::move(cache[cacheId]);
         }
       }
-      if (dropped.size() > 0) {
+      bool anyDropped = std::any_of(dropped.begin(), dropped.end(), [](auto& m) { return m.size(); });
+      if (anyDropped) {
         onDrop(slot, dropped, oldestPossibleTimeslice);
       }
     }

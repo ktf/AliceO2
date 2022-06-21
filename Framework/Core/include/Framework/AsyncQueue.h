@@ -42,6 +42,7 @@ struct AsyncTask {
 struct AsyncQueue {
   std::vector<AsyncTaskSpec> prototypes;
   std::vector<AsyncTask> tasks;
+  size_t iteration = 0;
 };
 
 struct AsyncQueueHelpers {
