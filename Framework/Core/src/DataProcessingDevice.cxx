@@ -548,6 +548,19 @@ static auto forwardInputs = [](ServiceRegistry& registry, TimesliceSlot slot, st
       continue;
     }
     auto channel = proxy.getForwardChannel(ChannelIndex{fi});
+    /// Print out the headers for all the forwarded messages
+    for (size_t i = 0; i < forwardedParts[fi].Size(); i ++) {
+      auto& header = forwardedParts[fi].At(i);
+      auto dh = o2::header::get<DataHeader*>(header->GetData());
+      auto dph = o2::header::get<DataProcessingHeader*>(header->GetData());
+      auto timestamp = -1;
+      if (dph) {
+        timestamp = dph->startTime;
+      }
+      if (dh) {
+        LOGP(info, "Forwarding message for timeslice {} to channel {}: {}/{}", timestamp, channel->GetName(), dh->dataOrigin, dh->dataDescription);
+      }
+    }
     // in DPL we are using subchannel 0 only
     channel->Send(forwardedParts[fi]);
   }
