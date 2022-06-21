@@ -549,7 +549,7 @@ static auto forwardInputs = [](ServiceRegistry& registry, TimesliceSlot slot, st
     }
     auto channel = proxy.getForwardChannel(ChannelIndex{fi});
     /// Print out the headers for all the forwarded messages
-    for (size_t i = 0; i < forwardedParts[fi].Size(); i ++) {
+    for (size_t i = 0; i < forwardedParts[fi].Size(); i++) {
       auto& header = forwardedParts[fi].At(i);
       auto dh = o2::header::get<DataHeader*>(header->GetData());
       auto dph = o2::header::get<DataProcessingHeader*>(header->GetData());
