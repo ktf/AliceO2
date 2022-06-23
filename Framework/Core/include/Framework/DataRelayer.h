@@ -89,6 +89,14 @@ class DataRelayer
   ActivityStats processDanglingInputs(std::vector<ExpirationHandler> const&,
                                       ServiceRegistry& context, bool createNew);
 
+  using OnDropCallback = std::function<void(TimesliceSlot, std::vector<MessageSet>&, TimesliceIndex::OldestOutputInfo info)>;
+
+  /// Prune the cache for a given slot
+  void pruneCache(TimesliceSlot slot, OnDropCallback onDrop = nullptr);
+
+  /// Prune the cache for all the slots which are older than the given one
+  void pruneCache(TimesliceId oldest, OnDropCallback onDrop = nullptr);
+
   /// This is to relay a whole set of fair::mq::Messages, all which are part
   /// of the same set of split parts.
   /// @a rawHeader raw header pointer
@@ -104,7 +112,7 @@ class DataRelayer
                     std::unique_ptr<fair::mq::Message>* messages,
                     size_t nMessages,
                     size_t nPayloads = 1,
-                    std::function<void(TimesliceSlot, std::vector<MessageSet>&, TimesliceIndex::OldestOutputInfo info)> onDrop = nullptr);
+                    OnDropCallback onDrop = nullptr);
 
   /// This is to set the oldest possible @a timeslice this relayer can
   /// possibly see on an input channel @a channel.

@@ -1572,6 +1572,11 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
     /// Notice we do so only if the incoming data has been fully processed.
     if (oldestPossibleTimeslice != (size_t)-1) {
       info.oldestForChannel = {oldestPossibleTimeslice};
+      auto onDrop = [&registry = *context.registry](TimesliceSlot slot, std::vector<MessageSet>& dropped, TimesliceIndex::OldestOutputInfo oldestOutputInfo) {
+        LOGP(info, "DomainInfoUpdated results in Dropping message from slot {}. Forwarding as needed.", slot.index);
+        forwardInputs(registry, slot, dropped, oldestOutputInfo, false, true);
+      };
+      context.registry->get<DataRelayer>().pruneCache(TimesliceId{oldestPossibleTimeslice}, onDrop);
       context.registry->domainInfoUpdatedCallback(*context.registry, oldestPossibleTimeslice, info.id);
       context.registry->get<CallbackService>()(CallbackService::Id::DomainInfoUpdated, (ServiceRegistry&)*context.registry, (size_t)oldestPossibleTimeslice, (ChannelIndex)info.id);
       *context.wasActive = true;

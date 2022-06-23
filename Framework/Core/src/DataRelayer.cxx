@@ -306,73 +306,33 @@ TimesliceIndex::OldestOutputInfo DataRelayer::getOldestPossibleOutput() const
   return mTimesliceIndex.getOldestPossibleOutput();
 }
 
-DataRelayer::RelayChoice
-  DataRelayer::relay(void const* rawHeader,
-                     std::unique_ptr<fair::mq::Message>* messages,
-                     size_t nMessages,
-                     size_t nPayloads,
-                     std::function<void(TimesliceSlot, std::vector<MessageSet>&, TimesliceIndex::OldestOutputInfo)> onDrop)
-{
-  std::scoped_lock<LockableBase(std::recursive_mutex)> lock(mMutex);
-  DataProcessingHeader const* dph = o2::header::get<DataProcessingHeader*>(rawHeader);
-  // STATE HOLDING VARIABLES
-  // This is the class level state of the relaying. If we start supporting
-  // multithreading this will have to be made thread safe before we can invoke
-  // relay concurrently.
-  auto& index = mTimesliceIndex;
-
-  auto& cache = mCache;
-  auto const& readonlyCache = mCache;
-  auto& metrics = mMetrics;
-  auto numInputTypes = mDistinctRoutesIndex.size();
-
-  // IMPLEMENTATION DETAILS
-  //
-  // This returns true if a given slot is available for the current number of lanes
-  auto isSlotInLane = [currentLane = dph->startTime, maxLanes = mMaxLanes](TimesliceSlot slot) {
-    return (slot.index % maxLanes) == (currentLane % maxLanes);
-  };
-  // This returns the identifier for the given input. We use a separate
-  // function because while it's trivial now, the actual matchmaking will
-  // become more complicated when we will start supporting ranges.
-  auto getInputTimeslice = [&matchers = mInputMatchers,
-                            &distinctRoutes = mDistinctRoutesIndex,
-                            &rawHeader,
-                            &index](VariableContext& context)
-    -> std::tuple<int, TimesliceId> {
-    /// FIXME: for the moment we only use the first context and reset
-    /// between one invokation and the other.
-    auto input = matchToContext(rawHeader, matchers, distinctRoutes, context);
-
-    if (input == INVALID_INPUT) {
-      return {
-        INVALID_INPUT,
-        TimesliceId{TimesliceId::INVALID},
-      };
+void DataRelayer::pruneCache(TimesliceId oldest, OnDropCallback onDrop) {
+  /// Iterate over all the slots and remove all the data that is older than the
+  /// oldest timeslice.
+  for (size_t si = 0; si < mCache.size() / mInputs.size(); ++si) {
+    if (mTimesliceIndex.isDirty({si}) == true) {
+      continue;
     }
-    /// The first argument is always matched against the data start time, so
-    /// we can assert it's the same as the dph->startTime
-    if (auto pval = std::get_if<uint64_t>(&context.get(0))) {
-      TimesliceId timeslice{*pval};
-      return {input, timeslice};
+    /// Get the timeslice for this slot.
+    auto timestamp = VariableContextHelpers::getTimeslice(mTimesliceIndex.getVariablesForSlot({si}));
+    if (timestamp.value < oldest.value) {
+      LOGP(info, "Pruning obsolete cache slot {} because it has timeslice {} < {}", si, timestamp.value, oldest.value);
+      pruneCache(TimesliceSlot{si}, onDrop);
+      mTimesliceIndex.markAsInvalid(TimesliceSlot{si});
     }
-    // If we get here it means we need to push something out of the cache.
-    return {
-      INVALID_INPUT,
-      TimesliceId{TimesliceId::INVALID},
-    };
-  };
+  }
+}
 
+void DataRelayer::pruneCache(TimesliceSlot slot, OnDropCallback onDrop) {
   // We need to prune the cache from the old stuff, if any. Otherwise we
   // simply store the payload in the cache and we mark relevant bit in the
   // hence the first if.
   auto pruneCache = [&onDrop,
-                     &cache,
+                     &cache = mCache,
                      &cachedStateMetrics = mCachedStateMetrics,
-                     &numInputTypes,
-                     &index,
-                     this,
-                     &metrics](TimesliceSlot slot) {
+                     numInputTypes = mDistinctRoutesIndex.size(),
+                     &index = mTimesliceIndex,
+                     &metrics = mMetrics](TimesliceSlot slot) {
     if (onDrop) {
       auto oldestPossibleTimeslice = index.getOldestPossibleOutput();
       // State of the computation
@@ -403,14 +363,69 @@ DataRelayer::RelayChoice
     }
   };
 
+  pruneCache(slot);
+}
+
+DataRelayer::RelayChoice
+  DataRelayer::relay(void const* rawHeader,
+                     std::unique_ptr<fair::mq::Message>* messages,
+                     size_t nMessages,
+                     size_t nPayloads,
+                     std::function<void(TimesliceSlot, std::vector<MessageSet>&, TimesliceIndex::OldestOutputInfo)> onDrop)
+{
+  std::scoped_lock<LockableBase(std::recursive_mutex)> lock(mMutex);
+  DataProcessingHeader const* dph = o2::header::get<DataProcessingHeader*>(rawHeader);
+  // STATE HOLDING VARIABLES
+  // This is the class level state of the relaying. If we start supporting
+  // multithreading this will have to be made thread safe before we can invoke
+  // relay concurrently.
+  auto const& readonlyCache = mCache;
+
+  // IMPLEMENTATION DETAILS
+  //
+  // This returns true if a given slot is available for the current number of lanes
+  auto isSlotInLane = [currentLane = dph->startTime, maxLanes = mMaxLanes](TimesliceSlot slot) {
+    return (slot.index % maxLanes) == (currentLane % maxLanes);
+  };
+  // This returns the identifier for the given input. We use a separate
+  // function because while it's trivial now, the actual matchmaking will
+  // become more complicated when we will start supporting ranges.
+  auto getInputTimeslice = [&matchers = mInputMatchers,
+                            &distinctRoutes = mDistinctRoutesIndex,
+                            &rawHeader,
+                            &index = mTimesliceIndex](VariableContext& context)
+    -> std::tuple<int, TimesliceId> {
+    /// FIXME: for the moment we only use the first context and reset
+    /// between one invokation and the other.
+    auto input = matchToContext(rawHeader, matchers, distinctRoutes, context);
+
+    if (input == INVALID_INPUT) {
+      return {
+        INVALID_INPUT,
+        TimesliceId{TimesliceId::INVALID},
+      };
+    }
+    /// The first argument is always matched against the data start time, so
+    /// we can assert it's the same as the dph->startTime
+    if (auto pval = std::get_if<uint64_t>(&context.get(0))) {
+      TimesliceId timeslice{*pval};
+      return {input, timeslice};
+    }
+    // If we get here it means we need to push something out of the cache.
+    return {
+      INVALID_INPUT,
+      TimesliceId{TimesliceId::INVALID},
+    };
+  };
+
   // Actually save the header / payload in the slot
   auto saveInSlot = [&cachedStateMetrics = mCachedStateMetrics,
                      &messages,
                      &nMessages,
                      &nPayloads,
-                     &cache,
-                     &numInputTypes,
-                     &metrics](TimesliceId timeslice, int input, TimesliceSlot slot) {
+                     &cache = mCache,
+                     numInputTypes = mDistinctRoutesIndex.size(),
+                     &metrics = mMetrics](TimesliceId timeslice, int input, TimesliceSlot slot) {
     auto cacheIdx = numInputTypes * slot.index + input;
     MessageSet& target = cache[cacheIdx];
     cachedStateMetrics[cacheIdx] = CacheEntryStatus::PENDING;
@@ -453,6 +468,7 @@ DataRelayer::RelayChoice
   auto input = INVALID_INPUT;
   auto timeslice = TimesliceId{TimesliceId::INVALID};
   auto slot = TimesliceSlot{TimesliceSlot::INVALID};
+  auto &index = mTimesliceIndex;
 
   bool needsCleaning = false;
   // First look for matching slots which already have some
@@ -494,7 +510,7 @@ DataRelayer::RelayChoice
   if (input != INVALID_INPUT && TimesliceId::isValid(timeslice) && TimesliceSlot::isValid(slot)) {
     O2_SIGNPOST(O2_PROBE_DATARELAYER, timeslice.value, 0, 0, 0);
     if (needsCleaning) {
-      pruneCache(slot);
+      this->pruneCache(slot);
     }
     saveInSlot(timeslice, input, slot);
     index.publishSlot(slot);
@@ -570,7 +586,7 @@ DataRelayer::RelayChoice
     case TimesliceIndex::ActionTaken::ReplaceObsolete:
       // At this point the variables match the new input but the
       // cache still holds the old data, so we prune it.
-      pruneCache(slot);
+      this->pruneCache(slot);
       saveInSlot(timeslice, input, slot);
       index.publishSlot(slot);
       index.markAsDirty(slot, true);
