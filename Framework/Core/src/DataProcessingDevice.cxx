@@ -1077,11 +1077,9 @@ void DataProcessingDevice::Run()
     // - we can trigger further events from the queue
     // - we can guarantee this is the last thing we do in the loop (
     //   assuming no one else is adding to the queue before this point).
-    if (!mWasActive) {
-      auto& queue = mServiceRegistry.get<AsyncQueue>();
-      auto oldestPossibleTimeslice = mRelayer->getOldestPossibleOutput();
-      AsyncQueueHelpers::run(queue, oldestPossibleTimeslice.timeslice);
-    }
+    auto& queue = mServiceRegistry.get<AsyncQueue>();
+    auto oldestPossibleTimeslice = mRelayer->getOldestPossibleOutput();
+    AsyncQueueHelpers::run(queue, {oldestPossibleTimeslice.timeslice.value + 1});
     FrameMark;
   }
   /// Cleanup messages which are still pending on exit.
