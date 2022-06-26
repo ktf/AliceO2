@@ -1489,14 +1489,6 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
             // Get the current timeslice for the slot.
             auto& variables = registry.get<TimesliceIndex>().getVariablesForSlot(slot);
             auto timeslice = VariableContextHelpers::getTimeslice(variables);
-            // This is required to avoid that the DecongestionService sends the
-            // oldest possible timetimeslice before pruned elements in the cache
-            // can be removed.
-            AsyncQueueHelpers::post(
-              asyncQueue, decongestion.oldestPossibleTimesliceTask, []() {
-                LOGP(debug, "Skip DecongestionService broadcasting of oldest possible timeslice and do it a the moment of dropping the messages.");
-              },
-              TimesliceId{timeslice}, 20);
             forwardInputs(registry, slot, dropped, oldestOutputInfo, false, true);
           };
           auto relayed = relayer.relay(parts.At(headerIndex)->GetData(),

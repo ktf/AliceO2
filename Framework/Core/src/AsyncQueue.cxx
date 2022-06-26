@@ -87,9 +87,9 @@ auto AsyncQueueHelpers::run(AsyncQueue& queue, TimesliceId oldestPossible) -> vo
   for (auto i : order) {
     if (queue.tasks[i].timeslice.value < oldestPossible.value) {
       // If a timeslice is obsolete, we can run the task and remove it from the queue
-      LOGP(debug, "Running task {} ({})", queue.prototypes[queue.tasks[i].id.value].name, i);
+      LOGP(info, "Running task {} ({})", queue.prototypes[queue.tasks[i].id.value].name, i);
       queue.tasks[i].task();
-      LOGP(debug, "Done running {}", i);
+      LOGP(info, "Done running {}", i);
     } 
   }
   // Remove all runnable tasks regardless  they actually
