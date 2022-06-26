@@ -675,7 +675,7 @@ o2::framework::ServiceSpec CommonServices::decongestionSpec()
           }
         }
         decongestion.lastTimeslice = oldestPossibleOutput.timeslice.value;
-      }, 20); },
+      }, TimesliceId{oldestPossibleTimeslice}, 20); },
     .kind = ServiceKind::Serial};
 }
 

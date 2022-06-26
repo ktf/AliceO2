@@ -40,6 +40,7 @@
 #include "Framework/DriverClient.h"
 #include "Framework/Monitoring.h"
 #include "Framework/TimesliceIndex.h"
+#include "Framework/VariableContextHelpers.h"
 #include "PropertyTreeHelpers.h"
 #include "DataProcessingStatus.h"
 #include "DecongestionService.h"
@@ -1078,7 +1079,8 @@ void DataProcessingDevice::Run()
     //   assuming no one else is adding to the queue before this point).
     if (!mWasActive) {
       auto& queue = mServiceRegistry.get<AsyncQueue>();
-      AsyncQueueHelpers::run(queue);
+      auto oldestPossibleTimeslice = mRelayer->getOldestPossibleOutput();
+      AsyncQueueHelpers::run(queue, oldestPossibleTimeslice.timeslice);
     }
     FrameMark;
   }
@@ -1483,6 +1485,10 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
             LOGP(info, "Dropping message from slot {}. Forwarding as needed.", slot.index);
             auto& asyncQueue = registry.get<AsyncQueue>();
             auto& decongestion = registry.get<DecongestionService>();
+            auto& relayer = registry.get<DataRelayer>();
+            // Get the current timeslice for the slot.
+            auto& variables = registry.get<TimesliceIndex>().getVariablesForSlot(slot);
+            auto timeslice = VariableContextHelpers::getTimeslice(variables);
             // This is required to avoid that the DecongestionService sends the
             // oldest possible timetimeslice before pruned elements in the cache
             // can be removed.
@@ -1490,7 +1496,7 @@ void DataProcessingDevice::handleData(DataProcessorContext& context, InputChanne
               asyncQueue, decongestion.oldestPossibleTimesliceTask, []() {
                 LOGP(debug, "Skip DecongestionService broadcasting of oldest possible timeslice and do it a the moment of dropping the messages.");
               },
-              20);
+              TimesliceId{timeslice}, 20);
             forwardInputs(registry, slot, dropped, oldestOutputInfo, false, true);
           };
           auto relayed = relayer.relay(parts.At(headerIndex)->GetData(),
