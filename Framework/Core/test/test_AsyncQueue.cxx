@@ -25,8 +25,10 @@ BOOST_AUTO_TEST_CASE(TestDebouncing)
   auto taskId = AsyncQueueHelpers::create(queue, {.name = "test", .score = 10});
   // Push two tasks on the queue with the same id
   auto count = 0;
-  AsyncQueueHelpers::post(queue, taskId, [&count]() { count += 1; }, TimesliceId{0}, 10);
-  AsyncQueueHelpers::post(queue, taskId, [&count]() { count += 2; }, TimesliceId{1}, 20);
+  AsyncQueueHelpers::post(
+    queue, taskId, [&count]() { count += 1; }, TimesliceId{0}, 10);
+  AsyncQueueHelpers::post(
+    queue, taskId, [&count]() { count += 2; }, TimesliceId{1}, 20);
   AsyncQueueHelpers::run(queue, TimesliceId{2});
   BOOST_CHECK_EQUAL(count, 2);
 }
@@ -40,8 +42,10 @@ BOOST_AUTO_TEST_CASE(TestPriority)
   auto taskId2 = AsyncQueueHelpers::create(queue, {.name = "test2", .score = 20});
   // Push two tasks on the queue with the same id
   auto count = 0;
-  AsyncQueueHelpers::post(queue, taskId1, [&count]() { count += 10; }, TimesliceId{0});
-  AsyncQueueHelpers::post(queue, taskId2, [&count]() { count /= 10; }, TimesliceId{0});
+  AsyncQueueHelpers::post(
+    queue, taskId1, [&count]() { count += 10; }, TimesliceId{0});
+  AsyncQueueHelpers::post(
+    queue, taskId2, [&count]() { count /= 10; }, TimesliceId{0});
   AsyncQueueHelpers::run(queue, TimesliceId{2});
   BOOST_CHECK_EQUAL(count, 10);
 }

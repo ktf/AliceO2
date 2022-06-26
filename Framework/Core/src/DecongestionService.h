@@ -13,7 +13,8 @@
 #define O2_FRAMEWORK_DECONGESTIONSERVICE_H_
 #include "Framework/AsyncQueue.h"
 
-namespace o2::framework {
+namespace o2::framework
+{
 struct DecongestionService {
   /// Wether we are a source in the processing chain
   bool isFirstInTopology = true;
@@ -25,4 +26,3 @@ struct DecongestionService {
 };
 } // namespace o2::framework
 #endif
-

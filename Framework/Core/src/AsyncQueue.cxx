@@ -50,8 +50,8 @@ auto AsyncQueueHelpers::run(AsyncQueue& queue, TimesliceId oldestPossible) -> vo
         return false;
       }
       if (queue.tasks[a].id.value == queue.tasks[b].id.value) {
-          return queue.tasks[a].debounce > queue.tasks[b].debounce;
-      } 
+        return queue.tasks[a].debounce > queue.tasks[b].debounce;
+      }
       return queue.prototypes[queue.tasks[a].id.value].score > queue.prototypes[queue.tasks[b].id.value].score;
     } else {
       return queue.tasks[a].timeslice.value > queue.tasks[b].timeslice.value;
@@ -78,7 +78,7 @@ auto AsyncQueueHelpers::run(AsyncQueue& queue, TimesliceId oldestPossible) -> vo
   if (order.empty() && queue.tasks.size() > 0) {
     LOGP(info, "AsyncQueue: not running iteration {} timeslice {} pending {}.", order.size(), queue.iteration, oldestPossible.value, queue.tasks.size());
     return;
-  } else if (order.empty()){
+  } else if (order.empty()) {
     return;
   }
   LOGP(debug, "AsyncQueue: Running {} tasks in iteration {} timeslice {}", order.size(), queue.iteration, oldestPossible.value);
@@ -90,7 +90,7 @@ auto AsyncQueueHelpers::run(AsyncQueue& queue, TimesliceId oldestPossible) -> vo
       LOGP(info, "Running task {} ({})", queue.prototypes[queue.tasks[i].id.value].name, i);
       queue.tasks[i].task();
       LOGP(info, "Done running {}", i);
-    } 
+    }
   }
   // Remove all runnable tasks regardless  they actually
   // ran or they were skipped due to debouncing.

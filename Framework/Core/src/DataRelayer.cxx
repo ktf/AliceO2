@@ -306,7 +306,8 @@ TimesliceIndex::OldestOutputInfo DataRelayer::getOldestPossibleOutput() const
   return mTimesliceIndex.getOldestPossibleOutput();
 }
 
-void DataRelayer::pruneCache(TimesliceSlot slot, OnDropCallback onDrop) {
+void DataRelayer::pruneCache(TimesliceSlot slot, OnDropCallback onDrop)
+{
   // We need to prune the cache from the old stuff, if any. Otherwise we
   // simply store the payload in the cache and we mark relevant bit in the
   // hence the first if.
@@ -451,7 +452,7 @@ DataRelayer::RelayChoice
   auto input = INVALID_INPUT;
   auto timeslice = TimesliceId{TimesliceId::INVALID};
   auto slot = TimesliceSlot{TimesliceSlot::INVALID};
-  auto &index = mTimesliceIndex;
+  auto& index = mTimesliceIndex;
 
   bool needsCleaning = false;
   // First look for matching slots which already have some
