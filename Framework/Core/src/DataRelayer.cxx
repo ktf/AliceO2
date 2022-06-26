@@ -306,23 +306,6 @@ TimesliceIndex::OldestOutputInfo DataRelayer::getOldestPossibleOutput() const
   return mTimesliceIndex.getOldestPossibleOutput();
 }
 
-void DataRelayer::pruneCache(TimesliceId oldest, OnDropCallback onDrop) {
-  /// Iterate over all the slots and remove all the data that is older than the
-  /// oldest timeslice.
-  for (size_t si = 0; si < mCache.size() / mInputs.size(); ++si) {
-    if (mTimesliceIndex.isDirty({si}) == true) {
-      continue;
-    }
-    /// Get the timeslice for this slot.
-    auto timestamp = VariableContextHelpers::getTimeslice(mTimesliceIndex.getVariablesForSlot({si}));
-    if (timestamp.value < oldest.value) {
-      LOGP(info, "Pruning obsolete cache slot {} because it has timeslice {} < {}", si, timestamp.value, oldest.value);
-      pruneCache(TimesliceSlot{si}, onDrop);
-      mTimesliceIndex.markAsInvalid(TimesliceSlot{si});
-    }
-  }
-}
-
 void DataRelayer::pruneCache(TimesliceSlot slot, OnDropCallback onDrop) {
   // We need to prune the cache from the old stuff, if any. Otherwise we
   // simply store the payload in the cache and we mark relevant bit in the

@@ -94,9 +94,6 @@ class DataRelayer
   /// Prune the cache for a given slot
   void pruneCache(TimesliceSlot slot, OnDropCallback onDrop = nullptr);
 
-  /// Prune the cache for all the slots which are older than the given one
-  void pruneCache(TimesliceId oldest, OnDropCallback onDrop = nullptr);
-
   /// This is to relay a whole set of fair::mq::Messages, all which are part
   /// of the same set of split parts.
   /// @a rawHeader raw header pointer
