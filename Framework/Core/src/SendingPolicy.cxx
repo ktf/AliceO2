@@ -37,8 +37,7 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies(ConfigContext co
               } },
             .send = [](FairMQDeviceProxy& proxy, fair::mq::Parts& parts, ChannelIndex channelIndex) {
               auto *channel = proxy.getOutputChannel(channelIndex);
-              channel->Send(parts, 0); 
-           }},
+              channel->Send(parts, 0); }},
           SendingPolicy{
             .name = "default",
             .matcher = [](DeviceSpec const&, ConfigContext const&) { return true; },
