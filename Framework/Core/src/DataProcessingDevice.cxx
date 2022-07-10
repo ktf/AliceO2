@@ -559,27 +559,28 @@ static auto forwardInputs = [](ServiceRegistry& registry, TimesliceSlot slot, st
   auto& asyncQueue = registry.get<AsyncQueue>();
   auto& decongestion = registry.get<DecongestionService>();
   LOG(debug) << "Queuing forwarding " << forwardedParts.size() << " messages";
-  AsyncQueueHelpers::post(asyncQueue, decongestion.oldestPossibleTimesliceTask, [&proxy, registry, oldestTimeslice]() {
-
-  //DataProcessingHelpers::broadcastOldestPossibleTimeslice(proxy, oldestTimeslice.timeslice.value);
-  for (int fi = 0; fi < proxy.getNumForwardChannels(); fi++) {
-    auto& info = proxy.getForwardChannelInfo(ChannelIndex{fi});
-    // The oldest possible timeslice for a forwarded message
-    // is conservatively the one of the device doing the forwarding.
-    // TODO: this we could cache in the proxy at the bind moment.
-    if (info.channelType != ChannelAccountingType::DPL) {
-      LOG(debug) << "Skipping channel";
-      continue;
-    }
-    // Not 100% sure this is the right way to do it. The idea is 
-    // that when we early forward the oldest possible timeslice is
-    // still the one before, because the processing has not yet
-    // happened. Maybe we should check if the timeslice value is the same as
-    // the one we are forwarding.
-    DataProcessingHelpers::sendOldestPossibleTimeframe(info.channel, oldestTimeslice.timeslice.value + 1);
-    LOGP(debug, "Forwarding to channel {} oldest possible timeslice {}", info.name, oldestTimeslice.timeslice.value);
-  }
-  }, oldestTimeslice.timeslice, 20);
+  AsyncQueueHelpers::post(
+    asyncQueue, decongestion.oldestPossibleTimesliceTask, [&proxy, registry, oldestTimeslice]() {
+      //DataProcessingHelpers::broadcastOldestPossibleTimeslice(proxy, oldestTimeslice.timeslice.value);
+      for (int fi = 0; fi < proxy.getNumForwardChannels(); fi++) {
+        auto& info = proxy.getForwardChannelInfo(ChannelIndex{fi});
+        // The oldest possible timeslice for a forwarded message
+        // is conservatively the one of the device doing the forwarding.
+        // TODO: this we could cache in the proxy at the bind moment.
+        if (info.channelType != ChannelAccountingType::DPL) {
+          LOG(debug) << "Skipping channel";
+          continue;
+        }
+        // Not 100% sure this is the right way to do it. The idea is
+        // that when we early forward the oldest possible timeslice is
+        // still the one before, because the processing has not yet
+        // happened. Maybe we should check if the timeslice value is the same as
+        // the one we are forwarding.
+        DataProcessingHelpers::sendOldestPossibleTimeframe(info.channel, oldestTimeslice.timeslice.value + 1);
+        LOGP(debug, "Forwarding to channel {} oldest possible timeslice {}", info.name, oldestTimeslice.timeslice.value);
+      }
+    },
+    oldestTimeslice.timeslice, 20);
   LOG(debug) << "Forwarding done";
 };
 extern volatile int region_read_global_dummy_variable;
