@@ -969,7 +969,7 @@ void WorkflowHelpers::constructGraph(const WorkflowSpec& workflow,
           availableOutputsInfo.erase(
             std::remove_if(availableOutputsInfo.begin(), availableOutputsInfo.end(), [](auto& info) {
               return info.enabled == false;
-          }),
+            }),
             availableOutputsInfo.end());
         }
       }
