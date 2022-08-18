@@ -606,7 +606,7 @@ DataProcessorSpec adaptAnalysisTask(ConfigContext const& ctx, Args&&... args)
       homogeneous_apply_refs([&eosContext](auto&& x) { return OutputManager<std::decay_t<decltype(x)>>::postRun(eosContext, x); }, *task.get());
       eosContext.services().get<ControlService>().readyToQuit(QuitRequest::Me);
     };
-    callbacks.set(CallbackService::Id::EndOfStream, endofdatacb);
+    callbacks.set<CallbackService::Id::EndOfStream>(endofdatacb);
 
     /// update configurables in filters
     homogeneous_apply_refs(

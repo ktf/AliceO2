@@ -115,21 +115,19 @@ AlgorithmSpec adaptFromTask(Args&&... args)
 {
   return AlgorithmSpec::InitCallback{[=](InitContext& ic) {
     auto task = std::make_shared<T>(args...);
+    auto& callbacks = ic.services().get<CallbackService>();
     if constexpr (has_endOfStream<T>::value) {
-      auto& callbacks = ic.services().get<CallbackService>();
-      callbacks.set(CallbackService::Id::EndOfStream, [task](EndOfStreamContext& eosContext) {
+      callbacks.set<CallbackService::Id::EndOfStream>([task](EndOfStreamContext& eosContext) {
         task->endOfStream(eosContext);
       });
     }
     if constexpr (has_finaliseCCDB<T>::value) {
-      auto& callbacks = ic.services().get<CallbackService>();
-      callbacks.set(CallbackService::Id::CCDBDeserialised, [task](ConcreteDataMatcher& matcher, void* obj) {
+      callbacks.set<CallbackService::Id::CCDBDeserialised>([task](ConcreteDataMatcher& matcher, void* obj) {
         task->finaliseCCDB(matcher, obj);
       });
     }
     if constexpr (has_stop<T>::value) {
-      auto& callbacks = ic.services().get<CallbackService>();
-      callbacks.set(CallbackService::Id::Stop, [task]() {
+      callbacks.set<CallbackService::Id::Stop>([task]() {
         task->stop();
       });
     }
@@ -144,21 +142,19 @@ template <typename T>
 AlgorithmSpec adoptTask(std::shared_ptr<T> task)
 {
   return AlgorithmSpec::InitCallback{[task](InitContext& ic) {
+    auto& callbacks = ic.services().get<CallbackService>();
     if constexpr (has_endOfStream<T>::value) {
-      auto& callbacks = ic.services().get<CallbackService>();
-      callbacks.set(CallbackService::Id::EndOfStream, [task](EndOfStreamContext& eosContext) {
+      callbacks.set<CallbackService::Id::EndOfStream>([task](EndOfStreamContext& eosContext) {
         task->endOfStream(eosContext);
       });
     }
     if constexpr (has_finaliseCCDB<T>::value) {
-      auto& callbacks = ic.services().get<CallbackService>();
-      callbacks.set(CallbackService::Id::CCDBDeserialised, [task](ConcreteDataMatcher& matcher, void* obj) {
+      callbacks.set<CallbackService::Id::CCDBDeserialised>([task](ConcreteDataMatcher& matcher, void* obj) {
         task->finaliseCCDB(matcher, obj);
       });
     }
     if constexpr (has_stop<T>::value) {
-      auto& callbacks = ic.services().get<CallbackService>();
-      callbacks.set(CallbackService::Id::Stop, [task]() {
+      callbacks.set<CallbackService::Id::Stop>([task]() {
         task->stop();
       });
     }

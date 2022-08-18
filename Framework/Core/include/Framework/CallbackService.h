@@ -121,6 +121,13 @@ class CallbackService
     mCallbacks.set(id, std::forward<U>(cb));
   }
 
+  // set callback for specified processing step
+  template <Id id, typename U>
+  void set(U&& cb)
+  {
+    mCallbacks.set<(size_t)id>(id, std::forward<U>(cb));
+  }
+
   // execute callback for specified processing step with argument pack
   template <typename... TArgs>
   auto operator()(Id id, TArgs&&... args)
