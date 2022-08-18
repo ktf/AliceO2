@@ -484,8 +484,7 @@ struct TableBuilderHelpers {
   {
     char const* const* names_ptr = names.data();
     return {
-      std::make_shared<arrow::Field>(*names_ptr++, BuilderMaker<ARGS>::make_datatype(), true, nullptr)...
-    };
+      std::make_shared<arrow::Field>(*names_ptr++, BuilderMaker<ARGS>::make_datatype(), true, nullptr)...};
   }
 
   /// Invokes the append method for each entry in the tuple
@@ -523,7 +522,7 @@ struct TableBuilderHelpers {
   {
     return (finalize(arrays[Is], std::get<Is>(holders)) && ...);
   }
-  
+
   template <typename HOLDER>
   static bool finalize(std::shared_ptr<arrow::Array>& array, HOLDER& holder)
   {
@@ -537,7 +536,7 @@ struct TableBuilderHelpers {
   }
 
   template <typename HOLDER>
-  static HOLDER &&reserveAll(HOLDER&& holder, size_t s)
+  static HOLDER&& reserveAll(HOLDER&& holder, size_t s)
   {
     if (s != -1) {
       holder.builder->Reserve(s).ok();
