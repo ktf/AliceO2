@@ -157,7 +157,6 @@ struct Bar : FooFoo<int> {
 struct NoBar : NoFooFoo<int> {
 };
 
-
 BOOST_AUTO_TEST_CASE(BaseOfTemplate)
 {
   constexpr bool t = is_base_of_template_v<std::vector, std::vector<int>>;
