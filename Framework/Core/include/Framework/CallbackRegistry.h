@@ -58,19 +58,6 @@ class CallbackRegistry
     exec<size>(id, std::forward<TArgs>(args)...);
   }
 
- private:
-  // helper trait to check whether class has a constructor taking callback as argument
-  template <class T, typename CB>
-  struct has_matching_callback {
-    template <class U, typename V>
-    static int check(decltype(U(std::declval<V>()))*);
-
-    template <typename U, typename V>
-    static char check(...);
-
-    static const bool value = sizeof(check<T, CB>(nullptr)) == sizeof(int);
-  };
-
   // set the callback function of the specified id
   // this iterates over defined slots and sets the matching callback
   template <std::size_t pos, typename U>
@@ -83,18 +70,6 @@ class CallbackRegistry
       // note: there are two substitutions, the one for callback matching the slot type sets the
       // callback, while the other substitution should never be called
       setAt<pos - 1, typename std::tuple_element<pos - 1, CallbackStore>::type::type>(cb);
-    }
-  }
-
-  // set the callback at specified slot position
-  template <std::size_t pos, typename U, typename F>
-  void setAt(F&& cb)
-  {
-    if constexpr (has_matching_callback<U, F>::value == true) {
-      // create a new std::function object and init with the callback function
-      std::get<pos>(mStore).callback = (U)(cb);
-    } else {
-      throw runtime_error_f("mismatch in function substitution at position %d", pos);
     }
   }
 
@@ -112,6 +87,31 @@ class CallbackRegistry
       using ResT = typename FunT::result_type;
       using CheckT = std::function<ResT(TArgs...)>;
       execAt<pos - 1, FunT, CheckT>(std::forward<TArgs>(args)...);
+    }
+  }
+
+ private:
+  // helper trait to check whether class has a constructor taking callback as argument
+  template <class T, typename CB>
+  struct has_matching_callback {
+    template <class U, typename V>
+    static int check(decltype(U(std::declval<V>()))*);
+
+    template <typename U, typename V>
+    static char check(...);
+
+    static const bool value = sizeof(check<T, CB>(nullptr)) == sizeof(int);
+  };
+
+  // set the callback at specified slot position
+  template <std::size_t pos, typename U, typename F>
+  void setAt(F&& cb)
+  {
+    if constexpr (has_matching_callback<U, F>::value == true) {
+      // create a new std::function object and init with the callback function
+      std::get<pos>(mStore).callback = (U)(cb);
+    } else {
+      throw runtime_error_f("mismatch in function substitution at position %d", pos);
     }
   }
 
