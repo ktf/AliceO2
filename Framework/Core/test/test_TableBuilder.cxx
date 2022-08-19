@@ -403,8 +403,9 @@ BOOST_AUTO_TEST_CASE(TestColumnCount)
   BOOST_REQUIRE_EQUAL(count2, 3);
 }
 
-BOOST_AUTO_TEST_CASE(TestMakeFields) {
-  auto fields = TableBuilderHelpers::makeFields<int, float>({ "i", "f" });
+BOOST_AUTO_TEST_CASE(TestMakeFields)
+{
+  auto fields = TableBuilderHelpers::makeFields<int, float>({"i", "f"});
   BOOST_REQUIRE_EQUAL(fields.size(), 2);
   BOOST_REQUIRE_EQUAL(fields[0]->name(), "i");
   BOOST_REQUIRE_EQUAL(fields[1]->name(), "f");
