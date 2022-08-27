@@ -50,13 +50,13 @@ BOOST_AUTO_TEST_CASE(TestDeviceMetricsInfo)
   BOOST_CHECK_EQUAL(info.metricLabelsPrefixesSortedIdx[0].index, 0);
   BOOST_CHECK_EQUAL(info.intMetrics.size(), 1);
   BOOST_CHECK_EQUAL(info.floatMetrics.size(), 0);
-  BOOST_CHECK_EQUAL(info.timestamps.size(), 1);
+  BOOST_CHECK_EQUAL(info.intTimestamps.size(), 1);
   BOOST_CHECK_EQUAL(info.metrics.size(), 1);
   BOOST_CHECK_EQUAL(info.metrics[0].type, MetricType::Int);
   BOOST_CHECK_EQUAL(info.metrics[0].storeIdx, 0);
   BOOST_CHECK_EQUAL(info.metrics[0].pos, 1);
 
-  BOOST_CHECK_EQUAL(info.timestamps[0][0], 1789372894);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][0], 1789372894);
   BOOST_CHECK_EQUAL(info.intMetrics[0][0], 12);
   BOOST_CHECK_EQUAL(info.intMetrics[0][1], 0);
 
@@ -400,17 +400,19 @@ BOOST_AUTO_TEST_CASE(TestDeviceMetricsInfo2)
   BOOST_CHECK_EQUAL(info.floatMetrics[0][1], 2.);
   BOOST_CHECK_EQUAL(info.floatMetrics[0][2], 3.);
   BOOST_CHECK_EQUAL(info.floatMetrics[0][3], 4.);
-  BOOST_CHECK_EQUAL(info.timestamps.size(), 3);
-  BOOST_CHECK_EQUAL(info.timestamps[0][0], 1000);
-  BOOST_CHECK_EQUAL(info.timestamps[0][1], 1001);
-  BOOST_CHECK_EQUAL(info.timestamps[0][2], 1002);
-  BOOST_CHECK_EQUAL(info.timestamps[0][3], 1003);
-  BOOST_CHECK_EQUAL(info.timestamps[0][4], 1004);
-  BOOST_CHECK_EQUAL(info.timestamps[0][5], 1005);
-  BOOST_CHECK_EQUAL(info.timestamps[1][0], 1007);
-  BOOST_CHECK_EQUAL(info.timestamps[1][1], 1008);
-  BOOST_CHECK_EQUAL(info.timestamps[1][2], 1009);
-  BOOST_CHECK_EQUAL(info.timestamps[1][3], 1010);
+  BOOST_CHECK_EQUAL(info.intTimestamps.size(), 1);
+  BOOST_CHECK_EQUAL(info.floatTimestamps.size(), 1);
+  BOOST_CHECK_EQUAL(info.uint64Timestamps.size(), 1);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][0], 1000);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][1], 1001);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][2], 1002);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][3], 1003);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][4], 1004);
+  BOOST_CHECK_EQUAL(info.intTimestamps[0][5], 1005);
+  BOOST_CHECK_EQUAL(info.floatTimestamps[0][0], 1007);
+  BOOST_CHECK_EQUAL(info.floatTimestamps[0][1], 1008);
+  BOOST_CHECK_EQUAL(info.floatTimestamps[0][2], 1009);
+  BOOST_CHECK_EQUAL(info.floatTimestamps[0][3], 1010);
   BOOST_CHECK_EQUAL(info.changed.size(), 3);
   for (int i = 0; i < 1026; ++i) {
     ckey(info, i, t++);

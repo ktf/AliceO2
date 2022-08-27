@@ -105,6 +105,13 @@ bool DeviceMetricsHelper::parseMetric(std::string_view const s, ParsedMetricMatc
       }
       match.floatValue = (float)match.uint64Value;
       break;
+    case MetricType::Enum:
+      match.uint64Value = strtoul(spaces[1] + 1, &ep, 10);
+      if (ep != *(space - 2)) {
+        return false;
+      }
+      match.floatValue = (float)match.uint64Value;
+      break;
 
     default:
       return false;
@@ -156,7 +163,6 @@ static constexpr int DPL_MAX_METRICS_PER_DEVICE = 1024*128;
 
 static auto initMetric = [](DeviceMetricsInfo& info) -> void {
   // Add the timestamp buffer for it
-  info.timestamps.emplace_back(std::array<size_t, 1024>{});
   info.max.push_back(std::numeric_limits<float>::lowest());
   info.min.push_back(std::numeric_limits<float>::max());
   info.average.push_back(0);
@@ -181,6 +187,8 @@ auto storeIdx = [](DeviceMetricsInfo& info, MetricType type) -> size_t {
       return info.floatMetrics.size();
     case MetricType::Uint64:
       return info.uint64Metrics.size();
+    case MetricType::Enum:
+      return info.enumMetrics.size();
     default:
       return -1;
   }
@@ -197,16 +205,24 @@ auto createMetricInfo = [](DeviceMetricsInfo& info, MetricType type) -> MetricIn
   // Add a new empty buffer for it of the correct kind
   switch (type) {
     case MetricType::Int:
-      info.intMetrics.emplace_back(std::array<int, 1024>{});
+      info.intMetrics.emplace_back(MetricsStorage<int>{});
+      info.intTimestamps.emplace_back(TimestampsStorage<int>{});
       break;
     case MetricType::String:
-      info.stringMetrics.emplace_back(std::array<StringMetric, 32>{});
+      info.stringMetrics.emplace_back(MetricsStorage<StringMetric>{});
+      info.stringTimestamps.emplace_back(TimestampsStorage<StringMetric>{});
       break;
     case MetricType::Float:
-      info.floatMetrics.emplace_back(std::array<float, 1024>{});
+      info.floatMetrics.emplace_back(MetricsStorage<float>{});
+      info.floatTimestamps.emplace_back(TimestampsStorage<float>{});
       break;
     case MetricType::Uint64:
-      info.uint64Metrics.emplace_back(std::array<uint64_t, 1024>{});
+      info.uint64Metrics.emplace_back(MetricsStorage<uint64_t>{});
+      info.uint64Timestamps.emplace_back(TimestampsStorage<uint64_t>{});
+      break;
+    case MetricType::Enum:
+      info.enumMetrics.emplace_back(MetricsStorage<int8_t>{});
+      info.enumTimestamps.emplace_back(TimestampsStorage<int8_t>{});
       break;
     default:
       throw std::runtime_error("Unknown metric type");
@@ -291,6 +307,7 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
     case MetricType::Float:
     case MetricType::Int:
     case MetricType::Uint64:
+    case MetricType::Enum:
       break;
     case MetricType::String: {
       auto lastChar = std::min(match.endStringValue - match.beginStringValue, StringMetric::MAX_SIZE - 1);
@@ -376,18 +393,27 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
     case MetricType::Int: {
       info.intMetrics[metricInfo.storeIdx][metricInfo.pos] = match.intValue;
       sizeOfCollection = info.intMetrics[metricInfo.storeIdx].size();
+      info.intTimestamps[metricInfo.storeIdx][metricInfo.pos] = match.timestamp;
     } break;
     case MetricType::String: {
       info.stringMetrics[metricInfo.storeIdx][metricInfo.pos] = stringValue;
       sizeOfCollection = info.stringMetrics[metricInfo.storeIdx].size();
+      info.stringTimestamps[metricInfo.storeIdx][metricInfo.pos] = match.timestamp;
     } break;
     case MetricType::Float: {
       info.floatMetrics[metricInfo.storeIdx][metricInfo.pos] = match.floatValue;
       sizeOfCollection = info.floatMetrics[metricInfo.storeIdx].size();
+      info.floatTimestamps[metricInfo.storeIdx][metricInfo.pos] = match.timestamp;
     } break;
     case MetricType::Uint64: {
       info.uint64Metrics[metricInfo.storeIdx][metricInfo.pos] = match.uint64Value;
       sizeOfCollection = info.uint64Metrics[metricInfo.storeIdx].size();
+      info.uint64Timestamps[metricInfo.storeIdx][metricInfo.pos] = match.timestamp;
+    } break;
+    case MetricType::Enum: {
+      info.enumMetrics[metricInfo.storeIdx][metricInfo.pos] = match.intValue;
+      sizeOfCollection = info.enumMetrics[metricInfo.storeIdx].size();
+      info.enumTimestamps[metricInfo.storeIdx][metricInfo.pos] = match.timestamp;
     } break;
     default:
       return false;
@@ -404,7 +430,6 @@ bool DeviceMetricsHelper::processMetric(ParsedMetricMatch& match,
     return previousAverage + (nextValue - previousAverage) / (previousCount + 1);
   };
   info.average[metricIndex] = onlineAverage(match.floatValue, info.average[metricIndex], metricInfo.filledMetrics);
-  info.timestamps[metricIndex][metricInfo.pos] = match.timestamp;
   // We point to the next metric
   metricInfo.pos = (metricInfo.pos + 1) % sizeOfCollection;
   ++metricInfo.filledMetrics;
