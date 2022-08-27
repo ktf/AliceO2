@@ -756,7 +756,7 @@ void displayMetrics(gui::WorkspaceGUIState& state,
           deviceVisible = true;
           visibleMetrics++;
           auto& metric = metricInfo.metrics[mi];
-          size_t const*timestamps = nullptr;
+          size_t const* timestamps = nullptr;
           switch (metric.type) {
             case MetricType::Int:
               timestamps = metricInfo.intTimestamps[metric.storeIdx].data();
