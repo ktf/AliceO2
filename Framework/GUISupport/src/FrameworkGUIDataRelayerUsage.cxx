@@ -129,10 +129,10 @@ void displayDataRelayer(DeviceMetricsInfo const& metrics,
     MetricInfo const& metricInfo = metrics.metrics[metricIndex];
     MetricLabel const& metricLabel = metrics.metricLabels[metricIndex];
     if (metricInfo.type != MetricType::Enum || metrics.enumMetrics.size() <= metricInfo.storeIdx) {
-      LOG(error)  << "Unexpected data relayer metric " << metricLabel.label << " " << metricInfo.type << " " << metrics.enumMetrics.size() << " " << metricInfo.storeIdx;
-      LOG(error)  << record << " " << viewIndex.w << " " << viewIndex.h << " " << i;
+      LOG(error) << "Unexpected data relayer metric " << metricLabel.label << " " << metricInfo.type << " " << metrics.enumMetrics.size() << " " << metricInfo.storeIdx;
+      LOG(error) << record << " " << viewIndex.w << " " << viewIndex.h << " " << i;
       for (auto index : viewIndex.indexes) {
-        LOG(error)  << index << ": " << metrics.metricLabels[index].label;
+        LOG(error) << index << ": " << metrics.metricLabels[index].label;
       }
     }
     assert(metricInfo.type == MetricType::Enum);
@@ -191,14 +191,14 @@ void displayDataRelayer(DeviceMetricsInfo const& metrics,
 
   if (getNumRecords()) {
     HeatMapHelper::draw<int, int8_t>("DataRelayer",
-                                  size,
-                                  getNumRecords,
-                                  getRecord,
-                                  getNumItems,
-                                  getItem,
-                                  getValue,
-                                  getColor,
-                                  describeCell);
+                                     size,
+                                     getNumRecords,
+                                     getRecord,
+                                     getNumItems,
+                                     getItem,
+                                     getValue,
+                                     getColor,
+                                     describeCell);
   }
 }
 
