@@ -58,7 +58,7 @@ bool DeviceMetricsHelper::parseMetric(std::string_view const s, ParsedMetricMatc
   ParsingState state = ParsingState::IN_START;
   char const* cur = s.data();
   char const* next = s.data();
-  char *err = nullptr;
+  char* err = nullptr;
   // We need to keep track of the last and last but one space
   // to be able to parse the timestamp and tags.
   char const* lastSpace = nullptr;
@@ -207,7 +207,7 @@ bool DeviceMetricsHelper::parseMetric(std::string_view const s, ParsedMetricMatc
         if (cur == next) {
         } else if (*next == ' ') {
           state = ParsingState::IN_TAGS;
-        } else if (next == s.data() + s.size() || *next =='\n') {
+        } else if (next == s.data() + s.size() || *next == '\n') {
           state = ParsingState::IN_EXIT;
         }
       } break;

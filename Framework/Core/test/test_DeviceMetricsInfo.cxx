@@ -83,7 +83,6 @@ BOOST_AUTO_TEST_CASE(TestEnums)
   }
 }
 
-
 BOOST_AUTO_TEST_CASE(TestDeviceMetricsInfo)
 {
   using namespace o2::framework;
