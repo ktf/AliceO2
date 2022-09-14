@@ -1048,7 +1048,7 @@ std::vector<ServiceSpec> CommonServices::defaultServices(int numThreads)
         LOGP(error, "Could not find service {} in library {}", loadableService.name, loadableService.library);
         continue;
       }
-      
+
       loadedPlugins.push_back({loadableService.name, factory});
       loadedPlugin = loadedPlugins.begin() + loadedPlugins.size() - 1;
     }
