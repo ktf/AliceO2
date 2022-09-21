@@ -13,8 +13,9 @@
 #include "Framework/ServiceSpec.h"
 #include "Framework/CommonServices.h"
 
-struct ThreadPoolPlugin: public o2::framework::ServicePlugin {
-  o2::framework::ServiceSpec* create(void) {
+struct ThreadPoolPlugin : public o2::framework::ServicePlugin {
+  o2::framework::ServiceSpec* create(void)
+  {
     return o2::framework::CommonServices::threadPool(2);
   }
 };
