@@ -34,4 +34,4 @@ std::string VisualisationEventSerializer::fileNameIndexed(const std::string file
   return buffer.str();
 }
 
-} // namespace o2
+} // namespace o2::event_visualisation
