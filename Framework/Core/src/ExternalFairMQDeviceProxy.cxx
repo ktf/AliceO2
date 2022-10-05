@@ -425,7 +425,7 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
     // will be multiple channels. At least we throw a more informative exception.
     // fair::mq::Device calls the custom init before the channels have been configured
     // so we do the check before starting in a dedicated callback
-    auto channelConfigurationChecker = [channel, device, &services = ctx.services()]() {
+    auto channelConfigurationChecker = [channel, device, services = ctx.services()]() {
       auto& deviceState = services.get<DeviceState>();
       if (device->fChannels.count(channel) == 0) {
         throw std::runtime_error("the required out-of-band channel '" + channel + "' has not been configured, please check the name in the channel configuration");
