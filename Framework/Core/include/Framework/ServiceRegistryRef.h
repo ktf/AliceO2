@@ -14,4 +14,3 @@
 // Until we merge the proper ServiceRegistryRef...
 #include "Framework/ServiceRegistry.h"
 #endif // O2_FRAMEWORK_SERVICEREGISTRYREF_H_
-

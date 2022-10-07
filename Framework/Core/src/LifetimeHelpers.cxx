@@ -403,7 +403,6 @@ ExpirationHandler::Handler LifetimeHelpers::enumerate(ConcreteDataMatcher const&
     *(counter_t*)payload->GetData() = *counter;
     ref.payload = std::move(payload);
     (*counter)++;
-
   };
 }
 
