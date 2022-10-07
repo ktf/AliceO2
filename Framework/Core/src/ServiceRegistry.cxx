@@ -77,7 +77,7 @@ void ServiceRegistry::registerService(ServiceTypeHash typeHash, void* service, S
     // If the service slot was not taken, take it atomically
     bool expected = false;
     if (mServicesBooked[i + index.index].compare_exchange_strong(expected, true,
-                                                                  std::memory_order_seq_cst)) {
+                                                                 std::memory_order_seq_cst)) {
       mServicesValue[i + index.index] = service;
       mServicesMeta[i + index.index] = Meta{kind, salt};
       mServicesKey[i + index.index] = typeHash.hash;

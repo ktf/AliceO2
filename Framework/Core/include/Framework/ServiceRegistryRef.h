@@ -58,7 +58,8 @@ class ServiceRegistryRef
   }
 
   /// Invoke before sending messages @a parts on a channel @a channelindex
-  void preSendingMessagesCallbacks(fair::mq::Parts& parts, ChannelIndex channelindex) {
+  void preSendingMessagesCallbacks(fair::mq::Parts& parts, ChannelIndex channelindex)
+  {
     mRegistry.preSendingMessagesCallbacks(mRegistry, parts, channelindex);
   }
 

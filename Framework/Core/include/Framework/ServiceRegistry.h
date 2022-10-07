@@ -112,7 +112,8 @@ struct ServiceRegistry {
   /// The mask to use to calculate the initial slot id.
   constexpr static uint32_t MAX_SERVICES_MASK = MAX_SERVICES - 1;
 
-  static Salt threadSalt() {
+  static Salt threadSalt()
+  {
     auto tid = std::this_thread::get_id();
     std::hash<std::thread::id> hasher;
     return Salt{Context{.streamId = (short)hasher(tid)}};
