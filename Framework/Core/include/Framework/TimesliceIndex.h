@@ -135,6 +135,7 @@ class TimesliceIndex
 
   // Reset the TimesliceIndex to its initial state
   auto reset() -> void;
+
  private:
   /// @return the oldest slot possible so that we can eventually override it.
   /// This is the timeslices for all the in flight parts.
@@ -157,7 +158,6 @@ class TimesliceIndex
   /// By default we use -1, which means that we don't have any.
   OldestInputInfo mOldestPossibleInput = {};
   OldestOutputInfo mOldestPossibleOutput = {};
-
 
   /// What to do in case of backpressure
   BackpressureOp mBackpressurePolicy = BackpressureOp::Wait;
