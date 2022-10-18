@@ -236,7 +236,7 @@ InjectorFunction dplModelAdaptor(std::vector<OutputSpec> const& filterSpecs, DPL
       creationVal = creationValBase;
       override_creation = true;
     } else {
-      std::string orbitResetTimeUrl = device.fConfig->GetProperty<std::string>("orbit-reset-time", "ccdb://CTP/Calib/OrbitResetTime");
+      auto orbitResetTimeUrl = device.fConfig->GetProperty<std::string>("orbit-reset-time", "ccdb://CTP/Calib/OrbitResetTime");
       char* err = nullptr;
       creationVal = std::strtoll(orbitResetTimeUrl.c_str(), &err, 10);
       if (err && *err == 0 && creationVal) {
@@ -245,6 +245,10 @@ InjectorFunction dplModelAdaptor(std::vector<OutputSpec> const& filterSpecs, DPL
     }
 
     for (int msgidx = 0; msgidx < parts.Size(); msgidx += 2) {
+      if (parts.At(msgidx).get() == nullptr) {
+        LOG(error) << "unexpected nullptr found. Skipping message pair.";
+        continue;
+      }
       const auto dh = o2::header::get<DataHeader*>(parts.At(msgidx)->GetData());
       if (!dh) {
         LOG(error) << "data on input " << msgidx << " does not follow the O2 data model, DataHeader missing";
