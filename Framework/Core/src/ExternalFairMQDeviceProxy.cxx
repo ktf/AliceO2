@@ -505,7 +505,7 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
                         control = &ctx.services().get<ControlService>(),
                         deviceState = &ctx.services().get<DeviceState>(),
                         &timingInfo = ctx.services().get<TimingInfo>(),
-                        outputChannels = std::move(outputChannels)](fair::mq::Parts& inputs, int) {
+                        outputChannels = std::move(outputChannels)](fair::mq::Parts& inputs, int, size_t ci) {
       // pass a copy of the outputRoutes
       auto channelRetriever = [&outputRoutes](OutputSpec const& query, DataProcessingHeader::StartTime timeslice) -> std::string {
         for (auto& route : outputRoutes) {
@@ -518,21 +518,20 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
       };
 
       bool everyEoS = true;
-      for (size_t ci = 0; ci < channels.size(); ++ci) {
-        auto& channel = channels[ci];
-        // we buffer the condition since the converter will forward messages by move
-        numberOfEoS[ci] += countEoS(inputs);
-        converter(timingInfo, *device, inputs, channelRetriever);
+      std::string const& channel = channels[ci];
+      // we buffer the condition since the converter will forward messages by move
+      numberOfEoS[ci] += countEoS(inputs);
+      converter(timingInfo, *device, inputs, channelRetriever);
 
-        // If we have enough EoS messages, we can stop the device
-        // Notice that this has a number of failure modes:
-        // * If a connection sends the EoS and then closes.
-        // * If a connection sends two EoS.
-        // * If a connection sends an end of stream closes and another one opens.
-        if (numberOfEoS[ci] < device->GetNumberOfConnectedPeers(channel)) {
-          everyEoS = false;
-        }
+      // If we have enough EoS messages, we can stop the device
+      // Notice that this has a number of failure modes:
+      // * If a connection sends the EoS and then closes.
+      // * If a connection sends two EoS.
+      // * If a connection sends an end of stream closes and another one opens.
+      if (numberOfEoS[ci] < device->GetNumberOfConnectedPeers(channel)) {
+        everyEoS = false;
       }
+
       if (everyEoS) {
         // Mark all input channels as closed
         for (auto& info : deviceState->inputChannelInfos) {
@@ -548,7 +547,8 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
       auto device = ctx.services().get<RawDeviceService>().device();
       limiter.check(ctx, std::stoi(device->fConfig->GetValue<std::string>("timeframes-rate-limit")), minSHM);
 
-      for (auto& channel : channels) {
+      for (size_t ci = 0; ci < channels.size(); ++ci) {
+        std::string const& channel = channels[ci];
         fair::mq::Parts parts;
         device->Receive(parts, channel, 0);
         LOGP(info, "Received {} parts on channel {}. First message ptr is {}.", parts.Size(), channel, (void*) parts.At(0).get());
@@ -566,7 +566,7 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
             timingInfo.timeslice = dph->startTime;
             timingInfo.creation = dph->creation;
           }
-          dataHandler(parts, 0);
+          dataHandler(parts, 0, ci);
         }
       }
     };
