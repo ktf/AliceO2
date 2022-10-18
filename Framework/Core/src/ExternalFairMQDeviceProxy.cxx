@@ -551,7 +551,7 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
         std::string const& channel = channels[ci];
         fair::mq::Parts parts;
         device->Receive(parts, channel, 0);
-        LOGP(info, "Received {} parts on channel {}. First message ptr is {}.", parts.Size(), channel, (void*) parts.At(0).get());
+        LOGP(info, "Received {} parts on channel {}. First message ptr is {}.", parts.Size(), channel, (void*)parts.At(0).get());
         // Populate TimingInfo from the first message
         if (parts.Size() != 0) {
           auto const dh = o2::header::get<DataHeader*>(parts.At(0)->GetData());
