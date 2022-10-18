@@ -561,8 +561,8 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
             timingInfo.timeslice = dph->startTime;
             timingInfo.creation = dph->creation;
           }
+          dataHandler(parts, 0);
         }
-        dataHandler(parts, 0);
       }
     };
 
