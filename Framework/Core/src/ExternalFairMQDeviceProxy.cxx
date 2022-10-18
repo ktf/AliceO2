@@ -224,8 +224,12 @@ InjectorFunction dplModelAdaptor(std::vector<OutputSpec> const& filterSpecs, DPL
   };
 
   return [filterSpecs = std::move(filterSpecs), throwOnUnmatchedInputs, droppedDataSpecs = std::make_shared<DroppedDataSpecs>()](TimingInfo& timingInfo, fair::mq::Device& device, fair::mq::Parts& parts, ChannelRetriever channelRetriever) {
-    std::unordered_map<std::string, fair::mq::Parts> outputs;
-    std::vector<std::string> unmatchedDescriptions;
+    // FIXME: this in not thread safe, but better than an alloc of a map per message...
+    static std::unordered_map<std::string, fair::mq::Parts> outputs;
+    static std::vector<std::string> unmatchedDescriptions;
+    outputs.clear();
+    unmatchedDescriptions.clear();
+
     static int64_t dplCounter = -1;
     dplCounter++;
     static bool override_creation_env = getenv("DPL_RAWPROXY_OVERRIDE_ORBITRESET");
