@@ -396,9 +396,9 @@ void on_signal_callback(uv_signal_t* handle, int signum)
   LOG(debug) << "Signal " << signum << " received.";
   auto* registry = (ServiceRegistry*)handle->data;
   ServiceRegistryRef ref{*registry};
-  auto &state = ref.get<DeviceState>();
-  auto &quotaEvaluator = ref.get<ComputingQuotaEvaluator>();
-  auto &stats = ref.get<DataProcessingStats>();
+  auto& state = ref.get<DeviceState>();
+  auto& quotaEvaluator = ref.get<ComputingQuotaEvaluator>();
+  auto& stats = ref.get<DataProcessingStats>();
   state.loopReason |= DeviceState::SIGNAL_ARRIVED;
   size_t ri = 0;
   while (ri != quotaEvaluator.mOffers.size()) {
@@ -1311,14 +1311,14 @@ void DataProcessingDevice::doRun(DataProcessorContext& context)
 {
   auto switchState = [&registry = context.registry](StreamingState newState) {
     ServiceRegistryRef ref{*registry};
-    auto &state = ref.get<DeviceState>();
+    auto& state = ref.get<DeviceState>();
     LOG(detail) << "New state " << (int)newState << " old state " << (int)state.streaming;
     state.streaming = newState;
     ref.get<ControlService>().notifyStreamingState(state.streaming);
   };
   ServiceRegistryRef ref{*context.registry};
-  auto &state = ref.get<DeviceState>();
-  auto &spec = ref.get<DeviceSpec const>();
+  auto& state = ref.get<DeviceState>();
+  auto& spec = ref.get<DeviceSpec const>();
 
   if (state.streaming == StreamingState::Idle) {
     *context.wasActive = false;
@@ -1878,7 +1878,7 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
   auto switchState = [&registry = context.registry](StreamingState newState) {
     ServiceRegistryRef ref{*registry};
     auto &control = ref.get<ControlService>();
-    auto &state = ref.get<DeviceState>();
+    auto& state = ref.get<DeviceState>();
     state.streaming = newState;
     control.notifyStreamingState(state.streaming);
   };
@@ -1922,8 +1922,8 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
   // This is the main dispatching loop
   LOGP(debug, "Processing actions:");
   ServiceRegistryRef ref{*context.registry};
-  auto &state = ref.get<DeviceState>();
-  auto &spec = ref.get<DeviceSpec const>();
+  auto& state = ref.get<DeviceState>();
+  auto& spec = ref.get<DeviceSpec const>();
 
   for (auto action : getReadyActions()) {
     LOGP(debug, "  Begin action");
@@ -1945,7 +1945,7 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
     bool shouldConsume = action.op == CompletionPolicy::CompletionOp::Consume ||
                          action.op == CompletionPolicy::CompletionOp::Discard;
     InputSpan span = getInputSpan(action.slot, shouldConsume);
-    auto &spec = ref.get<DeviceSpec const>();
+    auto& spec = ref.get<DeviceSpec const>();
     InputRecord record{spec.inputs,
                        span,
                        *context.registry};
@@ -1985,8 +1985,8 @@ bool DataProcessingDevice::tryDispatchComputation(DataProcessorContext& context,
 
     auto runNoCatch = [&context, &processContext](DataRelayer::RecordAction& action) {
       ServiceRegistryRef ref{*context.registry};
-      auto &state = ref.get<DeviceState>();
-      auto &spec = ref.get<DeviceSpec const>();
+      auto& state = ref.get<DeviceState>();
+      auto& spec = ref.get<DeviceSpec const>();
       if (state.quitRequested == false) {
         {
           ZoneScopedN("service post processing");
