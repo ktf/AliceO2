@@ -25,6 +25,7 @@
 #include "Framework/SourceInfoHeader.h"
 #include "Framework/ChannelInfo.h"
 #include "Framework/Logger.h"
+#include "Framework/RateLimiter.h"
 
 #if __has_include(<TJAlienFile.h>)
 #include <TJAlienFile.h>
@@ -40,6 +41,7 @@
 #include <arrow/table.h>
 #include <arrow/util/key_value_metadata.h>
 
+#include <fairmq/Device.h>
 #include <thread>
 
 using namespace o2;
@@ -185,9 +187,11 @@ AlgorithmSpec AODJAlienReaderHelpers::rootFileReaderCallback()
                            fileCounter,
                            numTF,
                            watchdog,
-                           didir](Monitoring& monitoring, DataAllocator& outputs, ControlService& control, DeviceSpec const& device) {
+                           didir](ProcessingContext &pcx, RawDeviceService& raw, Monitoring& monitoring, DataAllocator& outputs, ControlService& control, DeviceSpec const& device) {
       // Each parallel reader device.inputTimesliceId reads the files fileCounter*device.maxInputTimeslices+device.inputTimesliceId
       // the TF to read is numTF
+      static RateLimiter limiter;
+      limiter.check(pcx, std::stoi(raw.device()->fConfig->GetValue<std::string>("timeframes-rate-limit")), 2000);
       assert(device.inputTimesliceId < device.maxInputTimeslices);
       int fcnt = (*fileCounter * device.maxInputTimeslices) + device.inputTimesliceId;
       int ntf = *numTF + 1;
