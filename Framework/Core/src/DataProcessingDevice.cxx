@@ -112,7 +112,7 @@ void on_communication_requested(uv_async_t* s)
   state->loopReason |= DeviceState::METRICS_MUST_FLUSH;
 }
 
-DeviceSpec const&getRunningDevice(RunningDeviceRef const& running, ServiceRegistryRef const& services)
+DeviceSpec const& getRunningDevice(RunningDeviceRef const& running, ServiceRegistryRef const& services)
 {
   return services.get<o2::framework::RunningWorkflowInfo const>().devices[running.index];
 }
@@ -894,7 +894,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
   /// FIXME: move erro handling to a service?
   if (context.error != nullptr) {
     context.errorHandling = [&errorCallback = context.error,
-                      &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
+                             &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
       ZoneScopedN("Error handling");
       /// FIXME: we should pass the salt in, so that the message
       ///        can access information which were stored in the stream.
@@ -908,7 +908,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
     };
   } else {
     context.errorHandling = [&errorPolicy = mProcessingPolicies.error,
-                      &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
+                             &serviceRegistry = mServiceRegistry](RuntimeErrorRef e, InputRecord& record) {
       ZoneScopedN("Error handling");
       auto& err = error_from_ref(e);
       /// FIXME: we should pass the salt in, so that the message
