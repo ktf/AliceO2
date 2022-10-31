@@ -187,7 +187,7 @@ AlgorithmSpec AODJAlienReaderHelpers::rootFileReaderCallback()
                            fileCounter,
                            numTF,
                            watchdog,
-                           didir](ProcessingContext &pcx, RawDeviceService& raw, Monitoring& monitoring, DataAllocator& outputs, ControlService& control, DeviceSpec const& device) {
+                           didir](ProcessingContext& pcx, RawDeviceService& raw, Monitoring& monitoring, DataAllocator& outputs, ControlService& control, DeviceSpec const& device) {
       // Each parallel reader device.inputTimesliceId reads the files fileCounter*device.maxInputTimeslices+device.inputTimesliceId
       // the TF to read is numTF
       static RateLimiter limiter;

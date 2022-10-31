@@ -303,7 +303,7 @@ void* ServiceRegistry::get(ServiceTypeHash typeHash, Salt salt, ServiceKind kind
       throwError(runtime_error_f("A stream service cannot be retrieved from a non stream salt %d", salt.context.streamId));
       O2_BUILTIN_UNREACHABLE();
     }
-    
+
     if (isDataProcessor && salt.context.dataProcessorId < 0) {
       throwError(runtime_error_f("A data processor service cannot be retrieved from a non dataprocessor context %d", salt.context.dataProcessorId));
       O2_BUILTIN_UNREACHABLE();
