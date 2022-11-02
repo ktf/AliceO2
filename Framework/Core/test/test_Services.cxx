@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(TestStreamServices)
   BOOST_CHECK_THROW(registry.get({TypeIdHelpers::uniqueId<DummyService>()}, salt_0, ServiceKind::Stream), RuntimeErrorRef);
 
   registry.registerService({TypeIdHelpers::uniqueId<DummyService>()}, &t2_d1, ServiceKind::Stream, ServiceRegistry::Salt{ServiceRegistry::Context{3, 1}});
-  
+
   auto tt2_dp1 = reinterpret_cast<DummyService*>(registry.get({TypeIdHelpers::uniqueId<DummyService>()}, ServiceRegistry::Salt{3, 1}, ServiceKind::Stream));
   BOOST_CHECK_EQUAL(tt2_dp1->threadId, 2);
 
