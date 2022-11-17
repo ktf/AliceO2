@@ -20,6 +20,7 @@
 #include "Framework/TimesliceIndex.h"
 #include "Framework/DataProcessingHelpers.h"
 #include "Framework/CommonServices.h"
+#include "Framework/DataProcessingContext.h"
 
 #include <fairmq/Device.h>
 
@@ -79,7 +80,8 @@ std::unique_ptr<fair::mq::Message> DataSender::create(RouteIndex routeIndex)
 
 void DataSender::send(fair::mq::Parts& parts, ChannelIndex channelIndex)
 {
-  mRegistry.preSendingMessagesCallbacks(parts, channelIndex);
+  auto& dataProcessorContext = mRegistry.get<DataProcessorContext>();
+  dataProcessorContext.preSendingMessagesCallbacks(mRegistry, parts, channelIndex);
   mPolicy.send(mProxy, parts, channelIndex, mRegistry);
 }
 

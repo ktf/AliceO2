@@ -21,6 +21,7 @@
 #include "Framework/ServiceSpec.h"
 #include "Framework/CommonServices.h"
 #include "Framework/GuiCallbackContext.h"
+#include "Framework/DataProcessingContext.h"
 #include "SpyService.h"
 #include "SpyServiceHelpers.h"
 #include <fairmq/Channel.h>
@@ -88,7 +89,8 @@ struct ImGUIDebugGUI : o2::framework::DebugGUI {
   void* pollGUIRender(std::function<void(void)> guiCallback) override
   {
     auto* result = o2::framework::pollGUIRender(guiCallback);
-    registry->postRenderGUICallbacks();
+    auto ref = ServiceRegistryRef{*registry};
+    registry->postRenderGUICallbacks(ref);
     return result;
   }
   void pollGUIPostRender(void* context, void* draw_data) override
