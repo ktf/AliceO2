@@ -13,6 +13,9 @@
 #include "Framework/RawDeviceService.h"
 #include "Framework/Tracing.h"
 #include "Framework/Logger.h"
+#include "Framework/StreamContext.h"
+#include "Framework/ProcessingContext.h"
+#include "Framework/DataProcessingContext.h"
 #include <fairmq/Device.h>
 #include <iostream>
 
@@ -105,7 +108,7 @@ void ServiceRegistry::declareService(ServiceSpec const& spec, DeviceState& state
   if (spec.kind != ServiceKind::Stream) {
     ServiceHandle handle = spec.init({*this}, state, options);
     this->registerService({handle.hash}, handle.instance, handle.kind, salt, handle.name.c_str());
-    this->bindService(spec, handle.instance);
+    this->bindService(salt, spec, handle.instance);
   } else if (spec.kind == ServiceKind::Stream) {
     // We register a nullptr in this case, because we really want to have the ptr to
     // the service spec only.
@@ -119,164 +122,102 @@ void ServiceRegistry::declareService(ServiceSpec const& spec, DeviceState& state
   }
 }
 
-void ServiceRegistry::bindService(ServiceSpec const& spec, void* service) const
+void ServiceRegistry::bindService(ServiceRegistry::Salt salt, ServiceSpec const& spec, void* service) const
 {
   static TracyLockableN(std::mutex, bindMutex, "bind mutex");
-  std::scoped_lock<LockableBase(std::mutex)> lock(bindMutex);
-  if (spec.preProcessing) {
-    mPreProcessingHandles.push_back(ServiceProcessingHandle{spec, spec.preProcessing, service});
-  }
-  if (spec.postProcessing) {
-    mPostProcessingHandles.push_back(ServiceProcessingHandle{spec, spec.postProcessing, service});
-  }
-  if (spec.preDangling) {
-    mPreDanglingHandles.push_back(ServiceDanglingHandle{spec, spec.preDangling, service});
-  }
-  if (spec.postDangling) {
-    mPostDanglingHandles.push_back(ServiceDanglingHandle{spec, spec.postDangling, service});
-  }
-  if (spec.preEOS) {
-    mPreEOSHandles.push_back(ServiceEOSHandle{spec, spec.preEOS, service});
-  }
-  if (spec.postEOS) {
-    mPostEOSHandles.push_back(ServiceEOSHandle{spec, spec.postEOS, service});
-  }
-  if (spec.postDispatching) {
-    mPostDispatchingHandles.push_back(ServiceDispatchingHandle{spec, spec.postDispatching, service});
-  }
-  if (spec.postForwarding) {
-    mPostForwardingHandles.push_back(ServiceForwardingHandle{spec, spec.postForwarding, service});
-  }
-  if (spec.start) {
-    mPreStartHandles.push_back(ServiceStartHandle{spec, spec.start, service});
-  }
-  if (spec.stop) {
-    mPostStopHandles.push_back(ServiceStopHandle{spec, spec.stop, service});
-  }
-  if (spec.exit) {
-    mPreExitHandles.push_back(ServiceExitHandle{spec, spec.exit, service});
-  }
-  if (spec.domainInfoUpdated) {
-    mDomainInfoHandles.push_back(ServiceDomainInfoHandle{spec, spec.domainInfoUpdated, service});
-  }
-  if (spec.preSendingMessages) {
-    mPreSendingMessagesHandles.push_back(ServicePreSendingMessagesHandle{spec, spec.preSendingMessages, service});
-  }
-  if (spec.postRenderGUI) {
-    mPostRenderGUIHandles.push_back(ServicePostRenderGUIHandle{spec, spec.postRenderGUI, service});
-  }
-}
-
-/// Invoke callbacks to be executed before every process method invokation
-void ServiceRegistry::preProcessingCallbacks(ProcessingContext& processContext)
-{
-  for (auto& handle : mPreProcessingHandles) {
-    handle.callback(processContext, handle.service);
-  }
-}
-/// Invoke callbacks to be executed after every process method invokation
-void ServiceRegistry::postProcessingCallbacks(ProcessingContext& processContext)
-{
-  for (auto& handle : mPostProcessingHandles) {
-    handle.callback(processContext, handle.service);
-  }
-}
-/// Invoke callbacks to be executed before every dangling check
-void ServiceRegistry::preDanglingCallbacks(DanglingContext& danglingContext)
-{
-  for (auto preDanglingHandle : mPreDanglingHandles) {
-    preDanglingHandle.callback(danglingContext, preDanglingHandle.service);
-  }
-}
-
-/// Invoke callbacks to be executed after every dangling check
-void ServiceRegistry::postDanglingCallbacks(DanglingContext& danglingContext)
-{
-  for (auto postDanglingHandle : mPostDanglingHandles) {
-    LOGP(debug, "Doing postDanglingCallback for service {}", postDanglingHandle.spec.name);
-    postDanglingHandle.callback(danglingContext, postDanglingHandle.service);
-  }
-}
-
-/// Invoke callbacks to be executed before every EOS user callback invokation
-void ServiceRegistry::preEOSCallbacks(EndOfStreamContext& eosContext)
-{
-  for (auto& eosHandle : mPreEOSHandles) {
-    eosHandle.callback(eosContext, eosHandle.service);
-  }
-}
-
-/// Invoke callbacks to be executed after every EOS user callback invokation
-void ServiceRegistry::postEOSCallbacks(EndOfStreamContext& eosContext)
-{
-  for (auto& eosHandle : mPostEOSHandles) {
-    eosHandle.callback(eosContext, eosHandle.service);
-  }
-}
-
-/// Invoke callbacks to be executed after every data Dispatching
-void ServiceRegistry::postDispatchingCallbacks(ProcessingContext& processContext)
-{
-  for (auto& dispatchingHandle : mPostDispatchingHandles) {
-    dispatchingHandle.callback(processContext, dispatchingHandle.service);
-  }
-}
-
-/// Invoke callbacks to be executed after every data Dispatching
-void ServiceRegistry::postForwardingCallbacks(ProcessingContext& processContext)
-{
-  for (auto& forwardingHandle : mPostForwardingHandles) {
-    forwardingHandle.callback(processContext, forwardingHandle.service);
-  }
-}
-
-/// Callbacks to be called in fair::mq::Device::PreRun()
-void ServiceRegistry::preStartCallbacks()
-{
-  // FIXME: we need to call the callback only once for the global services
-  /// I guess...
-  for (auto startHandle = mPreStartHandles.begin(); startHandle != mPreStartHandles.end(); ++startHandle) {
-    startHandle->callback(*this, startHandle->service);
-  }
-}
-
-void ServiceRegistry::postStopCallbacks()
-{
-  // FIXME: we need to call the callback only once for the global services
-  /// I guess...
-  for (auto& stopHandle : mPostStopHandles) {
-    stopHandle.callback(*this, stopHandle.service);
-  }
-}
-
-/// Invoke callback to be executed on exit, in reverse order.
-void ServiceRegistry::preExitCallbacks()
-{
-  // FIXME: we need to call the callback only once for the global services
-  /// I guess...
-  for (auto exitHandle = mPreExitHandles.rbegin(); exitHandle != mPreExitHandles.rend(); ++exitHandle) {
-    exitHandle->callback(ServiceRegistryRef{*this}, exitHandle->service);
-  }
-}
-
-void ServiceRegistry::domainInfoUpdatedCallback(ServiceRegistry& registry, size_t oldestPossibleTimeslice, ChannelIndex channelIndex)
-{
-  for (auto& handle : mDomainInfoHandles) {
-    handle.callback(*this, oldestPossibleTimeslice, channelIndex);
-  }
-}
-
-void ServiceRegistry::preSendingMessagesCallbacks(ServiceRegistry& registry, fair::mq::Parts& parts, ChannelIndex channelIndex)
-{
-  for (auto& handle : mPreSendingMessagesHandles) {
-    handle.callback(*this, parts, channelIndex);
-  }
-}
-
-void ServiceRegistry::postRenderGUICallbacks()
-{
-  for (auto& handle : mPostRenderGUIHandles) {
-    handle.callback(*this);
+  // Stream services need to store their callbacks in the stream context.
+  // This is to make sure we invoke the correct callback only once per
+  // stream, since they could bind multiple times.
+  // On the other hand, they should not be allowed to have any
+  // other callback, because we would not know which one to invoke.
+  if (spec.kind == ServiceKind::Stream) {
+    ServiceRegistryRef ref{const_cast<ServiceRegistry&>(*this), salt};
+    auto& streamContext = ref.get<StreamContext>();
+    std::scoped_lock<LockableBase(std::mutex)> lock(bindMutex);
+    assert(spec.preDangling == nullptr);
+    assert(spec.postDangling == nullptr);
+    assert(spec.postDispatching == nullptr);
+    assert(spec.postForwarding == nullptr);
+    assert(spec.start == nullptr);
+    assert(spec.stop == nullptr);
+    assert(spec.exit == nullptr);
+    assert(spec.domainInfoUpdated == nullptr);
+    assert(spec.preSendingMessages == nullptr);
+    assert(spec.postRenderGUI == nullptr);
+    if (spec.preProcessing) {
+      streamContext.preProcessingHandles.push_back(ServiceProcessingHandle{spec, spec.preProcessing, service});
+    }
+    if (spec.postProcessing) {
+      streamContext.postProcessingHandles.push_back(ServiceProcessingHandle{spec, spec.postProcessing, service});
+    }
+    // We need to call the preEOS also on a per stream basis, not only on a per
+    // data processor basis.
+    if (spec.preEOS) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preEOSHandles.push_back(ServiceEOSHandle{spec, spec.preEOS, service});
+    }
+    if (spec.postEOS) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postEOSHandles.push_back(ServiceEOSHandle{spec, spec.postEOS, service});
+    }
+  } else {
+    ServiceRegistryRef ref{const_cast<ServiceRegistry&>(*this), salt};
+    std::scoped_lock<LockableBase(std::mutex)> lock(bindMutex);
+    if (spec.preProcessing) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preProcessingHandlers.push_back(ServiceProcessingHandle{spec, spec.preProcessing, service});
+    }
+    if (spec.postProcessing) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postProcessingHandlers.push_back(ServiceProcessingHandle{spec, spec.postProcessing, service});
+    }
+    if (spec.preDangling) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preDanglingHandles.push_back(ServiceDanglingHandle{spec, spec.preDangling, service});
+    }
+    if (spec.postDangling) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postDanglingHandles.push_back(ServiceDanglingHandle{spec, spec.postDangling, service});
+    }
+    if (spec.preEOS) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preEOSHandles.push_back(ServiceEOSHandle{spec, spec.preEOS, service});
+    }
+    if (spec.postEOS) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postEOSHandles.push_back(ServiceEOSHandle{spec, spec.postEOS, service});
+    }
+    if (spec.postDispatching) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postDispatchingHandles.push_back(ServiceDispatchingHandle{spec, spec.postDispatching, service});
+    }
+    if (spec.postForwarding) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postForwardingHandles.push_back(ServiceForwardingHandle{spec, spec.postForwarding, service});
+    }
+    if (spec.start) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preStartHandles.push_back(ServiceStartHandle{spec, spec.start, service});
+    }
+    if (spec.stop) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.postStopHandles.push_back(ServiceStopHandle{spec, spec.stop, service});
+    }
+    if (spec.exit) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preExitHandles.push_back(ServiceExitHandle{spec, spec.exit, service});
+    }
+    if (spec.domainInfoUpdated) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.domainInfoHandles.push_back(ServiceDomainInfoHandle{spec, spec.domainInfoUpdated, service});
+    }
+    if (spec.preSendingMessages) {
+      auto& dataProcessorContext = ref.get<DataProcessorContext>();
+      dataProcessorContext.preSendingMessagesHandles.push_back(ServicePreSendingMessagesHandle{spec, spec.preSendingMessages, service});
+    }
+    if (spec.postRenderGUI) {
+      mPostRenderGUIHandles.push_back(ServicePostRenderGUIHandle{spec, spec.postRenderGUI, service});
+    }
   }
 }
 
@@ -385,12 +326,19 @@ void* ServiceRegistry::get(ServiceTypeHash typeHash, Salt salt, ServiceKind kind
     // Call init for the proper ServiceRegistryRef
     ServiceHandle handle = spec.init({registry, salt}, deviceState, *rawDeviceService.device()->fConfig);
     this->registerService({handle.hash}, handle.instance, handle.kind, salt, handle.name.c_str());
-    this->bindService(spec, handle.instance);
+    this->bindService(salt, spec, handle.instance);
     return handle.instance;
   }
 
   LOGP(error, "Unable to find requested service {} with hash {} using salt {} for service kind {}", name ? name : "", typeHash.hash, valueFromSalt(salt), (int)kind);
   return nullptr;
+}
+
+void ServiceRegistry::postRenderGUICallbacks(ServiceRegistryRef ref)
+{
+  for (auto& handle : mPostRenderGUIHandles) {
+    handle.callback(ref);
+  }
 }
 
 } // namespace o2::framework

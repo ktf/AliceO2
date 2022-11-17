@@ -44,6 +44,7 @@
 #include "Framework/DataProcessingContext.h"
 #include "Framework/DeviceContext.h"
 #include "Framework/RawDeviceService.h"
+#include "Framework/StreamContext.h"
 
 #include "PropertyTreeHelpers.h"
 #include "DataProcessingStatus.h"
@@ -958,7 +959,8 @@ void DataProcessingDevice::PreRun()
       info.state = InputChannelState::Running;
     }
   }
-  mServiceRegistry.preStartCallbacks();
+  auto& dataProcessorContext = ref.get<DataProcessorContext>();
+  dataProcessorContext.preStartCallbacks(ref);
   ref.get<CallbackService>()(CallbackService::Id::Start);
   startPollers();
 }
@@ -968,7 +970,8 @@ void DataProcessingDevice::PostRun()
   stopPollers();
   ServiceRegistryRef ref{mServiceRegistry};
   ref.get<CallbackService>()(CallbackService::Id::Stop);
-  mServiceRegistry.postStopCallbacks();
+  auto& dataProcessorContext = ref.get<DataProcessorContext>();
+  dataProcessorContext.postStopCallbacks(ref);
 }
 
 void DataProcessingDevice::Reset()
@@ -1344,7 +1347,8 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
   *context.wasActive |= DataProcessingDevice::tryDispatchComputation(ref, context.completed);
   DanglingContext danglingContext{*context.registry};
 
-  context.registry->preDanglingCallbacks(danglingContext);
+  auto& dataProcessorContext = ref.get<DataProcessorContext>();
+  dataProcessorContext.preDanglingCallbacks(danglingContext);
   if (*context.wasActive == false) {
     ref.get<CallbackService>()(CallbackService::Id::Idle);
   }
@@ -1354,7 +1358,7 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
   context.completed.clear();
   *context.wasActive |= DataProcessingDevice::tryDispatchComputation(ref, context.completed);
 
-  context.registry->postDanglingCallbacks(danglingContext);
+  dataProcessorContext.postDanglingCallbacks(danglingContext);
 
   // If we got notified that all the sources are done, we call the EndOfStream
   // callback and return false. Notice that what happens next is actually
@@ -1380,9 +1384,12 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
     }
     EndOfStreamContext eosContext{*context.registry, ref.get<DataAllocator>()};
 
-    context.registry->preEOSCallbacks(eosContext);
+    auto& streamContext = ref.get<StreamContext>();
+    dataProcessorContext.preEOSCallbacks(eosContext);
+    streamContext.preEOSCallbacks(eosContext);
     ref.get<CallbackService>()(CallbackService::Id::EndOfStream, eosContext);
-    context.registry->postEOSCallbacks(eosContext);
+    streamContext.postEOSCallbacks(eosContext);
+    dataProcessorContext.postEOSCallbacks(eosContext);
 
     for (auto& channel : spec.outputChannels) {
       LOGP(detail, "Sending end of stream to {}", channel.name);
@@ -1673,7 +1680,7 @@ void DataProcessingDevice::handleData(ServiceRegistryRef ref, InputChannelInfo& 
     if (oldestPossibleTimeslice != (size_t)-1) {
       info.oldestForChannel = {oldestPossibleTimeslice};
       auto &context = ref.get<DataProcessorContext>();
-      context.registry->domainInfoUpdatedCallback(*context.registry, oldestPossibleTimeslice, info.id);
+      context.domainInfoUpdatedCallback(ref, oldestPossibleTimeslice, info.id);
       ref.get<CallbackService>()(CallbackService::Id::DomainInfoUpdated, (ServiceRegistryRef)*context.registry, (size_t)oldestPossibleTimeslice, (ChannelIndex)info.id);
       *context.wasActive = true;
     }
@@ -1931,6 +1938,7 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
   auto& state = ref.get<DeviceState>();
   auto& spec = ref.get<DeviceSpec const>();
 
+  auto& streamContext = ref.get<StreamContext>();
   for (auto action : getReadyActions()) {
     LOGP(debug, "  Begin action");
     if (action.op == CompletionPolicy::CompletionOp::Wait) {
@@ -1958,11 +1966,13 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
     ProcessingContext processContext{record, ref, ref.get<DataAllocator>()};
     {
       ZoneScopedN("service pre processing");
-      context.registry->preProcessingCallbacks(processContext);
+      streamContext.preProcessingCallbacks(processContext);
     }
     if (action.op == CompletionPolicy::CompletionOp::Discard) {
       LOGP(debug, "  - Action is to Discard");
-      context.registry->postDispatchingCallbacks(processContext);
+      // NOTICE that this is called on different threads, so we need to
+      // make sure any service involved is rentrant and thread safe.
+      context.postDispatchingCallbacks(processContext);
       if (spec.forwards.empty() == false) {
         auto& timesliceIndex = ref.get<TimesliceIndex>();
         forwardInputs(ref, action.slot, currentSetOfInputs, timesliceIndex.getOldestPossibleOutput(), false);
@@ -1991,11 +2001,12 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
     auto runNoCatch = [&context, ref, &processContext](DataRelayer::RecordAction& action) mutable {
       auto& state = ref.get<DeviceState>();
       auto& spec = ref.get<DeviceSpec const>();
+      auto& streamContext = ref.get<StreamContext>();
       if (state.quitRequested == false) {
         {
           ZoneScopedN("service post processing");
           // Callbacks from services
-          context.registry->preProcessingCallbacks(processContext);
+          streamContext.preProcessingCallbacks(processContext);
           // Callbacks from users
           ref.get<CallbackService>()(CallbackService::Id::PreProcessing, o2::framework::ServiceRegistryRef{ref}, (int)action.op);
         }
@@ -2018,7 +2029,8 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
         {
           ZoneScopedN("service post processing");
           ref.get<CallbackService>()(CallbackService::Id::PostProcessing, o2::framework::ServiceRegistryRef{ref}, (int)action.op);
-          context.registry->postProcessingCallbacks(processContext);
+          assert(context.registry);
+          streamContext.postProcessingCallbacks(processContext);
         }
       }
     };
@@ -2057,8 +2069,9 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
     postUpdateStats(action, record, tStart);
     // We forward inputs only when we consume them. If we simply Process them,
     // we keep them for next message arriving.
+    auto& dpContext = ref.get<DataProcessorContext>();
     if (action.op == CompletionPolicy::CompletionOp::Consume) {
-      context.registry->postDispatchingCallbacks(processContext);
+      dpContext.postDispatchingCallbacks(processContext);
       ref.get<CallbackService>()(CallbackService::Id::DataConsumed, o2::framework::ServiceRegistryRef{ref});
     }
     if ((context.canForwardEarly == false) && hasForwards && consumeSomething) {
@@ -2066,7 +2079,7 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
       auto& timesliceIndex = ref.get<TimesliceIndex>();
       forwardInputs(ref, action.slot, currentSetOfInputs, timesliceIndex.getOldestPossibleOutput(), false, action.op == CompletionPolicy::CompletionOp::Consume);
     }
-    context.registry->postForwardingCallbacks(processContext);
+    dpContext.postForwardingCallbacks(processContext);
     if (action.op == CompletionPolicy::CompletionOp::Consume) {
 #ifdef TRACY_ENABLE
       cleanupRecord(record);

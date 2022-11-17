@@ -19,6 +19,7 @@
 #include "Framework/ComputingQuotaEvaluator.h"
 #include "CommonDriverServices.h"
 #include "Framework/DataProcessingDevice.h"
+#include "Framework/DataProcessingContext.h"
 #include "Framework/DataProcessorSpec.h"
 #include "Framework/Plugins.h"
 #include "Framework/DeviceControl.h"
@@ -1149,7 +1150,9 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
   runner.AddHook<fair::mq::hooks::InstantiateDevice>(afterConfigParsingCallback);
 
   auto result = runner.Run();
-  serviceRegistry.preExitCallbacks();
+  ServiceRegistryRef serviceRef = {serviceRegistry};
+  auto& context = serviceRef.get<DataProcessorContext>();
+  DataProcessorContext::preExitCallbacks(context.preExitHandles, serviceRef);
   return result;
 }
 
