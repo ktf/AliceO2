@@ -147,91 +147,35 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        bool changed = false;
 
                        size_t lastTimestamp = 0;
+                       size_t dummyTimestamp = 0;
                        static std::vector<MetricIndices> allIndices = createDefaultIndices(allDeviceMetrics);
+                       static auto get64BitValue = [](DeviceMetricsInfo& deviceMetrics, size_t index, int64_t& accumulator, size_t& maxTimestamp) {
+                         bool changed = false;
+                         assert(index < deviceMetrics.metrics.size());
+                         changed |= deviceMetrics.changed[index];
+                         MetricInfo info = deviceMetrics.metrics[index];
+                         assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
+                         auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
+                         auto const& timestamps = DeviceMetricsHelper::getTimestampsStore<uint64_t>(deviceMetrics)[info.storeIdx];
+                         accumulator += (int64_t)data[(info.pos - 1) % data.size()];
+                         maxTimestamp = std::max(maxTimestamp, timestamps[(info.pos - 1) % data.size()]);
+                         return changed;
+                       };
                        for (size_t mi = 0; mi < allDeviceMetrics.size(); ++mi) {
                          auto& deviceMetrics = allDeviceMetrics[mi];
                          if (deviceMetrics.changed.size() != deviceMetrics.metrics.size()) {
                            throw std::runtime_error("deviceMetrics.size() != allDeviceMetrics.size()");
                          }
+
                          auto& indices = allIndices[mi];
-                         {
-                           size_t index = indices.arrowBytesCreated;
-                           assert(index < deviceMetrics.metrics.size());
-                           changed |= deviceMetrics.changed[index];
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           auto const& timestamps = DeviceMetricsHelper::getTimestampsStore<uint64_t>(deviceMetrics)[info.storeIdx];
-                           auto value = (int64_t)data[(info.pos - 1) % data.size()];
-                           totalBytesCreated += value;
-                           lastTimestamp = std::max(lastTimestamp, timestamps[(info.pos - 1) % data.size()]);
-                         }
-                         {
-                           size_t index = indices.shmOfferConsumed;
-                           assert(index < deviceMetrics.metrics.size());
-                           changed |= deviceMetrics.changed[index];
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           auto const& timestamps = DeviceMetricsHelper::getTimestampsStore<uint64_t>(deviceMetrics)[info.storeIdx];
-                           auto value = (int64_t)data[(info.pos - 1) % data.size()];
-                           shmOfferConsumed += value;
-                           lastTimestamp = std::max(lastTimestamp, timestamps[(info.pos - 1) % data.size()]);
-                         }
-                         {
-                           size_t index = indices.arrowBytesDestroyed;
-                           assert(index < deviceMetrics.metrics.size());
-                           changed |= deviceMetrics.changed[index];
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           totalBytesDestroyed += (int64_t)data[(info.pos - 1) % data.size()];
-                         }
-                         {
-                           size_t index = indices.arrowBytesExpired;
-                           assert(index < deviceMetrics.metrics.size());
-                           changed |= deviceMetrics.changed[index];
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           totalBytesExpired += (int64_t)data[(info.pos - 1) % data.size()];
-                         }
-                         {
-                           size_t index = indices.arrowMessagesCreated;
-                           assert(index < deviceMetrics.metrics.size());
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           changed |= deviceMetrics.changed[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           totalMessagesCreated += (int64_t)data[(info.pos - 1) % data.size()];
-                         }
-                         {
-                           size_t index = indices.arrowMessagesDestroyed;
-                           assert(index < deviceMetrics.metrics.size());
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           changed |= deviceMetrics.changed[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           totalMessagesDestroyed += (int64_t)data[(info.pos - 1) % data.size()];
-                         }
-                         {
-                           size_t index = indices.timeframesRead;
-                           assert(index < deviceMetrics.metrics.size());
-                           changed |= deviceMetrics.changed[index];
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           totalTimeframesRead += (int64_t)data[(info.pos - 1) % data.size()];
-                         }
-                         {
-                           size_t index = indices.timeframesConsumed;
-                           assert(index < deviceMetrics.metrics.size());
-                           changed |= deviceMetrics.changed[index];
-                           MetricInfo info = deviceMetrics.metrics[index];
-                           assert(info.storeIdx < deviceMetrics.uint64Metrics.size());
-                           auto& data = deviceMetrics.uint64Metrics[info.storeIdx];
-                           totalTimeframesConsumed += (int64_t)data[(info.pos - 1) % data.size()];
-                         }
+                         changed |= get64BitValue(deviceMetrics, indices.arrowBytesCreated, totalBytesCreated, lastTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.shmOfferConsumed, shmOfferConsumed, lastTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.arrowBytesDestroyed, totalBytesDestroyed, lastTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.arrowBytesExpired, totalBytesExpired, lastTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.arrowMessagesCreated, totalMessagesCreated, dummyTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.arrowMessagesDestroyed, totalMessagesDestroyed, dummyTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.timeframesRead, totalTimeframesRead, dummyTimestamp);
+                         changed |= get64BitValue(deviceMetrics, indices.timeframesConsumed, totalTimeframesConsumed, dummyTimestamp);
                        }
                        if (changed) {
                          totalBytesCreatedMetric(driverMetrics, totalBytesCreated, timestamp);
