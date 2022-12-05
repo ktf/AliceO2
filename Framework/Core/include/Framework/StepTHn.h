@@ -113,7 +113,8 @@ class StepTHnT : public StepTHn
     }
   }
 
-  void Fill(int iStep, int nParams, double positionAndWeight[]) final {
+  void Fill(int iStep, int nParams, double positionAndWeight[]) final
+  {
     auto op = Prepare(iStep, nParams, positionAndWeight);
     if (op.bin == -1) {
       return;
