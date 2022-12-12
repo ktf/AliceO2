@@ -17,7 +17,7 @@ namespace o2::framework
 /// Invoke callbacks to be executed before every process method invokation
 void StreamContext::preProcessingCallbacks(ProcessingContext& pcx)
 {
-  auto &streamContext = pcx.services().get<StreamContext>();
+  auto& streamContext = pcx.services().get<StreamContext>();
   for (auto& handle : streamContext.preProcessingHandles) {
     handle.callback(pcx, handle.service);
   }
@@ -26,7 +26,7 @@ void StreamContext::preProcessingCallbacks(ProcessingContext& pcx)
 /// Invoke callbacks to be executed after every process method invokation
 void StreamContext::postProcessingCallbacks(ProcessingContext& pcx)
 {
-  auto &streamContext = pcx.services().get<StreamContext>();
+  auto& streamContext = pcx.services().get<StreamContext>();
   for (auto& handle : streamContext.postProcessingHandles) {
     assert(handle.service);
     handle.callback(pcx, handle.service);
