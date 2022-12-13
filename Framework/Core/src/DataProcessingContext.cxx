@@ -109,7 +109,7 @@ void DataProcessorContext::domainInfoUpdatedCallback(ServiceRegistryRef ref, siz
 
 void DataProcessorContext::preSendingMessagesCallbacks(ServiceRegistryRef ref, fair::mq::Parts& parts, ChannelIndex channelIndex)
 {
-    LOGP(debug, "Invoking preSending for service {}", handle.spec.name);
+  LOGP(debug, "Invoking preSending for service {}", handle.spec.name);
   for (auto& handle : preSendingMessagesHandles) {
     handle.callback(ref, parts, channelIndex);
   }
