@@ -220,6 +220,7 @@ foreach(t
         Mermaid
         OptionsHelpers
         OverrideLabels
+        O2DataModelHelpers
         PtrHelpers
         RootConfigParamHelpers
         Services

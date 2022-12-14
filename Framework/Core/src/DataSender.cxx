@@ -81,6 +81,21 @@ std::unique_ptr<fair::mq::Message> DataSender::create(RouteIndex routeIndex)
 void DataSender::send(fair::mq::Parts& parts, ChannelIndex channelIndex)
 {
   auto& dataProcessorContext = mRegistry.get<DataProcessorContext>();
+  // Check that all the outputs which are supposed to be sent are actually
+  // sent.
+  for (auto& output : mOutputs) {
+    if (output.lifetime != Lifetime::Timeframe) {
+      continue;
+    }
+    // Iterate on all the headers, and check that we have something which
+    // matches the output.
+    for (size_t i = 0; i < parts.Size(); ++i) {
+      auto& header = parts.At(i)->GetHeader<o2::header::DataHeader>();
+      if (DataSpecUtils::match(header, output)) {
+        goto nextOutput;
+      }
+    }
+  }
   dataProcessorContext.preSendingMessagesCallbacks(mRegistry, parts, channelIndex);
   mPolicy.send(mProxy, parts, channelIndex, mRegistry);
 }

@@ -76,3 +76,20 @@ BOOST_AUTO_TEST_CASE(TestRootContainerSerialization)
   // the get method takes care of this
   BOOST_CHECK(s->IsOwner());
 }
+
+BOOST_AUTO_TEST_CASE(TestForeachHeader) {
+  o2::header::DataHeader dh;
+  dh.dataOrigin = "TST";
+  dh.dataDescription = "A";
+  dh.subSpecification = 0
+  dh.payloadSize = 0;
+  dh.splitPayloadParts = 2;
+
+  DataProcessingHeader dph{timingInfo.timeslice, 1, timingInfo.creation};
+  // Create a FairMQMessage with the header.
+  auto headerMessage = o2::header::getHeaderMessage(dh, dph);
+
+  auto channelAlloc = o2::pmr::getTransportAllocator(transport);
+  return o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh, dph, spec.metaHeader});
+
+}
