@@ -77,12 +77,12 @@ BOOST_AUTO_TEST_CASE(TestRootContainerSerialization)
   BOOST_CHECK(s->IsOwner());
 }
 
-BOOST_AUTO_TEST_CASE(TestForeachHeader) {
+BOOST_AUTO_TEST_CASE(TestForeachHeader)
+{
   o2::header::DataHeader dh;
   dh.dataOrigin = "TST";
   dh.dataDescription = "A";
-  dh.subSpecification = 0
-  dh.payloadSize = 0;
+  dh.subSpecification = 0 dh.payloadSize = 0;
   dh.splitPayloadParts = 2;
 
   DataProcessingHeader dph{timingInfo.timeslice, 1, timingInfo.creation};
@@ -91,5 +91,4 @@ BOOST_AUTO_TEST_CASE(TestForeachHeader) {
 
   auto channelAlloc = o2::pmr::getTransportAllocator(transport);
   return o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh, dph, spec.metaHeader});
-
 }
