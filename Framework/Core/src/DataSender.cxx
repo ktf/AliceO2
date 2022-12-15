@@ -20,10 +20,8 @@
 #include "Framework/TimesliceIndex.h"
 #include "Framework/DataProcessingHelpers.h"
 #include "Framework/CommonServices.h"
-
-#include <fairmq/Device.h>
-
-#include <fmt/ostream.h>
+#include "Framework/DataProcessingContext.h"
+#include "Framework/O2DataModelHelpers.h"
 
 using namespace o2::monitoring;
 
@@ -70,6 +68,7 @@ DataSender::DataSender(ServiceRegistryRef registry,
     DataSpecUtils::describe(buffer, 127, mOutputs.back());
     monitoring.send({fmt::format("{} ({})", buffer, (int)mOutputs.back().lifetime), mQueriesMetricsNames[i], Verbosity::Debug});
   }
+  mPresent.resize(mOutputs.size());
 }
 
 std::unique_ptr<fair::mq::Message> DataSender::create(RouteIndex routeIndex)
@@ -79,6 +78,12 @@ std::unique_ptr<fair::mq::Message> DataSender::create(RouteIndex routeIndex)
 
 void DataSender::send(fair::mq::Parts& parts, ChannelIndex channelIndex)
 {
+  // FIXME: make datasender either invoked by a single thread
+  // or make it thread a stream service.
+  if (!O2DataModelHelpers::checkForMissingSporadic(parts, mOutputs, mPresent)) {
+    throw runtime_error(O2DataModelHelpers::describeMissingOutputs(mOutputs, mPresent).c_str());
+  }
+
   mRegistry.preSendingMessagesCallbacks(parts, channelIndex);
   mPolicy.send(mProxy, parts, channelIndex, mRegistry);
 }

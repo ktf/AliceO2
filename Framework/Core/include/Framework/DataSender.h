@@ -51,6 +51,10 @@ class DataSender
   std::vector<std::string> mMetricsNames;
   std::vector<std::string> mVariablesMetricsNames;
   std::vector<std::string> mQueriesMetricsNames;
+  // Keep track of wether a given output has been sent or
+  // not. Complain if a Lifetime::Timeframe output is not
+  // there.
+  std::vector<bool> mPresent;
 
   TracyLockableN(std::recursive_mutex, mMutex, "data relayer mutex");
 };
