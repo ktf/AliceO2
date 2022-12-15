@@ -223,12 +223,12 @@ void* ServiceRegistry::get(ServiceTypeHash typeHash, Salt salt, ServiceKind kind
     bool isDataProcessor = mServicesMeta[pos].kind == ServiceKind::DataProcessorStream || mServicesMeta[pos].kind == ServiceKind::DataProcessorGlobal || mServicesMeta[pos].kind == ServiceKind::DataProcessorSerial;
 
     if (isStream && salt.streamId <= 0) {
-      throwError(runtime_error_f("A stream service cannot be retrieved from a non stream salt %d", salt.streamId));
+      throwError(runtime_error_f("A stream service (%s) cannot be retrieved from a non stream salt %d", name ? name : "unknown", salt.streamId));
       O2_BUILTIN_UNREACHABLE();
     }
 
     if (isDataProcessor && salt.dataProcessorId < 0) {
-      throwError(runtime_error_f("A data processor service cannot be retrieved from a non dataprocessor context %d", salt.dataProcessorId));
+      throwError(runtime_error_f("A data processor service (%s) cannot be retrieved from a non dataprocessor context %d", name ? name : "unknown", salt.dataProcessorId));
       O2_BUILTIN_UNREACHABLE();
     }
 
