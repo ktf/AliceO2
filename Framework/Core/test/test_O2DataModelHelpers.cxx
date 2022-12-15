@@ -43,12 +43,11 @@ BOOST_AUTO_TEST_CASE(TestNoWait)
   auto transport = fair::mq::TransportFactory::CreateTransportFactory("zeromq");
   std::array<fair::mq::MessagePtr, 2> messages;
   auto channelAlloc = o2::pmr::getTransportAllocator(transport.get());
-  fair::mq::Parts inputs {
+  fair::mq::Parts inputs{
     o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh1, dph1}),
     transport->CreateMessage(1000),
     o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh2, dph2}),
-    transport->CreateMessage(1000)
-  };
+    transport->CreateMessage(1000)};
   // Check if any header has dataDescription == "CLUSTERS"
   BOOST_CHECK(O2DataModelHelpers::all_headers_matching(inputs, [](auto const& header) {
     return header != nullptr && header->dataDescription == o2::header::DataDescription("CLUSTERS");
@@ -71,7 +70,7 @@ BOOST_AUTO_TEST_CASE(TestNoWait)
   dh3.splitPayloadParts = 0;
   DataProcessingHeader dph3{0, 1};
 
-  fair::mq::Parts inputs2 {
+  fair::mq::Parts inputs2{
     o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh1, dph1}),
     transport->CreateMessage(1000),
     o2::pmr::getMessage(o2::header::Stack{channelAlloc, dh2, dph2}),
@@ -90,8 +89,8 @@ BOOST_AUTO_TEST_CASE(TestNoWait)
   }));
 
   BOOST_CHECK(O2DataModelHelpers::any_header_matching(inputs, [](auto const& header) {
-    return header != nullptr && header->dataDescription == o2::header::DataDescription("TRACKS");
-  }) == false);
+                return header != nullptr && header->dataDescription == o2::header::DataDescription("TRACKS");
+              }) == false);
 
   BOOST_CHECK(O2DataModelHelpers::any_header_matching(inputs2, [](auto const& header) {
     return header != nullptr && header->dataDescription == o2::header::DataDescription("TRACKS");
