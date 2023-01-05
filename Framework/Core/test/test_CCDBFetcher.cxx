@@ -26,7 +26,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
     {
       "A",
       {InputSpec{"somecondition", "TOF", "LHCphase", 0, Lifetime::Condition, ccdbParamSpec("TOF/LHCphase")},
-       InputSpec{"sometimer", "TST", "BAR", 0, Lifetime::Timer, {startTimeParamSpec{1638548475371}}}},
+       InputSpec{"sometimer", "TST", "BAR", 0, Lifetime::Timer}}},
       {OutputSpec{"TST", "A1", 0, Lifetime::Timeframe}},
       AlgorithmSpec{
         adaptStateless([](DataAllocator& outputs, InputRecord& inputs, ControlService& control) {
@@ -35,10 +35,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
           if (payloadSize != 2048) {
             LOGP(error, "Wrong size for condition payload (expected {}, found {}", 2048, payloadSize);
           }
-          payloadSize;
           control.readyToQuit(QuitRequest::All);
         })},
       Options{
         {"test-option", VariantType::String, "test", {"A test option"}}},
-    }};
+    };
 }

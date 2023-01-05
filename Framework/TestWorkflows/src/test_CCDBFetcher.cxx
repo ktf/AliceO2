@@ -43,17 +43,31 @@ struct CCDBTestTask : public o2::framework::Task {
   }
 };
 
+struct ProduceDummyData : public o2::framework::Task {
+  void run(ProcessingContext& ctx) final
+  {
+    LOG(error) << "Producing dummy data";
+    ctx.outputs().make<int>(OutputRef{"a", 0}, 1);
+  }
+
+};
+
 // This is how you can define your processing in a declarative way
 WorkflowSpec defineDataProcessing(ConfigContext const&)
 {
   return WorkflowSpec{
     {
-      "A",
-      {InputSpec{"somecondition", "TOF", "LHCphase", 0, Lifetime::Condition, ccdbParamSpec("TOF/LHCphase")}},
-      //{InputSpec{"somecondition", "TOF", "LHCphase", 0, Lifetime::Condition, ccdbParamSpec("TOF/LHCphase", {{"some", "metadata"}})}},
-      {OutputSpec{"TST", "A1", 0, Lifetime::Timeframe}},
-      adaptFromTask<CCDBTestTask>(),
-      Options{
-        {"test-option", VariantType::String, "test", {"A test option"}}},
-    }};
+      .name = "CCDBTestTask",
+      .inputs = {InputSpec{"somecondition", "TOF", "LHCphase", 0, Lifetime::Condition, ccdbParamSpec("TOF/LHCphase")},
+                 InputSpec{"sometimer", "TST", "A", 0, Lifetime::Timeframe}},
+      .outputs = {OutputSpec{"TST", "B", 0, Lifetime::Timeframe}},
+      .algorithm = adaptFromTask<CCDBTestTask>(),
+    },
+    {
+      .name = "A",
+      .inputs = {InputSpec{"sometimer", "TST", "BAR", 0, Lifetime::Timer, {startTimeParamSpec(1638548475371)}}},
+      .outputs = {OutputSpec{{"a"}, "TST", "A", 0, Lifetime::Timeframe}},
+      .algorithm = adaptFromTask<ProduceDummyData>(),
+    }
+  };
 }
