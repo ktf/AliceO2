@@ -88,8 +88,6 @@ void DataProcessorContext::postForwardingCallbacks(ProcessingContext& processCon
 /// Callbacks to be called in fair::mq::Device::PreRun()
 void DataProcessorContext::preStartCallbacks(ServiceRegistryRef ref)
 {
-  // FIXME: we need to call the callback only once for the global services
-  /// I guess...
   for (auto& handle : preStartHandles) {
     LOGP(detail, "Invoking preStartCallback for service {}", handle.spec.name);
     handle.callback(ref, handle.service);

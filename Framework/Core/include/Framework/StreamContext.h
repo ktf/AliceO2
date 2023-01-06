@@ -30,6 +30,13 @@ struct ProcessingContext;
 struct StreamContext {
   constexpr static ServiceKind service_kind = ServiceKind::Stream;
 
+  // Invoked once per stream before we start processing
+  // They are all guaranteed to be invoked before the PreRun
+  // function terminates.
+  // Notice this will mean that a StreamService which has
+  // a start callback might be created upfront.
+  void preStartStreamCallbacks(ServiceRegistryRef);
+
   void preProcessingCallbacks(ProcessingContext& pcx);
   void postProcessingCallbacks(ProcessingContext& pcx);
 
@@ -47,6 +54,11 @@ struct StreamContext {
   std::vector<ServiceEOSHandle> preEOSHandles;
   /// Callbacks for services to be executed after every EOS user callback invokation
   std::vector<ServiceEOSHandle> postEOSHandles;
+
+  // Callbacks for services to be executed before a stream starts processing
+  // Notice that in such a case all the services will be created upfront, so
+  // the callback will be called for all of them.
+  std::vector<ServiceStartStreamHandle> preStartStreamHandles;
 };
 
 } // namespace o2::framework

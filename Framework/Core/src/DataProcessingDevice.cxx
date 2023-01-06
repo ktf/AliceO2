@@ -963,6 +963,12 @@ void DataProcessingDevice::PreRun()
   }
   auto& dpContext = ref.get<DataProcessorContext>();
   dpContext.preStartCallbacks(ref);
+  for (size_t i = 0; i < mStreams.size(); ++i) {
+    auto streamRef = ServiceRegistryRef{mServiceRegistry, ServiceRegistry::globalStreamSalt(i + 1)};
+    auto& context = streamRef.get<StreamContext>();
+    context.preStartStreamCallbacks(streamRef);
+  }
+
   ref.get<CallbackService>()(CallbackService::Id::Start);
   startPollers();
 }

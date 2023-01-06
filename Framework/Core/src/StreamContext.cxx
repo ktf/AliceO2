@@ -14,6 +14,17 @@
 namespace o2::framework
 {
 
+void StreamContext::preStartStreamCallbacks(ServiceRegistryRef ref)
+{
+  for (auto& handle : preStartStreamHandles) {
+    LOG(detail) << "Invoking preStartStreamCallbacks for " << handle.spec.name;
+    assert(handle.callback);
+    // The service must be nullptr because we have not created it yet at this
+    // point.
+    assert(handle.service == nullptr);
+    handle.callback(ref, nullptr);
+  }
+}
 /// Invoke callbacks to be executed before every process method invokation
 void StreamContext::preProcessingCallbacks(ProcessingContext& pcx)
 {

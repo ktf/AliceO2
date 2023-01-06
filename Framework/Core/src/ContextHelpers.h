@@ -28,12 +28,16 @@ void ContextHelpers::bindStreamService(DataProcessorContext& dpContext, StreamCo
   assert(spec.postDangling == nullptr);
   assert(spec.postDispatching == nullptr);
   assert(spec.postForwarding == nullptr);
-  assert(spec.start == nullptr);
   assert(spec.stop == nullptr);
   assert(spec.exit == nullptr);
   assert(spec.domainInfoUpdated == nullptr);
   assert(spec.preSendingMessages == nullptr);
   assert(spec.postRenderGUI == nullptr);
+  // Notice that this will mean that stream services will execute the start
+  // callback once per stream, not once per dataprocessor.
+  if (spec.start) {
+    context.preStartStreamHandles.push_back(ServiceStartStreamHandle{spec, spec.start, service});
+  }
   if (spec.preProcessing) {
     context.preProcessingHandles.push_back(ServiceProcessingHandle{spec, spec.preProcessing, service});
   }
