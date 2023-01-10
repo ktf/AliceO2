@@ -35,10 +35,10 @@ struct PdgTest {
   void process(Enumeration<0, 1>& e)
   {
     // Hardcoded from DataFormats/simulation/include/SimulationDataFormat/O2DatabasePDG.h
-    TParticlePDG *p = pdg->GetParticle(300553);
+    TParticlePDG* p = pdg->GetParticle(300553);
     ASSERT_ERROR(p != nullptr);
     ASSERT_ERROR(p->Mass() == 10.580);
-    ASSERT_ERROR(p->Stable() ==  kFALSE);
+    ASSERT_ERROR(p->Stable() == kFALSE);
     ASSERT_ERROR(p->Charge() == 0);
     ASSERT_ERROR(p->Width() == 0.000);
     control->readyToQuit(QuitRequest::Me);
