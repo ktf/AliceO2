@@ -150,7 +150,7 @@ o2_add_library(Framework
                                      ROOT::Hist
                                      O2::FrameworkFoundation
                                      O2::CommonConstants
-                                     O2::Headers
+                                     O2::Headers_obj
                                      O2::MemoryResources
                                      O2::PCG
                                      ROOT::Tree

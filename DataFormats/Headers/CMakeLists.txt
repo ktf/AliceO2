@@ -14,7 +14,9 @@ o2_add_library(Headers
                        src/HeartbeatFrame.cxx src/TimeStamp.cxx
                        src/DAQID.cxx src/RDHAny.cxx src/STFHeader.cxx
                PUBLIC_LINK_LIBRARIES O2::MemoryResources
-                                     O2::GPUCommon)
+                                     O2::GPUCommon_obj
+               LIBRARY_KIND BOTH
+                                     )
 
 o2_add_test(DataHeader
             SOURCES test/testDataHeader.cxx
