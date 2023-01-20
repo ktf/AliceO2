@@ -61,7 +61,7 @@ function(o2_add_library baseTargetName)
     A
     ""
     "TARGETVARNAME"
-    "SOURCES;PUBLIC_INCLUDE_DIRECTORIES;PUBLIC_LINK_LIBRARIES;PRIVATE_INCLUDE_DIRECTORIES;PRIVATE_LINK_LIBRARIES"
+    "SOURCES;PUBLIC_INCLUDE_DIRECTORIES;PUBLIC_LINK_LIBRARIES;PRIVATE_INCLUDE_DIRECTORIES;PRIVATE_LINK_LIBRARIES;LIBRARY_KIND"
     )
 
   if(A_UNPARSED_ARGUMENTS)
@@ -73,9 +73,25 @@ function(o2_add_library baseTargetName)
   set(target ${targetName})
 
   # define the target and its O2:: alias
-  add_library(${target} ${A_SOURCES})
-  add_library(O2::${baseTargetName} ALIAS ${target})
+  if (A_LIBRARY_KIND STREQUAL "BOTH")
+    add_library(${target}_obj OBJECT ${A_SOURCES})
+    add_library(${target} $<TARGET_OBJECTS:${target}_obj>)
+    add_library(O2::${baseTargetName} ALIAS ${target})
+    add_library(O2::${baseTargetName}_obj ALIAS ${target}_obj)
+  elseif(A_LIBRARY_KIND STREQUAL "OBJECT")
+    add_library(${target} OBJECT ${A_SOURCES})
+    add_library(O2::${baseTargetName} ALIAS ${target})
+  else()
+    add_library(${target} ${A_SOURCES})
+    add_library(O2::${baseTargetName} ALIAS ${target})
+  endif()
 
+  if (A_LIBRARY_KIND STREQUAL "BOTH")
+    set_property(TARGET ${target}_obj PROPERTY EXPORT_NAME ${baseTargetName}_obj)
+
+    # output name of the lib will be libO2[baseTargetName].(so|dylib|a)
+    set_property(TARGET ${target}_obj PROPERTY OUTPUT_NAME O2${baseTargetName}_obj)
+  endif()
   # set the export name so that packages using O2 can reference the target as
   # O2::${baseTargetName} as well (assuming the export is installed with
   # namespace O2::)
@@ -95,6 +111,9 @@ function(o2_add_library baseTargetName)
       if(${NS} EQUAL -1)
         message(FATAL_ERROR "Trying to use a non-namespaced target ${L}")
       endif()
+      if (A_LIBRARY_KIND STREQUAL "BOTH")
+        target_link_libraries(${target}_obj PUBLIC ${L})
+      endif()
       target_link_libraries(${target} PUBLIC ${L})
     endforeach()
   endif()
@@ -105,6 +124,9 @@ function(o2_add_library baseTargetName)
       string(FIND ${L} "::" NS)
       if(${NS} EQUAL -1)
         message(FATAL_ERROR "Trying to use a non-namespaced target ${L}")
+      endif()
+      if (A_LIBRARY_KIND STREQUAL "BOTH")
+        target_link_libraries(${target}_obj PRIVATE ${L})
       endif()
       target_link_libraries(${target} PRIVATE ${L})
     endforeach()
@@ -117,10 +139,18 @@ function(o2_add_library baseTargetName)
         message(
           FATAL_ERROR "Trying to append non existing include directory ${d}")
       endif()
+      if (A_LIBRARY_KIND STREQUAL "BOTH")
+        target_include_directories(${target} PUBLIC $<BUILD_INTERFACE:${adir}>)
+      endif()
       target_include_directories(${target} PUBLIC $<BUILD_INTERFACE:${adir}>)
     endforeach()
   else()
     # use sane default (if it exists)
+    if (A_LIBRARY_KIND STREQUAL "BOTH")
+      target_include_directories(
+        ${target}_obj
+        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>)
+    endif()
     if(IS_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/include)
       target_include_directories(
         ${target}
@@ -137,14 +167,27 @@ function(o2_add_library baseTargetName)
           FATAL_ERROR "Trying to append non existing include directory ${d}")
       endif()
       target_include_directories(${target} PRIVATE $<BUILD_INTERFACE:${d}>)
+      if (A_LIBRARY_KIND STREQUAL "BOTH")
+        target_include_directories(${target}_obj PRIVATE $<BUILD_INTERFACE:${d}>)
+      endif()
     endforeach()
   else()
     # use sane(?) default
+    if (A_LIBRARY_KIND STREQUAL "BOTH")
+      target_include_directories(
+        ${target}_obj
+        PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
+    endif()
     target_include_directories(
       ${target}
       PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>)
     get_filename_component(adir ${CMAKE_CURRENT_LIST_DIR}/src ABSOLUTE)
     if(EXISTS ${adir})
+      if (A_LIBRARY_KIND STREQUAL "BOTH")
+      target_include_directories(
+        ${target}_obj
+        PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>)
+      endif()
       target_include_directories(
         ${target}
         PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>)
@@ -158,10 +201,18 @@ function(o2_add_library baseTargetName)
     #
     # The EXPORT must come first in the list of parameters
     #
-    install(TARGETS ${target}
-            EXPORT O2Targets
-            INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    if (A_LIBRARY_KIND STREQUAL "BOTH")
+      install(TARGETS ${target} ${target}_obj
+              EXPORT O2Targets
+              INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+              LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    else()
+      install(TARGETS ${target}
+              EXPORT O2Targets
+              INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+              LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
 
     # install all the includes found in
     # ${CMAKE_CURRENT_LIST_DIR}/include/${baseTargetName} as those are public
@@ -175,6 +226,12 @@ function(o2_add_library baseTargetName)
     install(TARGETS ${target}
             EXPORT O2Targets
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+    if (A_LIBRARY_KIND STREQUAL "BOTH")
+      install(TARGETS ${target}_obj
+              EXPORT O2Targets
+              LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
 
   endif()
 
