@@ -137,6 +137,8 @@ TimesliceIndex::OldestInputInfo TimesliceIndex::setOldestPossibleInput(Timeslice
       continue;
     }
     auto& a = channel.oldestForChannel;
+    LOGP(info, "  Channel {} has oldest {}", ci, a.value);
+
     if (a.value < result.timeslice.value) {
       changed = true;
       result = {a, ChannelIndex{ci}};
@@ -144,7 +146,9 @@ TimesliceIndex::OldestInputInfo TimesliceIndex::setOldestPossibleInput(Timeslice
   }
   mOldestPossibleInput = result;
   if (changed) {
-    LOG(debug) << "Success: Oldest possible input is " << mOldestPossibleInput.timeslice.value << " due to channel " << mOldestPossibleInput.channel.value;
+    LOG(info) << "Success: Oldest possible input is " << mOldestPossibleInput.timeslice.value << " due to channel " << mOldestPossibleInput.channel.value;
+  } else {
+    LOG(info) << "No change in oldest possible input";
   }
   return mOldestPossibleInput;
 }

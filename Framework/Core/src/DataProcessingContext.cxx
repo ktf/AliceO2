@@ -118,7 +118,7 @@ void DataProcessorContext::preExitCallbacks(std::vector<ServiceExitHandle> handl
 void DataProcessorContext::domainInfoUpdatedCallback(ServiceRegistryRef ref, size_t oldestPossibleTimeslice, ChannelIndex channelIndex)
 {
   for (auto& handle : domainInfoHandles) {
-    LOGP(debug, "Invoking domainInfoHandles for service {}", handle.spec.name);
+    LOGP(info, "Invoking domainInfoHandles for service {}", handle.spec.name);
     handle.callback(ref, oldestPossibleTimeslice, channelIndex);
   }
 }

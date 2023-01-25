@@ -85,7 +85,7 @@ ExpirationHandler::Creator LifetimeHelpers::enumDrivenCreation(size_t start, siz
         // We know that next association will bring in last
         // so we can state this will be the latest possible input for the channel
         // associated with this.
-        LOG(debug) << "Oldest possible input is " << *last;
+        LOG(info) << "Oldest possible input is " << *last;
         auto newOldest = index.setOldestPossibleInput({*last}, channelIndex);
         index.updateOldestPossibleOutput();
         return slot;

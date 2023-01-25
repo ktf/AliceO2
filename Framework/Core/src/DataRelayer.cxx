@@ -272,7 +272,7 @@ void sendVariableContextMetrics(VariableContext& context, TimesliceSlot slot,
 void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex channel)
 {
   auto newOldest = mTimesliceIndex.setOldestPossibleInput(proposed, channel);
-  LOGP(debug, "DataRelayer::setOldestPossibleInput {} from channel {}", newOldest.timeslice.value, newOldest.channel.value);
+  LOGP(info, "DataRelayer::setOldestPossibleInput {} from channel {}", newOldest.timeslice.value, newOldest.channel.value);
   static bool dontDrop = getenv("DPL_DONT_DROP_OLD_TIMESLICE") && atoi(getenv("DPL_DONT_DROP_OLD_TIMESLICE"));
   if (dontDrop) {
     return;
@@ -283,7 +283,7 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
     auto valid = mTimesliceIndex.validateSlot({si}, newOldest.timeslice);
     if (valid) {
       if (mTimesliceIndex.isValid({si})) {
-        LOGP(debug, "Keeping slot {} because data has timestamp {} while oldest possible timestamp is {}", si, timestamp.value, newOldest.timeslice.value);
+        LOGP(info, "Keeping slot {} because data has timestamp {} while oldest possible timestamp is {}", si, timestamp.value, newOldest.timeslice.value);
       }
       continue;
     }
@@ -293,7 +293,7 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
       auto& element = mCache[si * mInputs.size() + mi];
       if (element.size() != 0) {
         if (input.lifetime != Lifetime::Condition && mCompletionPolicy.name != "internal-dpl-injected-dummy-sink") {
-          LOGP(error, "Dropping {} Lifetime::{} data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), (int)input.lifetime, si, timestamp.value, newOldest.timeslice.value);
+          LOGP(error, "Dropping {} Lifetime::{} data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
         } else {
           LOGP(debug,
                "Silently dropping data {} in pipeline slot {} because it has timeslice {} < {} after receiving data from channel {}."
