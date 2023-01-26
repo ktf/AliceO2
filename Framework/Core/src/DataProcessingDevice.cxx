@@ -2040,8 +2040,8 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
         {
           ZoneScopedN("service post processing");
           ref.get<CallbackService>()(CallbackService::Id::PostProcessing, o2::framework::ServiceRegistryRef{ref}, (int)action.op);
-          streamContext.postProcessingCallbacks(processContext);
           dpContext.postProcessingCallbacks(processContext);
+          streamContext.postProcessingCallbacks(processContext);
         }
       }
     };
