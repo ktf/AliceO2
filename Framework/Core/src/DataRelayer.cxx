@@ -294,6 +294,13 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
       if (element.size() != 0) {
         if (input.lifetime != Lifetime::Condition && mCompletionPolicy.name != "internal-dpl-injected-dummy-sink") {
           LOGP(error, "Dropping {} Lifetime::{} data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
+          for (std::size_t i = 0; i < element.size(); ++i) {
+            auto *header = o2::header::get<o2::header::DataHeader*>(element.header(i)->GetData());
+            if (header == nullptr) {
+              continue;
+            }
+            LOGP(error, "  Part {}/{} has header: {}/{}/{}", i, element.size(), header->dataOrigin, header->dataDescription, header->subSpecification);
+          }
         } else {
           LOGP(debug,
                "Silently dropping data {} in pipeline slot {} because it has timeslice {} < {} after receiving data from channel {}."
