@@ -74,10 +74,10 @@ DataSender::DataSender(ServiceRegistryRef registry,
   }
 
   /// Check if all the inputs are of kind Timeframe / Optional
-  /// and that the completion policy is the default one. If not, 
+  /// and that the completion policy is the default one. If not,
   /// we actually reset the mPresentDefaults to be empty, so that
   /// the check is disabled.
-  for (auto &input : mSpec.inputs) {
+  for (auto& input : mSpec.inputs) {
     if (input.matcher.lifetime != Lifetime::Timeframe && input.matcher.lifetime != Lifetime::Optional) {
       LOGP(detail, "Disabling the Lifetime::timeframe check because not all the inputs are of kind Lifetime::Timeframe");
       mPresentDefaults.resize(0);
