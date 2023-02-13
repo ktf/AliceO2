@@ -53,7 +53,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& ctx)
             if (counterA != 5) {
               LOGP(fatal, "2s timer did not do all the expected iterations {} != 5", counterA);
             }
-            int64_t diff = 2000000000LL*5 + 1000000000 * (counter-5) - (lastTime - start);
+            int64_t diff = 2000000000LL * 5 + 1000000000 * (counter - 5) - (lastTime - start);
             if (diff > 10000000) {
               LOGP(fatal, "1s timer is not accurate enough: {}, count ", diff, counter);
             }
