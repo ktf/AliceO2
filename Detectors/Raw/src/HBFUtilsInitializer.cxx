@@ -142,7 +142,7 @@ void HBFUtilsInitializer::addNewTimeSliceCallback(std::vector<o2::framework::Cal
       if (!fname.empty()) {
         if (fname == HBFUSrc) { // simple linear enumeration from already updated HBFUtils
           const auto& hbfu = o2::raw::HBFUtils::Instance();
-          service.set(o2::framework::CallbackService::Id::NewTimeslice,
+          service.set<o2::framework::CallbackService::Id::NewTimeslice>(
                       [offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit), increment = int64_t(hbfu.nHBFPerTF),
                        startTime = hbfu.startTime, orbitFirst = hbfu.orbitFirst, runNumber = hbfu.runNumber, delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
                         dh.firstTForbit = offset + increment * dh.tfCounter;
@@ -157,7 +157,7 @@ void HBFUtilsInitializer::addNewTimeSliceCallback(std::vector<o2::framework::Cal
           if (!o2::utils::Str::pathExists(fname)) {
             throw std::runtime_error(fmt::format("file {} does not exist", fname));
           }
-          service.set(o2::framework::CallbackService::Id::NewTimeslice,
+          service.set<o2::framework::CallbackService::Id::NewTimeslice>(
                       [tfidinfo = readTFIDInfoVector(fname), delay](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
                         assignDataHeader(tfidinfo, dh, dph);
                         static size_t tfcount = 0;

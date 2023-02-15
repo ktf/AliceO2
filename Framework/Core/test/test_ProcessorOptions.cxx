@@ -94,7 +94,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
           ASSERT_ERROR(anotheroption == "hello-aliceo2");
 
           auto data = std::make_shared<int>(0);
-          ic.services().get<CallbackService>().set(CallbackService::Id::EndOfStream,
+          ic.services().get<CallbackService>().set<CallbackService::Id::EndOfStream>(
                                                    [data](EndOfStreamContext& context) {
                                                      ASSERT_ERROR(*data == 42);
                                                    });

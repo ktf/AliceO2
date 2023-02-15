@@ -223,7 +223,7 @@ void customize(std::vector<o2::framework::CallbacksPolicy>& policies)
     },
     [](o2::framework::CallbackService& service, o2::framework::InitContext& context) {
       // simple linear enumeration from already updated HBFUtils (set via config key values)
-      service.set(o2::framework::CallbackService::Id::NewTimeslice,
+      service.set<o2::framework::CallbackService::Id::NewTimeslice>(
                   [](o2::header::DataHeader& dh, o2::framework::DataProcessingHeader& dph) {
                     const auto& hbfu = o2::raw::HBFUtils::Instance();
                     const auto offset = int64_t(hbfu.getFirstIRofTF({0, hbfu.orbitFirstSampled}).orbit);
