@@ -98,11 +98,11 @@ namespace o2::framework::readers
 auto setEOSCallback(InitContext& ic)
 {
   ic.services().get<CallbackService>().set<CallbackService::Id::EndOfStream>(
-                                           [](EndOfStreamContext& eosc) {
-                                             auto& control = eosc.services().get<ControlService>();
-                                             control.endOfStream();
-                                             control.readyToQuit(QuitRequest::Me);
-                                           });
+    [](EndOfStreamContext& eosc) {
+      auto& control = eosc.services().get<ControlService>();
+      control.endOfStream();
+      control.readyToQuit(QuitRequest::Me);
+    });
 }
 
 template <typename O>

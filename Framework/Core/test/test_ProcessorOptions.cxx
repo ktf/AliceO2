@@ -95,9 +95,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const&)
 
           auto data = std::make_shared<int>(0);
           ic.services().get<CallbackService>().set<CallbackService::Id::EndOfStream>(
-                                                   [data](EndOfStreamContext& context) {
-                                                     ASSERT_ERROR(*data == 42);
-                                                   });
+            [data](EndOfStreamContext& context) {
+              ASSERT_ERROR(*data == 42);
+            });
           return [data](ProcessingContext& ctx) {
             // there is nothing to do, simply stop the workflow
             *data = ctx.inputs().get<int>("in");
