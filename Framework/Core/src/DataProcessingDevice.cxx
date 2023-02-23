@@ -133,7 +133,7 @@ DataProcessingDevice::DataProcessingDevice(RunningDeviceRef running, ServiceRegi
       }
       cleanupCount = newCleanupCount;
       auto ref = ServiceRegistryRef{registry, ServiceRegistry::globalDeviceSalt()};
-      auto &deviceState = ref.get<DeviceState>();
+      auto& deviceState = ref.get<DeviceState>();
       for (auto& info : deviceState.inputChannelInfos) {
         FairMQParts parts;
         while (info.channel->Receive(parts, 0)) {
