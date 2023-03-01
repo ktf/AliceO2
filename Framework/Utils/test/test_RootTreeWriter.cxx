@@ -336,4 +336,3 @@ TEST_CASE("TestCanAssign")
   REQUIRE((can_assign<decltype(otherParam), Callback>::value == false));
 }
 } // namespace o2::test
-
