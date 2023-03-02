@@ -677,7 +677,7 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStats()
       stats->registerMetric({"total_bytes_in", (int)ProcessingStatsId::TOTAL_BYTES_IN, 0, quickUpdateInterval});
       stats->registerMetric({"total_bytes_out", (int)ProcessingStatsId::TOTAL_BYTES_OUT, 0, quickUpdateInterval});
       stats->registerMetric({fmt::format("available_managed_shm_{}", runningWorkflow.shmSegmentId), (int)ProcessingStatsId::AVAILABLE_MANAGED_SHM_BASE + runningWorkflow.shmSegmentId, 500});
-      auto &relayer = services.get<DataRelayer>();
+      auto& relayer = services.get<DataRelayer>();
 
       for (size_t i = 0; i < relayer.getCacheSize(); ++i) {
         stats->registerMetric({fmt::format("data_relayer/{}", i), static_cast<int>((int)ProcessingStatsId::RELAYER_METRIC_BASE + i), 0, 100});

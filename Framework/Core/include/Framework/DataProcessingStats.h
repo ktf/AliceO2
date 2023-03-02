@@ -69,15 +69,15 @@ struct DataProcessingStats {
   constexpr static short MAX_CMDS = 64;
 
   enum struct Op : char {
-    Nop,           /// No operation
-    Set,           /// Set the value to the specified value
-    SetIfPositive, /// Set the value to the specified value if it is positive
+    Nop,               /// No operation
+    Set,               /// Set the value to the specified value
+    SetIfPositive,     /// Set the value to the specified value if it is positive
     CumulativeRate,    /// Update the rate of the metric given the cumulative value since last time it got published
     InstantaneousRate, /// Update the rate of the metric given the amount since the last time
-    Add,           /// Add the value to the current value
-    Sub,           /// Subtract the value from the current value
-    Max,           /// Set the value to the maximum of the current value and the specified value
-    Min            /// Set the value to the minimum of the current value and the specified value
+    Add,               /// Add the value to the current value
+    Sub,               /// Subtract the value from the current value
+    Max,               /// Set the value to the maximum of the current value and the specified value
+    Min                /// Set the value to the minimum of the current value and the specified value
   };
 
   // This is what the user passes. Notice that there is no
@@ -107,7 +107,7 @@ struct DataProcessingStats {
   // It also prevents that we send the same metric multiple times, because
   // we keep track of the time of the last update.
   struct UpdateInfo {
-    int64_t timestamp = 0; // When the update actually took place
+    int64_t timestamp = 0;     // When the update actually took place
     int64_t lastPublished = 0; // When the update was last published
   };
 
@@ -167,7 +167,8 @@ struct DataProcessingStats {
   int64_t initialTimeOffset = 0;
 
   // Invoke to make sure that the updatedMetricsTotal is updated.
-  void lapseTelemetry() {
+  void lapseTelemetry()
+  {
     updatedMetricsTotal += updatedMetricsLapse.load();
     pushedMetricsTotal += pushedMetricsLapse;
     publishedMetricsTotal += publishedMetricsLapse;

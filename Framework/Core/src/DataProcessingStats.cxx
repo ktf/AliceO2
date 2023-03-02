@@ -77,13 +77,13 @@ void DataProcessingStats::updateStats(CommandSpec cmd)
     pendingCmds++;
     idx = nextCmd.fetch_add(1, std::memory_order_relaxed);
   } else if (idx > cmds.size()) {
-    while ( cmds.size()) {
+    while (cmds.size()) {
       // We need to wait for the flushing of the queue
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
       idx = nextCmd.load(std::memory_order_relaxed);
     }
     return updateStats(cmd);
-  } 
+  }
   // Save the command.
   assert(idx < cmds.size());
   assert(cmd.id < metrics.size());
@@ -218,7 +218,7 @@ void DataProcessingStats::flushChangedMetrics(std::function<void(std::string con
       updated[mi] = true;
       update.timestamp = currentTimestamp;
     }
-    if (updated[mi] == false) { 
+    if (updated[mi] == false) {
       continue;
     }
     if (currentTimestamp - update.lastPublished < spec.minPublishInterval) {
@@ -235,7 +235,7 @@ void DataProcessingStats::flushChangedMetrics(std::function<void(std::string con
   }
   static int64_t startTime = uv_hrtime();
   int64_t now = uv_hrtime();
-  double averageInvocations = (publishingInvokedTotal * 1000000000)  / (now - startTime);
+  double averageInvocations = (publishingInvokedTotal * 1000000000) / (now - startTime);
   double averagePublishing = (publishedMetricsLapse * 1000000000) / (now - startTime);
 
   LOGP(debug, "Publishing invoked {} times / s, {} metrics published / s", (int)averageInvocations, (int)averagePublishing);
