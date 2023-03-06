@@ -77,8 +77,6 @@
 #include <sstream>
 #include <boost/property_tree/json_parser.hpp>
 
-static int g_timeslice_done = -1;
-
 using namespace o2::framework;
 using ConfigurationInterface = o2::configuration::ConfigurationInterface;
 using DataHeader = o2::header::DataHeader;
@@ -1713,17 +1711,16 @@ void DataProcessingDevice::handleData(ServiceRegistryRef ref, InputChannelInfo& 
           /// We have back pressure, therefore we do not process DomainInfo anymore.
           /// until the previous message are processed.
           auto &context = ref.get<DataProcessorContext>();
-          *context.wasActive = true;
           auto headerIndex = input.position;
-          auto payloadIndex = input.position + 1;
-          assert(payloadIndex < parts.Size());
           // FIXME: the message with the end of stream cannot contain
           //        split parts.
-
           auto dih = o2::header::get<DomainInfoHeader*>(parts.At(headerIndex)->GetData());
-          if (hasBackpressure && dih->oldestPossibleTimeslice > g_timeslice_done) {
+          if (hasBackpressure && dih->oldestPossibleTimeslice > context.lastTimesliceWithBackpressure) {
             break;
           }
+          auto payloadIndex = input.position + 1;
+          assert(payloadIndex < parts.Size());
+          *context.wasActive = true;
           oldestPossibleTimeslice = std::min(oldestPossibleTimeslice, dih->oldestPossibleTimeslice);
           LOGP(debug, "Got DomainInfoHeader, new oldestPossibleTimeslice {} on channel {}", oldestPossibleTimeslice, info.id.value);
           parts.At(headerIndex).reset(nullptr);
@@ -2096,9 +2093,10 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
           dpContext.postProcessingCallbacks(processContext);
           streamContext.postProcessingCallbacks(processContext);
           auto& info = o2::framework::ServiceRegistryRef{ref}.get<TimingInfo>();
+          auto& context = o2::framework::ServiceRegistryRef{ref}.get<DataProcessorContext>();
           if (info.timeslice <= 1652945069870351) {
-            g_timeslice_done = info.timeslice;
-            LOG(info) << "Updated DONE " << g_timeslice_done;
+            context.lastTimesliceWithBackpressure = info.timeslice;
+            LOG(info) << "Updated DONE " << context.lastTimesliceWithBackpressure;
           }
         }
       }

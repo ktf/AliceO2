@@ -32,6 +32,8 @@ struct DataProcessorContext {
   bool allDone = false;
   /// Latest run number we processed globally for this DataProcessor.
   int64_t lastRunNumberProcessed = 0;
+  /// Timeslice with backpressure
+  int64_t lastTimesliceWithBackpressure = -1;
 
   // These are pointers to the one owned by the DataProcessingDevice
   // but they are fully reentrant / thread safe and therefore can
