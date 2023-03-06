@@ -77,6 +77,8 @@
 #include <sstream>
 #include <boost/property_tree/json_parser.hpp>
 
+static int g_timeslice_done = -1;
+
 using namespace o2::framework;
 using ConfigurationInterface = o2::configuration::ConfigurationInterface;
 using DataHeader = o2::header::DataHeader;
@@ -1710,9 +1712,6 @@ void DataProcessingDevice::handleData(ServiceRegistryRef ref, InputChannelInfo& 
         case InputType::DomainInfo: {
           /// We have back pressure, therefore we do not process DomainInfo anymore.
           /// until the previous message are processed.
-          if (hasBackpressure) {
-            break;
-          }
           auto &context = ref.get<DataProcessorContext>();
           *context.wasActive = true;
           auto headerIndex = input.position;
@@ -1722,6 +1721,9 @@ void DataProcessingDevice::handleData(ServiceRegistryRef ref, InputChannelInfo& 
           //        split parts.
 
           auto dih = o2::header::get<DomainInfoHeader*>(parts.At(headerIndex)->GetData());
+          if (hasBackpressure && dih->oldestPossibleTimeslice > g_timeslice_done) {
+            break;
+          }
           oldestPossibleTimeslice = std::min(oldestPossibleTimeslice, dih->oldestPossibleTimeslice);
           LOGP(debug, "Got DomainInfoHeader, new oldestPossibleTimeslice {} on channel {}", oldestPossibleTimeslice, info.id.value);
           parts.At(headerIndex).reset(nullptr);
@@ -2093,6 +2095,11 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
           ref.get<CallbackService>().call<CallbackService::Id::PostProcessing>(o2::framework::ServiceRegistryRef{ref}, (int)action.op);
           dpContext.postProcessingCallbacks(processContext);
           streamContext.postProcessingCallbacks(processContext);
+          auto& info = o2::framework::ServiceRegistryRef{ref}.get<TimingInfo>();
+          if (info.timeslice <= 1652945069870351) {
+            g_timeslice_done = info.timeslice;
+            LOG(info) << "Updated DONE " << g_timeslice_done;
+          }
         }
       }
     };
