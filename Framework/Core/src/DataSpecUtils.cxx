@@ -424,7 +424,7 @@ std::optional<ConcreteDataMatcher> DataSpecUtils::asOptionalConcreteDataMatcher(
                       [](DataDescriptorMatcher const& matcher) {
                         return DataSpecUtils::optionalConcreteDataMatcherFrom(matcher);
                       },
-                      [](auto const&) { return std::optional<ConcreteDataMatcher>{std::nullopt};}},
+                      [](auto const&) { return std::optional<ConcreteDataMatcher>{std::nullopt}; }},
                     spec.matcher);
 }
 
