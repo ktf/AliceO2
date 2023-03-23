@@ -11,11 +11,13 @@
 
 #include "Framework/DataProcessingHeader.h"
 #include "Headers/DataHeader.h"
+#include "Framework/TimingHelpers.h"
 
-namespace o2
+namespace o2::framework
 {
-namespace framework
+uint64_t DataProcessingHeader::getCreationTime()
 {
+  return ((uint64_t)TimingHelpers::getRealtimeSinceEpochStandalone()) | DUMMY_CREATION_TIME_OFFSET;
+}
 
-} // namespace framework
 } // namespace o2

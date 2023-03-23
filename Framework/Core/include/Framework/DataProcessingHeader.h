@@ -15,8 +15,6 @@
 
 #include <cstdint>
 #include <memory>
-#include <cassert>
-#include <chrono>
 
 namespace o2::framework
 {
@@ -48,11 +46,8 @@ struct DataProcessingHeader : public header::BaseHeader {
   /// This creation time is not meant to be used for anything but to understand the relative
   /// creation of messages in the flow. Notice that for the case DataProcessingHeader::creation
   /// has some particular meaning, we expect this function not to be used.
-  static uint64_t getCreationTime()
-  {
-    auto now = std::chrono::steady_clock::now();
-    return ((uint64_t)std::chrono::duration<double, std::milli>(now.time_since_epoch()).count()) | DUMMY_CREATION_TIME_OFFSET;
-  }
+  static uint64_t getCreationTime();
+
   // Required to do the lookup
   constexpr static const o2::header::HeaderType sHeaderType = "DataFlow";
   static const uint32_t sVersion = 1;
