@@ -33,7 +33,8 @@ std::function<int64_t(int64_t, int64_t)> TimingHelpers::defaultCPUTimeConfigurat
   };
 }
 
-int64_t TimingHelpers::getRealtimeSinceEpochStandalone() {
+int64_t TimingHelpers::getRealtimeSinceEpochStandalone()
+{
   /// Get milliseconds from epoch minimising the amount of system calls
   /// we do to get the time.
   static int64_t base = 0;
