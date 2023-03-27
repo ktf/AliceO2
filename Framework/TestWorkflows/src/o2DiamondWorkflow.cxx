@@ -105,8 +105,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
                           auto header = o2::header::get<const DataProcessingHeader*>(ref.header);
                           LOG(info) << "Start time: " << header->startTime;
                         })},
-                      .labels = {{"expendable"}}
-  };
+                      .labels = {{"expendable"}}};
 
   return workflow::concat(WorkflowSpec{a},
                           workflow::combine("combined", {b, c}, false),

@@ -72,7 +72,7 @@ WorkflowSpec defineDataProcessing()
              ConfigParamSpec{"b-param", VariantType::String, "", {"a parameter which will be escaped"}},
              ConfigParamSpec{"c-param", VariantType::String, "foo;bar", {"another parameter which will be escaped"}},
            },
-          .labels = {{"expendable"}}}};
+           .labels = {{"expendable"}}}};
 }
 
 char* strdiffchr(const char* s1, const char* s2)
