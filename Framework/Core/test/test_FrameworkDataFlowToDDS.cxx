@@ -43,36 +43,36 @@ namespace
 // This is how you can define your processing in a declarative way
 WorkflowSpec defineDataProcessing()
 {
-  return {{"A", Inputs{},
-           Outputs{OutputSpec{"TST", "A1"},
-                   OutputSpec{"TST", "A2"}},
-           AlgorithmSpec{[](ProcessingContext& ctx) {
+  return {{.name = "A",
+           .outputs = {OutputSpec{"TST", "A1"},
+                       OutputSpec{"TST", "A2"}},
+           .algorithm = AlgorithmSpec{[](ProcessingContext& ctx) {
              std::this_thread::sleep_for(std::chrono::seconds(1));
              ctx.outputs().make<int>(Output{"TST", "A1", 0}, 1);
              ctx.outputs().make<int>(Output{"TST", "A2", 0}, 1);
            }}},
-          {"B",
-           {InputSpec{"x", "TST", "A1"}},
-           Outputs{OutputSpec{"TST", "B1"}},
-           simplePipe(o2::header::DataDescription{"B1"})},
-          {"C",
-           {InputSpec{"y", "TST", "A2"}},
-           Outputs{OutputSpec{"TST", "C1"}},
-           simplePipe(o2::header::DataDescription{"C1"})},
-          {"D",
-           {
+          {.name = "B",
+           .inputs = {InputSpec{"x", "TST", "A1"}},
+           .outputs = {OutputSpec{"TST", "B1"}},
+           .algorithm = simplePipe(o2::header::DataDescription{"B1"})},
+          {.name = "C",
+           .inputs = {InputSpec{"y", "TST", "A2"}},
+           .outputs = {OutputSpec{"TST", "C1"}},
+           .algorithm = simplePipe(o2::header::DataDescription{"C1"})},
+          {.name = "D",
+           .inputs = {
              InputSpec{"x", "TST", "B1"},
              InputSpec{"y", "TST", "C1"},
            },
-           Outputs{},
-           AlgorithmSpec{
+           .algorithm = {
              [](ProcessingContext&) {},
            },
-           {
+           .options = {
              ConfigParamSpec{"a-param", VariantType::Int, 1, {"A parameter which should not be escaped"}},
              ConfigParamSpec{"b-param", VariantType::String, "", {"a parameter which will be escaped"}},
              ConfigParamSpec{"c-param", VariantType::String, "foo;bar", {"another parameter which will be escaped"}},
-           }}};
+           },
+          .labels = {{"expendable"}}}};
 }
 
 char* strdiffchr(const char* s1, const char* s2)
@@ -119,6 +119,7 @@ TEST_CASE("TestDDS")
   CommandInfo command{"foo"};
   DDSConfigHelpers::dumpDeviceSpec2DDS(ss, "", workflow, dataProcessorInfos, devices, executions, command);
   auto expected = R"EXPECTED(<topology name="o2-dataflow">
+<declrequirement name="odc_expendable_task" type="custom" value="true" />
 <asset name="dpl_json" type="inline" visibility="global" value="{
     &quot;workflow&quot;: [
         {
@@ -243,7 +244,9 @@ TEST_CASE("TestDDS")
                     &quot;kind&quot;: &quot;0&quot;
                 }
             ],
-            &quot;labels&quot;: [],
+            &quot;labels&quot;: [
+                &quot;expendable&quot;
+            ],
             &quot;rank&quot;: 0,
             &quot;nSlots&quot;: 1,
             &quot;inputTimeSliceId&quot;: 0,
@@ -325,6 +328,9 @@ TEST_CASE("TestDDS")
    <decltask name="D">
        <assets><name>dpl_json</name></assets>
        <exe reachable="true">cat ${DDS_LOCATION}/dpl_json.asset | foo --id D_dds%TaskIndex%_%CollectionIndex% --shm-monitor false --log-color false --color false --channel-config "name=from_B_to_D,type=pull,method=connect,address=ipc://@localhostworkflow-id_22002,transport=shmem,rateLogging=0,rcvBufSize=1,sndBufSize=1" --channel-config "name=from_C_to_D,type=pull,method=connect,address=ipc://@localhostworkflow-id_22003,transport=shmem,rateLogging=0,rcvBufSize=1,sndBufSize=1" --bad-alloc-attempt-interval 50 --bad-alloc-max-attempts 1 --early-forward-policy never --io-threads 1 --jobs 4 --severity info --shm-allocation rbtree_best_fit --shm-mlock-segment false --shm-mlock-segment-on-creation false --shm-no-cleanup false --shm-segment-id 0 --shm-throw-bad-alloc true --shm-zero-segment false --stacktrace-on-signal simple --timeframes-rate-limit 0 --a-param 1 --b-param "" --c-param "foo;bar" --session dpl_workflow-id --plugin odc</exe>
+       <requirements>
+           <requirement name="odc_expendable_task" />
+       </requirements>
    </decltask>
    <declcollection name="DPL">
        <tasks>

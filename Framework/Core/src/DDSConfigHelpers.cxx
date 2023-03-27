@@ -123,6 +123,8 @@ void DDSConfigHelpers::dumpDeviceSpec2DDS(std::ostream& out,
   WorkflowSerializationHelpers::dump(asset, workflow, dataProcessorInfos, commandInfo);
   out << R"(<topology name="o2-dataflow">)"
          "\n"
+         R"(<declrequirement name="odc_expendable_task" type="custom" value="true" />)"
+         "\n"
       << fmt::format(R"(<asset name="dpl_json{}" type="inline" visibility="global" value="{}"/>)",
                      workflowSuffix,
                      xmlEncode(asset.str()))
@@ -218,6 +220,15 @@ void DDSConfigHelpers::dumpDeviceSpec2DDS(std::ostream& out,
       out << " --channel-config \"" << accumulatedChannelPrefix << "\"";
     }
     out << "</exe>\n";
+    // Check if the expendable label is there, and if so, add
+    // the requirement to the XML.
+    if (std::find_if(spec.labels.begin(), spec.labels.end(), [](const auto& label) {
+          return label.value == "expendable";
+        }) != spec.labels.end()) {
+      out << "       <requirements>\n";
+      out << "           <requirement name=\"odc_expendable_task\" />\n";
+      out << "       </requirements>\n";
+    }
     auto& rewriter = rewriters[di];
     if (rewriter.requiresProperties.empty() == false) {
       out << "   <properties>\n";
