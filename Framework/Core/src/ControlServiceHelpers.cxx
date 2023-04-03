@@ -39,7 +39,7 @@ bool ControlServiceHelpers::parseControl(std::string_view const& s, std::match_r
 }
 
 void ControlServiceHelpers::processCommand(std::vector<DeviceInfo>& infos,
-                                          std::vector<DataProcessingStates>& allStates, 
+                                           std::vector<DataProcessingStates>& allStates,
                                            pid_t pid,
                                            std::string const& command,
                                            std::string const& arg)

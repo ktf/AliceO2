@@ -741,13 +741,13 @@ void spawnDevice(uv_loop_t* loop,
   uint64_t offset = now.tv_sec * 1000 - uv_now(loop);
   allStates.emplace_back(
     TimingHelpers::defaultRealtimeBaseConfigurator(offset, loop),
-     TimingHelpers::defaultCPUTimeConfigurator()) ;
+    TimingHelpers::defaultCPUTimeConfigurator());
 
   allStates.back().registerState(DataProcessingStates::StateSpec{
-      .name = "data_queries",
-      .stateId = (short)ProcessingStateId::DATA_QUERIES,
-      .sendInitialValue = true,
-      });
+    .name = "data_queries",
+    .stateId = (short)ProcessingStateId::DATA_QUERIES,
+    .sendInitialValue = true,
+  });
 
   // Let's add also metrics information for the given device
   gDeviceMetricsInfos.emplace_back(DeviceMetricsInfo{});

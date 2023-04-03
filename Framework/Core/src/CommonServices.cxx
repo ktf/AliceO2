@@ -845,8 +845,7 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStates()
     .configure = noConfiguration(),
     .postProcessing = [](ProcessingContext& context, void* service) {
       auto* states = (DataProcessingStates*)service;
-      //states->updateState({(short)ProcessingStateId::DUMMY_STATE, (int) strlen("somestate"), "somestate"}); 
-    },
+      //states->updateState({(short)ProcessingStateId::DUMMY_STATE, (int) strlen("somestate"), "somestate"}); },
     .preDangling = [](DanglingContext& context, void* service) {
        auto* states = (DataProcessingStates*)service;
        flushStates(context.services(), *states); },

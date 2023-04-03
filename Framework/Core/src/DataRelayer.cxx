@@ -97,7 +97,7 @@ DataRelayer::DataRelayer(const CompletionPolicy& policy,
 
   // The queries are all the same, so we only have width 1
   auto numInputTypes = mDistinctRoutesIndex.size();
-  auto &states = services.get<DataProcessingStates>();
+  auto& states = services.get<DataProcessingStates>();
   metrics.send({(int)numInputTypes, "data_queries/h", Verbosity::Debug});
   metrics.send({(int)1, "data_queries/w", Verbosity::Debug});
   std::string queries = "";

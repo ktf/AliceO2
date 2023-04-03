@@ -51,10 +51,10 @@ struct ChannelsTableHelper {
   }
 };
 
-void deviceInfoTable(char const* label, DataProcessingStates const&states, DeviceMetricsInfo const& metrics)
+void deviceInfoTable(char const* label, DataProcessingStates const& states, DeviceMetricsInfo const& metrics)
 {
   // Find the state spec associated to data_queries
-  auto &view = states.statesViews[(int)ProcessingStateId::DATA_QUERIES];
+  auto& view = states.statesViews[(int)ProcessingStateId::DATA_QUERIES];
   if (view.size == 0) {
     ImGui::CollapsingHeader("No inputs");
     return;
@@ -63,24 +63,22 @@ void deviceInfoTable(char const* label, DataProcessingStates const&states, Devic
     std::string_view inputs(states.statesBuffer.data() + view.first, view.size);
     ImGui::TextUnformatted(inputs.data(), inputs.data() + inputs.size());
     // split inputs at the ; and create an ImGui::Text for each one
-    //ImGui::Columns(2);
-    //auto labels = {"Name", "State"};
-    //for (auto& label : labels) {
+    // ImGui::Columns(2);
+    // auto labels = {"Name", "State"};
+    // for (auto& label : labels) {
     //  ImGui::TextUnformatted(label);
     //  ImGui::NextColumn();
     //}
 
-
-
-    //for (size_t i = 0; i < view.size(); ++i) {
-    //  assert(name);
-    //  ImGui::Text("%zu: %s", i, name);
-    //  if (ImGui::IsItemHovered()) {
-    //    ImGui::BeginTooltip();
-    //    ImGui::Text("%zu: %s", i, name);
-    //    ImGui::EndTooltip();
-    //  }
-    //}
+    // for (size_t i = 0; i < view.size(); ++i) {
+    //   assert(name);
+    //   ImGui::Text("%zu: %s", i, name);
+    //   if (ImGui::IsItemHovered()) {
+    //     ImGui::BeginTooltip();
+    //     ImGui::Text("%zu: %s", i, name);
+    //     ImGui::EndTooltip();
+    //   }
+    // }
   }
 }
 
@@ -329,7 +327,7 @@ void displayDeviceInspector(DeviceSpec const& spec,
   }
 
   deviceInfoTable("Inputs:", states, metrics);
-  //deviceInfoTable("Outputs:", allStatas, info.outputsViewIndex, metrics);
+  // deviceInfoTable("Outputs:", allStatas, info.outputsViewIndex, metrics);
   configurationTable(info.currentConfig, info.currentProvenance);
   optionsTable("Workflow Options", metadata.workflowOptions, control);
   servicesTable("Services", spec.services);
