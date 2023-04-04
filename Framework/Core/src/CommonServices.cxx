@@ -830,7 +830,8 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStats()
 // history-less metrics which are e.g. used for the GUI.
 o2::framework::ServiceSpec CommonServices::dataProcessingStates()
 {
-  return ServiceSpec{
+  return ServiceSpec
+  {
     .name = "data-processing-states",
     .init = [](ServiceRegistryRef services, DeviceState& state, fair::mq::ProgOptions& options) -> ServiceHandle {
       timespec now;
@@ -856,28 +857,28 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStates()
     .preEOS = [](EndOfStreamContext& context, void* service) {
       auto* states = (DataProcessingStates*)service;
       flushStates(context.services(), *states); },
-    .kind = ServiceKind::Global};
-}
+    .kind = ServiceKind::Global };
+  }
 
-struct GUIMetrics {
-};
+  struct GUIMetrics {
+  };
 
-o2::framework::ServiceSpec CommonServices::guiMetricsSpec()
-{
-  return ServiceSpec{
-    .name = "gui-metrics",
-    .init = [](ServiceRegistryRef services, DeviceState&, fair::mq::ProgOptions& options) -> ServiceHandle {
-      auto* stats = new GUIMetrics();
-      auto& monitoring = services.get<Monitoring>();
-      auto& spec = services.get<DeviceSpec const>();
-      monitoring.send({(int)spec.inputChannels.size(), fmt::format("oldest_possible_timeslice/h"), o2::monitoring::Verbosity::Debug});
-      monitoring.send({(int)1, fmt::format("oldest_possible_timeslice/w"), o2::monitoring::Verbosity::Debug});
-      monitoring.send({(int)spec.outputChannels.size(), fmt::format("oldest_possible_output/h"), o2::monitoring::Verbosity::Debug});
-      monitoring.send({(int)1, fmt::format("oldest_possible_output/w"), o2::monitoring::Verbosity::Debug});
-      return ServiceHandle{TypeIdHelpers::uniqueId<GUIMetrics>(), stats};
-    },
-    .configure = noConfiguration(),
-    .postProcessing = [](ProcessingContext& context, void* service) {
+  o2::framework::ServiceSpec CommonServices::guiMetricsSpec()
+  {
+    return ServiceSpec{
+      .name = "gui-metrics",
+      .init = [](ServiceRegistryRef services, DeviceState&, fair::mq::ProgOptions& options) -> ServiceHandle {
+        auto* stats = new GUIMetrics();
+        auto& monitoring = services.get<Monitoring>();
+        auto& spec = services.get<DeviceSpec const>();
+        monitoring.send({(int)spec.inputChannels.size(), fmt::format("oldest_possible_timeslice/h"), o2::monitoring::Verbosity::Debug});
+        monitoring.send({(int)1, fmt::format("oldest_possible_timeslice/w"), o2::monitoring::Verbosity::Debug});
+        monitoring.send({(int)spec.outputChannels.size(), fmt::format("oldest_possible_output/h"), o2::monitoring::Verbosity::Debug});
+        monitoring.send({(int)1, fmt::format("oldest_possible_output/w"), o2::monitoring::Verbosity::Debug});
+        return ServiceHandle{TypeIdHelpers::uniqueId<GUIMetrics>(), stats};
+      },
+      .configure = noConfiguration(),
+      .postProcessing = [](ProcessingContext& context, void* service) {
       auto& relayer = context.services().get<DataRelayer>();
       auto& monitoring = context.services().get<Monitoring>();
       auto& spec = context.services().get<DeviceSpec const>();
@@ -885,130 +886,130 @@ o2::framework::ServiceSpec CommonServices::guiMetricsSpec()
       for (size_t ci; ci < spec.outputChannels.size(); ++ci) {
         monitoring.send({(uint64_t)oldestPossibleOutput.timeslice.value, fmt::format("oldest_possible_output/{}", ci), o2::monitoring::Verbosity::Debug});
       } },
-    .domainInfoUpdated = [](ServiceRegistryRef registry, size_t timeslice, ChannelIndex channel) {
+      .domainInfoUpdated = [](ServiceRegistryRef registry, size_t timeslice, ChannelIndex channel) {
       auto& monitoring = registry.get<Monitoring>();
       monitoring.send({(uint64_t)timeslice, fmt::format("oldest_possible_timeslice/{}", channel.value), o2::monitoring::Verbosity::Debug}); },
-    .active = false,
-    .kind = ServiceKind::Serial};
-}
-
-o2::framework::ServiceSpec CommonServices::objectCache()
-{
-  return ServiceSpec{
-    .name = "object-cache",
-    .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
-      auto* cache = new ObjectCache();
-      return ServiceHandle{TypeIdHelpers::uniqueId<ObjectCache>(), cache};
-    },
-    .configure = noConfiguration(),
-    .kind = ServiceKind::Serial};
-}
-
-o2::framework::ServiceSpec CommonServices::dataProcessorContextSpec()
-{
-  return ServiceSpec{
-    .name = "data-processing-context",
-    .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
-      return ServiceHandle{TypeIdHelpers::uniqueId<DataProcessorContext>(), new DataProcessorContext()};
-    },
-    .configure = noConfiguration(),
-    .exit = [](ServiceRegistryRef, void* service) { auto* context = (DataProcessorContext*)service; delete context; },
-    .kind = ServiceKind::Serial};
-}
-
-o2::framework::ServiceSpec CommonServices::deviceContextSpec()
-{
-  return ServiceSpec{
-    .name = "device-context",
-    .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
-      return ServiceHandle{TypeIdHelpers::uniqueId<DeviceContext>(), new DeviceContext()};
-    },
-    .configure = noConfiguration(),
-    .kind = ServiceKind::Serial};
-}
-
-o2::framework::ServiceSpec CommonServices::dataAllocatorSpec()
-{
-  return ServiceSpec{
-    .name = "data-allocator",
-    .uniqueId = simpleServiceId<DataAllocator>(),
-    .init = [](ServiceRegistryRef ref, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
-      return ServiceHandle{
-        .hash = TypeIdHelpers::uniqueId<DataAllocator>(),
-        .instance = new DataAllocator(ref),
-        .kind = ServiceKind::Stream,
-        .name = "data-allocator",
-      };
-    },
-    .configure = noConfiguration(),
-    .kind = ServiceKind::Stream};
-}
-
-/// Split a string into a vector of strings using : as a separator.
-std::vector<ServiceSpec> CommonServices::defaultServices(int numThreads)
-{
-  std::vector<ServiceSpec> specs{
-    dataProcessorContextSpec(),
-    streamContextSpec(),
-    dataAllocatorSpec(),
-    asyncQueue(),
-    timingInfoSpec(),
-    timesliceIndex(),
-    driverClientSpec(),
-    datatakingContextSpec(),
-    monitoringSpec(),
-    configurationSpec(),
-    controlSpec(),
-    rootFileSpec(),
-    parallelSpec(),
-    callbacksSpec(),
-    dataProcessingStats(),
-    dataProcessingStates(),
-    dataRelayer(),
-    CommonMessageBackends::fairMQDeviceProxy(),
-    dataSender(),
-    objectCache(),
-    ccdbSupportSpec(),
-    ArrowSupport::arrowBackendSpec(),
-    CommonMessageBackends::fairMQBackendSpec(),
-    CommonMessageBackends::stringBackendSpec(),
-    decongestionSpec()};
-
-  std::string loadableServicesStr;
-  // Do not load InfoLogger by default if we are not at P2.
-  DeploymentMode deploymentMode = getDeploymentMode();
-  if (deploymentMode == DeploymentMode::OnlineDDS || deploymentMode == DeploymentMode::OnlineECS) {
-    loadableServicesStr += "O2FrameworkDataTakingSupport:InfoLoggerContext,O2FrameworkDataTakingSupport:InfoLogger";
+      .active = false,
+      .kind = ServiceKind::Serial};
   }
-  // Load plugins depending on the environment
-  std::vector<LoadableService> loadableServices = {};
-  char* loadableServicesEnv = getenv("DPL_LOAD_SERVICES");
-  // String to define the services to load is:
-  //
-  // library1:name1,library2:name2,...
-  if (loadableServicesEnv) {
-    if (loadableServicesStr.empty() == false) {
-      loadableServicesStr += ",";
+
+  o2::framework::ServiceSpec CommonServices::objectCache()
+  {
+    return ServiceSpec{
+      .name = "object-cache",
+      .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
+        auto* cache = new ObjectCache();
+        return ServiceHandle{TypeIdHelpers::uniqueId<ObjectCache>(), cache};
+      },
+      .configure = noConfiguration(),
+      .kind = ServiceKind::Serial};
+  }
+
+  o2::framework::ServiceSpec CommonServices::dataProcessorContextSpec()
+  {
+    return ServiceSpec{
+      .name = "data-processing-context",
+      .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
+        return ServiceHandle{TypeIdHelpers::uniqueId<DataProcessorContext>(), new DataProcessorContext()};
+      },
+      .configure = noConfiguration(),
+      .exit = [](ServiceRegistryRef, void* service) { auto* context = (DataProcessorContext*)service; delete context; },
+      .kind = ServiceKind::Serial};
+  }
+
+  o2::framework::ServiceSpec CommonServices::deviceContextSpec()
+  {
+    return ServiceSpec{
+      .name = "device-context",
+      .init = [](ServiceRegistryRef, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
+        return ServiceHandle{TypeIdHelpers::uniqueId<DeviceContext>(), new DeviceContext()};
+      },
+      .configure = noConfiguration(),
+      .kind = ServiceKind::Serial};
+  }
+
+  o2::framework::ServiceSpec CommonServices::dataAllocatorSpec()
+  {
+    return ServiceSpec{
+      .name = "data-allocator",
+      .uniqueId = simpleServiceId<DataAllocator>(),
+      .init = [](ServiceRegistryRef ref, DeviceState&, fair::mq::ProgOptions&) -> ServiceHandle {
+        return ServiceHandle{
+          .hash = TypeIdHelpers::uniqueId<DataAllocator>(),
+          .instance = new DataAllocator(ref),
+          .kind = ServiceKind::Stream,
+          .name = "data-allocator",
+        };
+      },
+      .configure = noConfiguration(),
+      .kind = ServiceKind::Stream};
+  }
+
+  /// Split a string into a vector of strings using : as a separator.
+  std::vector<ServiceSpec> CommonServices::defaultServices(int numThreads)
+  {
+    std::vector<ServiceSpec> specs{
+      dataProcessorContextSpec(),
+      streamContextSpec(),
+      dataAllocatorSpec(),
+      asyncQueue(),
+      timingInfoSpec(),
+      timesliceIndex(),
+      driverClientSpec(),
+      datatakingContextSpec(),
+      monitoringSpec(),
+      configurationSpec(),
+      controlSpec(),
+      rootFileSpec(),
+      parallelSpec(),
+      callbacksSpec(),
+      dataProcessingStats(),
+      dataProcessingStates(),
+      dataRelayer(),
+      CommonMessageBackends::fairMQDeviceProxy(),
+      dataSender(),
+      objectCache(),
+      ccdbSupportSpec(),
+      ArrowSupport::arrowBackendSpec(),
+      CommonMessageBackends::fairMQBackendSpec(),
+      CommonMessageBackends::stringBackendSpec(),
+      decongestionSpec()};
+
+    std::string loadableServicesStr;
+    // Do not load InfoLogger by default if we are not at P2.
+    DeploymentMode deploymentMode = getDeploymentMode();
+    if (deploymentMode == DeploymentMode::OnlineDDS || deploymentMode == DeploymentMode::OnlineECS) {
+      loadableServicesStr += "O2FrameworkDataTakingSupport:InfoLoggerContext,O2FrameworkDataTakingSupport:InfoLogger";
     }
-    loadableServicesStr += loadableServicesEnv;
+    // Load plugins depending on the environment
+    std::vector<LoadableService> loadableServices = {};
+    char* loadableServicesEnv = getenv("DPL_LOAD_SERVICES");
+    // String to define the services to load is:
+    //
+    // library1:name1,library2:name2,...
+    if (loadableServicesEnv) {
+      if (loadableServicesStr.empty() == false) {
+        loadableServicesStr += ",";
+      }
+      loadableServicesStr += loadableServicesEnv;
+    }
+    loadableServices = ServiceHelpers::parseServiceSpecString(loadableServicesStr.c_str());
+    ServiceHelpers::loadFromPlugin(loadableServices, specs);
+    // I should make it optional depending wether the GUI is there or not...
+    specs.push_back(CommonServices::guiMetricsSpec());
+    if (numThreads) {
+      specs.push_back(threadPool(numThreads));
+    }
+    return specs;
   }
-  loadableServices = ServiceHelpers::parseServiceSpecString(loadableServicesStr.c_str());
-  ServiceHelpers::loadFromPlugin(loadableServices, specs);
-  // I should make it optional depending wether the GUI is there or not...
-  specs.push_back(CommonServices::guiMetricsSpec());
-  if (numThreads) {
-    specs.push_back(threadPool(numThreads));
-  }
-  return specs;
-}
 
-std::vector<ServiceSpec> CommonServices::arrowServices()
-{
-  return {
-    ArrowSupport::arrowTableSlicingCacheDefSpec(),
-    ArrowSupport::arrowTableSlicingCacheSpec() //
-  };
-}
+  std::vector<ServiceSpec> CommonServices::arrowServices()
+  {
+    return {
+      ArrowSupport::arrowTableSlicingCacheDefSpec(),
+      ArrowSupport::arrowTableSlicingCacheSpec() //
+    };
+  }
 
 } // namespace o2::framework
 #pragma GCC diagnostic pop
