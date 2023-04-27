@@ -84,8 +84,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
         auto& aData = outputs.make<int>(OutputRef{"a1"}, 1);
         auto& bData = outputs.make<int>(OutputRef{"a2"}, 1);
       })},
-    .options = {ConfigParamSpec{"some-device-param", VariantType::Int, 1, {"Some device parameter"}},
-                }};
+    .options = {
+      ConfigParamSpec{"some-device-param", VariantType::Int, 1, {"Some device parameter"}},
+    }};
   DataProcessorSpec b{
     .name = "B",
     .inputs = {InputSpec{"x", "TST", "A1", Lifetime::Timeframe, {ConfigParamSpec{"somestring", VariantType::String, "", {"Some input param"}}}}},
