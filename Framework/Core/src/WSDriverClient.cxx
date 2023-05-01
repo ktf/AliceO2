@@ -141,7 +141,7 @@ void on_connect(uv_connect_t* connection, int status)
     LOGP(info, "Tracing flags set to {}", tracingFlags);
     state.tracingFlags = tracingFlags;
   });
-
+  
   // Client will be filled in the line after. I can probably have a single
   // client per device.
   auto dplClient = std::make_unique<WSDPLClient>();
