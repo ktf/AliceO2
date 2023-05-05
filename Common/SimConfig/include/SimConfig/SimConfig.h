@@ -18,9 +18,9 @@
 #else
 namespace boost::program_options
 {
-  class variables_map;
-  class options_description;
-}
+class variables_map;
+class options_description;
+} // namespace boost::program_options
 #endif
 
 namespace o2
