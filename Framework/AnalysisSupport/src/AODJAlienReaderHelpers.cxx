@@ -224,6 +224,9 @@ AlgorithmSpec AODJAlienReaderHelpers::rootFileReaderCallback()
         auto concrete = DataSpecUtils::asConcreteDataMatcher(route.matcher);
         auto dh = header::DataHeader(concrete.description, concrete.origin, concrete.subSpec);
 
+        setenv("ROOT_DYN_PATH", "", 1);
+        setenv("LD_LIBRARY_PATH", "", 1);
+        setenv("DYLD_LIBRARY_PATH", "", 1);
         if (!didir->readTree(outputs, dh, fcnt, ntf, totalSizeCompressed, totalSizeUncompressed)) {
           if (first) {
             // check if there is a next file to read
