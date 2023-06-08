@@ -122,7 +122,7 @@ bool DataInputDescriptor::setFile(int counter)
     closeInputFile();
   }
   mcurrentFile = TFile::Open(filename.c_str());
-  gInterpreter->UnloadAllSharedLibraryMaps(); 
+  gInterpreter->UnloadAllSharedLibraryMaps();
   if (!mcurrentFile) {
     throw std::runtime_error(fmt::format("Couldn't open file \"{}\"!", filename));
   }
