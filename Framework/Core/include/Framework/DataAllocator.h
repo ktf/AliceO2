@@ -120,9 +120,10 @@ struct LifetimeHolder {
   T* operator->() { return ptr; }
   T& operator*() { return *ptr; }
 
-  // release the owned object, if any. This allows to 
+  // release the owned object, if any. This allows to
   // invoke the callback early (e.g. for the Product<> case)
-  void release() { 
+  void release()
+  {
     if (ptr && callback) {
       callback(*ptr);
       delete ptr;
