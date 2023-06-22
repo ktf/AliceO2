@@ -2425,8 +2425,8 @@ void initialiseDriverControl(bpo::variables_map const& varmap,
       gSystem->ResetSignal(kSigSegmentationViolation, kTRUE);
       rlimit limit;
       if (getrlimit(RLIMIT_CORE, &limit) == 0) {
-        LOGP(info, "Core limit: {} {}", limit.rlim_cur, limit.rlim_max); 
-      } 
+        LOGP(info, "Core limit: {} {}", limit.rlim_cur, limit.rlim_max);
+      }
     }
     if (varmap["stacktrace-on-signal"].as<std::string>() == "simple" && (getenv("O2_NO_CATCHALL_EXCEPTIONS") == nullptr || strcmp(getenv("O2_NO_CATCHALL_EXCEPTIONS"), "0") == 0)) {
       LOGP(info, "Instrumenting crash signals");
