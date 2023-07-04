@@ -1067,7 +1067,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
     };
   }
 
-  auto decideEarlyForward = [&context, &spec, &policies = mProcessingPolicies]() -> bool {
+  auto decideEarlyForward = [&context, &spec,this]() -> bool {
     // There is nothing produced by this device, so we can forward early
     // because this is a proxy.
     if (spec.forwards.empty() == false && spec.outputs.empty() == true) {
@@ -1075,7 +1075,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
     }
     /// We must make sure there is no optional
     /// if we want to optimize the forwarding
-    bool canForwardEarly = (spec.forwards.empty() == false) && policies.earlyForward != EarlyForwardPolicy::NEVER;
+    bool canForwardEarly = (spec.forwards.empty() == false) && mProcessingPolicies.earlyForward != EarlyForwardPolicy::NEVER;
     bool onlyConditions = true;
     bool overriddenEarlyForward = false;
     for (auto& forwarded : spec.forwards) {
@@ -1088,7 +1088,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
         LOG(detail) << "Cannot forward early because of AOD input: " << DataSpecUtils::describe(forwarded.matcher);
         break;
       }
-      if (DataSpecUtils::partialMatch(forwarded.matcher, o2::header::DataDescription{"RAWDATA"}) && mProcessingPolicies.earlyForward == EarlyForwardPolicy::NORAW) {
+      if (DataSpecUtils::partialMatch(forwarded.matcher, o2::header::DataDescription{"RAWDATA"}) && this->mProcessingPolicies.earlyForward == EarlyForwardPolicy::NORAW) {
         context.canForwardEarly = false;
         overriddenEarlyForward = true;
         LOG(detail) << "Cannot forward early because of RAWDATA input: " << DataSpecUtils::describe(forwarded.matcher);
