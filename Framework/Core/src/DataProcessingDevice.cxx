@@ -1067,7 +1067,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
     };
   }
 
-  auto decideEarlyForward = [&context, &spec,this]() -> bool {
+  auto decideEarlyForward = [&context, &spec, this]() -> bool {
     // There is nothing produced by this device, so we can forward early
     // because this is a proxy.
     if (spec.forwards.empty() == false && spec.outputs.empty() == true) {
