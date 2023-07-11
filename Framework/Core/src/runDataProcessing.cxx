@@ -1011,12 +1011,12 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
     deviceState->loop = loop;
     deviceState->tracingFlags = DeviceStateHelpers::parseTracingFlags(r.fConfig.GetPropertyAsString("dpl-tracing-flags"));
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<DeviceState>(deviceState.get()));
+    serviceRef.registerService(ServiceRegistryHelpers::handleForService<DeviceSpec const>(&spec));
 
     quotaEvaluator = std::make_unique<ComputingQuotaEvaluator>(serviceRef);
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<ComputingQuotaEvaluator>(quotaEvaluator.get()));
 
     deviceContext = std::make_unique<DeviceContext>();
-    serviceRef.registerService(ServiceRegistryHelpers::handleForService<DeviceSpec const>(&spec));
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<RunningWorkflowInfo const>(&runningWorkflow));
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<DeviceContext>(deviceContext.get()));
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<DriverConfig const>(&driverConfig));

@@ -16,13 +16,16 @@
 #include "Framework/DriverClient.h"
 #include "Framework/Monitoring.h"
 #include "Framework/Logger.h"
+#include "Framework/DeviceSpec.h"
 #include <Monitoring/Monitoring.h>
+#define O2_FORCE_LOGGER_SIGNPOST
+#include "Framework/Signpost.h"
 
 #include <vector>
 #include <uv.h>
 #include <cassert>
 
-#define LOGLEVEL debug
+O2_DECLARE_DYNAMIC_LOG(quota_evaluator);
 
 namespace o2::framework
 {
@@ -30,6 +33,11 @@ namespace o2::framework
 ComputingQuotaEvaluator::ComputingQuotaEvaluator(ServiceRegistryRef ref)
   : mRef(ref)
 {
+  auto& spec = mRef.get<DeviceSpec const>();
+
+  if (spec.name == "internal-dpl-aod-reader") {
+    O2_LOG_ENABLE_DYNAMIC(quota_evaluator);
+  }
   auto& state = mRef.get<DeviceState>();
   // The first offer is valid, but does not contain any resource
   // so this will only work with some device which does not require
@@ -61,8 +69,17 @@ struct QuotaEvaluatorStats {
   std::vector<int> expired;
 };
 
+// Ugly hack. I should probably think of something better.
+std::string asString(std::vector<int> const& v)
+{
+  return fmt::format("{}", fmt::join(v, ", "));
+}
+
 bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const& selector, uint64_t now)
 {
+  O2_SIGNPOST_ID_GENERATE(oid, quota_evaluator);
+  O2_SIGNPOST_START(quota_evaluator, oid, "selectOffer", "starting selection process for task %d at %" PRIu64, task, now);
+
   auto selectOffer = [&offers = this->mOffers, &infos = this->mInfos, task](int ref, uint64_t now) {
     auto& selected = offers[ref];
     auto& info = infos[ref];
@@ -82,35 +99,42 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
   stats.selectedOffers.clear();
   stats.expired.clear();
 
-  auto summarizeWhatHappended = [ref = mRef](bool enough, std::vector<int> const& result, ComputingQuotaOffer const& totalOffer, QuotaEvaluatorStats& stats) -> bool {
+  auto summarizeWhatHappended = [ref = mRef, oid](bool enough, std::vector<int> const& result, ComputingQuotaOffer const& totalOffer, QuotaEvaluatorStats& stats) -> bool {
     auto& dpStats = ref.get<DataProcessingStats>();
     if (result.size() == 1 && result[0] == 0) {
-      //      LOG(LOGLEVEL) << "No particular resource was requested, so we schedule task anyways";
+      O2_SIGNPOST_END(quota_evaluator, oid, "selectOffer", "No resource requested. Scheduling.");
       return enough;
     }
     if (enough) {
-      LOGP(LOGLEVEL, "{} offers were selected for a total of: cpu {}, memory {}, shared memory {}", result.size(), totalOffer.cpu, totalOffer.memory, totalOffer.sharedMemory);
-      LOGP(LOGLEVEL, "  The following offers were selected for computation: {} ", fmt::join(result, ","));
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary",
+                             "%" PRIu64 " offers were selected for a total of: cpu %d, memory %" PRIu64 ", shared memory %" PRIu64,
+                             (uint64_t)result.size(), totalOffer.cpu, totalOffer.memory, totalOffer.sharedMemory);
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary", "The following offers were selected for computation: %s", asString(result).data());
       dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_SATISFACTORY), DataProcessingStats::Op::Add, 1});
     } else {
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary",
+                             "Not enough resoruces provided.");
       dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_MISSING), DataProcessingStats::Op::Add, 1});
       if (result.size()) {
+        O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary", "Insufficient resources provided by %d offers.",
+                               (int)result.size());
         dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_INSUFFICIENT), DataProcessingStats::Op::Add, 1});
       }
     }
     if (stats.invalidOffers.size()) {
-      LOGP(LOGLEVEL, "  The following offers were invalid: {}", fmt::join(stats.invalidOffers, ", "));
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary", "The following offers were invalid: %s.", asString(stats.invalidOffers).data());
     }
     if (stats.otherUser.size()) {
-      LOGP(LOGLEVEL, "  The following offers were owned by other users: {}", fmt::join(stats.otherUser, ", "));
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary", "The following offers were owned by other users: %s.", asString(stats.otherUser).data());
     }
     if (stats.expired.size()) {
-      LOGP(LOGLEVEL, "  The following offers are expired: {}", fmt::join(stats.expired, ", "));
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary", "The following offers were expired: %s.", asString(stats.expired).data());
     }
     if (stats.unexpiring.size() > 1) {
-      LOGP(LOGLEVEL, "  The following offers will never expire: {}", fmt::join(stats.unexpiring, ", "));
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "selection_summary", "The following offers will never expire: %s.", asString(stats.unexpiring).data());
     }
 
+    O2_SIGNPOST_END(quota_evaluator, oid, "selectOffer", "Scheduling result %d.", enough);
     return enough;
   };
 
@@ -138,12 +162,16 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
     if (offer.runtime < 0) {
       stats.unexpiring.push_back(i);
     } else if (offer.runtime + info.received < now) {
-      LOGP(LOGLEVEL, "Offer {} expired since {} milliseconds and holds {}MB", i, now - offer.runtime - info.received, offer.sharedMemory / 1000000);
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "offer_selection",
+                             "Offer %i expired since %" PRIu64 "ms and holds %d MB",
+                             i, offer.runtime + info.received - now, offer.sharedMemory / 1000000);
       mExpiredOffers.push_back(ComputingQuotaOfferRef{i});
       stats.expired.push_back(i);
       continue;
     } else {
-      LOGP(LOGLEVEL, "Offer {} still valid for {} milliseconds, providing {}MB", i, offer.runtime + info.received - now, offer.sharedMemory / 1000000);
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "offer_selection",
+                             "Offer %i still valid for %" PRIu64 "ms and providing %d MB",
+                             i, offer.runtime + info.received - now, offer.sharedMemory / 1000000);
       if (minValidity == 0) {
         minValidity = offer.runtime + info.received - now;
       }
@@ -176,9 +204,17 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
   }
 
   if (minValidity != 0) {
-    LOGP(LOGLEVEL, "Next offer to expire in {} milliseconds", minValidity);
+    O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "offer_selection",
+                           "Next offer will expire in %" PRIu64 "ms",
+                           minValidity);
+    mTimer->data = (void*)minValidity;
     uv_timer_start(mTimer, [](uv_timer_t* handle) {
-      LOGP(LOGLEVEL, "Offer should be expired by now, checking again");
+      int64_t minValidity = (int64_t)handle->data;
+      O2_SIGNPOST_ID_GENERATE(oid2, quota_evaluator);
+      O2_SIGNPOST_START(quota_evaluator, oid2, "offer_selection", "Timer expired after %" PRIi64, minValidity);
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid2, "offer_selection",
+                             "Offer should be checked again");
+      O2_SIGNPOST_END(quota_evaluator, oid2, "offer_selection", "Done Timer expired");
     },
                    minValidity + 100, 0);
   }
@@ -240,40 +276,36 @@ void ComputingQuotaEvaluator::updateOffers(std::vector<ComputingQuotaOffer>& pen
 
 void ComputingQuotaEvaluator::handleExpired(std::function<void(ComputingQuotaOffer const&, ComputingQuotaStats const& stats)> expirator)
 {
-  static int nothingToDoCount = mExpiredOffers.size();
+  O2_SIGNPOST_ID_GENERATE(oid, quota_evaluator);
+  O2_SIGNPOST_START(quota_evaluator, oid, "handleExpired", "ComputingQuotaEvaluator::handleExpired");
   if (mExpiredOffers.size()) {
-    LOGP(LOGLEVEL, "Handling {} expired offers", mExpiredOffers.size());
-    nothingToDoCount = 0;
+    O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "handleExpired", "Handling %" PRIu64 " expired offers", (uint64_t)mExpiredOffers.size());
   } else {
-    if (nothingToDoCount == 0) {
-      nothingToDoCount++;
-      LOGP(LOGLEVEL, "No expired offers");
-    }
+    O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "handleExpired", "No expired offers");
   }
   /// Whenever an offer is expired, we give back the resources
   /// to the driver.
   for (auto& ref : mExpiredOffers) {
     auto& offer = mOffers[ref.index];
     if (offer.sharedMemory < 0) {
-      LOGP(LOGLEVEL, "Offer {} does not have any more memory. Marking it as invalid.", ref.index);
+      O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "handleExpired", "Offer %d does not have any more memory", ref.index);
       offer.valid = false;
       offer.score = OfferScore::Unneeded;
       continue;
     }
     // FIXME: offers should go through the driver client, not the monitoring
     // api.
-    LOGP(LOGLEVEL, "Offer {} expired. Giving back {}MB and {} cores", ref.index, offer.sharedMemory / 1000000, offer.cpu);
+    O2_SIGNPOST_EVENT_EMIT(quota_evaluator, oid, "handleExpired", "Offer %d expired. Giving back " O2_ENG_TYPE("memory-in-bytes", PRIu64) " and %d cores", ref.index, offer.sharedMemory / 1000000, offer.cpu);
     assert(offer.sharedMemory >= 0);
     mStats.totalExpiredBytes += offer.sharedMemory;
     mStats.totalExpiredOffers++;
     expirator(offer, mStats);
-    //driverClient.tell("expired shmem {}", offer.sharedMemory);
-    //driverClient.tell("expired cpu {}", offer.cpu);
     offer.sharedMemory = -1;
     offer.valid = false;
     offer.score = OfferScore::Unneeded;
   }
   mExpiredOffers.clear();
+  O2_SIGNPOST_END(quota_evaluator, oid, "handleExpired", "Done ComputingQuotaEvaluator::handleExpired");
 }
 
 } // namespace o2::framework

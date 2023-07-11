@@ -12,9 +12,13 @@
 #include "Framework/ResourcePolicyHelpers.h"
 #include "Framework/DeviceSpec.h"
 #include "ResourcesMonitoringHelper.h"
+#include "Framework/Signpost.h"
 
 #include <string>
 #include <regex>
+
+#define O2_FORCE_LOGGER_SIGNPOST
+O2_DECLARE_DYNAMIC_LOG(resource_policies);
 
 namespace o2::framework
 {
@@ -46,13 +50,30 @@ ResourcePolicy ResourcePolicyHelpers::sharedMemoryBoundTask(char const* s, int r
   return ResourcePolicy{
     "shm-bound",
     [matcher = std::regex(s)](DeviceSpec const& spec) -> bool {
-      return std::regex_match(spec.name, matcher);
+      bool matches = std::regex_match(spec.name, matcher);
+      if (matches) {
+        O2_LOG_ENABLE_DYNAMIC(resource_policies);
+      }
+      return matches;
     },
     [requestedSharedMemory](ComputingQuotaOffer const& offer, ComputingQuotaOffer const& accumulated) -> OfferScore { 
+	    O2_LOG_ENABLE_DYNAMIC(resource_policies);
+	    O2_SIGNPOST_ID_GENERATE(rid, resource_policies);
+	    O2_SIGNPOST_START(resource_policies, rid, "shm-bound-selector", "Starting selection process");
       if (offer.sharedMemory == 0) {
+	      O2_SIGNPOST_EVENT_EMIT(resource_policies, rid, "shm-bound-selector", "No shared memory in offer.");
+	    O2_SIGNPOST_END(resource_policies, rid, "shm-bound-selector", "Ending selection process");
         return OfferScore::Unneeded;
       }
-      return accumulated.sharedMemory >= requestedSharedMemory ? OfferScore::Enough : OfferScore::More; }};
+      bool enough = accumulated.sharedMemory >= requestedSharedMemory;
+      if (enough) {
+      O2_SIGNPOST_EVENT_EMIT(resource_policies, rid, "shm-bound-selector", "Enough Requested shared memory: required %" PRIu64 " / provided %" PRIu64, requestedSharedMemory, accumulated.sharedMemory);
+	    O2_SIGNPOST_END(resource_policies, rid, "shm-bound-selector", "Ending selection process");
+	      return OfferScore::Enough;
+      }
+      O2_SIGNPOST_EVENT_EMIT(resource_policies, rid, "shm-bound-selector", "Not enough shared memory: required %" PRIu64 " / provided %" PRIu64, requestedSharedMemory, accumulated.sharedMemory);
+	    O2_SIGNPOST_END(resource_policies, rid, "shm-bound-selector", "Ending selection process");
+	      return OfferScore::More; }};
 }
 
 } // namespace o2::framework
