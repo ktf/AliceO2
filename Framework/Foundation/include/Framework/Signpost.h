@@ -63,7 +63,8 @@
 #include <cstdarg>
 #include <cinttypes>
 
-namespace {
+namespace
+{
 struct _o2_lock_free_stack {
   static constexpr size_t N = 1024;
   std::atomic<size_t> top = 0;
@@ -318,7 +319,7 @@ void _o2_log_set_stacktrace(_o2_log_t* log, int stacktrace)
 {
   log->stacktrace = stacktrace;
 }
-}
+} // namespace
 
 /// Dynamic logs need to be enabled via the O2_LOG_ENABLE_DYNAMIC macro. Notice this will only work
 /// for the logger based logging, since the Apple version needs instruments to enable them.
