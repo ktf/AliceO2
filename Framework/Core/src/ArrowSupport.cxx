@@ -30,6 +30,8 @@
 #include "Framework/ServiceMetricsInfo.h"
 #include "WorkflowHelpers.h"
 #include "Framework/WorkflowSpecNode.h"
+#define O2_FORCE_LOGGER_SIGNPOST
+#include "Framework/Signpost.h"
 
 #include "CommonMessageBackendsHelpers.h"
 #include <Monitoring/Monitoring.h>
@@ -100,6 +102,8 @@ uint64_t calculateAvailableSharedMemory(ServiceRegistryRef registry)
   return registry.get<RateLimitConfig>().maxMemory;
 }
 
+O2_DECLARE_DYNAMIC_LOG(arrow_support);
+
 o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
 {
   using o2::monitoring::Metric;
@@ -118,6 +122,9 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
     .metricHandling = [](ServiceRegistryRef registry,
                          ServiceMetricsInfo const& sm,
                          size_t timestamp) {
+	    	       O2_LOG_ENABLE_DYNAMIC(arrow_support);
+	    	       O2_SIGNPOST_ID_GENERATE(sid, arrow_support);
+		       O2_SIGNPOST_START(arrow_support, sid, "ServiceSpec::metricHandling", "Processing arrow metrics");
                        int64_t totalBytesCreated = 0;
                        int64_t shmOfferBytesConsumed = 0;
                        int64_t totalBytesDestroyed = 0;
@@ -277,6 +284,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        changedCountMetric(driverMetrics, unchangedCount, timestamp);
                        auto maxTimeframes = registry.get<RateLimitConfig>().maxTimeframes;
                        if (maxTimeframes && (totalTimeframesRead - totalTimeframesConsumed) > maxTimeframes) {
+		       	 O2_SIGNPOST_END(arrow_support, sid, "ServiceSpec::metricHandling", "Not enough timeframes");
                          return;
                        }
 
@@ -354,7 +362,9 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        availableSharedMemoryMetric(driverMetrics, availableSharedMemory, timestamp);
                        unusedOfferedSharedMemoryMetric(driverMetrics, unusedOfferedMemory, timestamp);
 
-                       offeredSharedMemoryMetric(driverMetrics, offeredSharedMemory, timestamp); },
+                       offeredSharedMemoryMetric(driverMetrics, offeredSharedMemory, timestamp); 
+		       O2_SIGNPOST_END(arrow_support, sid, "ServiceSpec::metricHandling", "Metrics updated");
+    },
     .postDispatching = [](ProcessingContext& ctx, void* service) {
                        using DataHeader = o2::header::DataHeader;
                        auto* arrow = reinterpret_cast<ArrowContext*>(service);
