@@ -264,8 +264,8 @@ void _o2_signpost_interval_begin(_o2_log_t* log, _o2_signpost_id_t id, char cons
   char prebuffer[4096];
   int s = snprintf(prebuffer, 4096, "id%.16" PRIx64 ":%-16sS>%*c", id.id, name, leading, ' ');
   vsnprintf(prebuffer + s, 4096 - s, format, args);
-  va_end(args);
   O2_LOG_MACRO("%s", prebuffer);
+  va_end(args);
 }
 
 void _o2_signpost_interval_end_v(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, va_list args)
