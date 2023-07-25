@@ -40,6 +40,9 @@
 #include "Framework/RuntimeError.h"
 #include "Framework/RateLimiter.h"
 #include "Framework/Plugins.h"
+// Uncomment to enable when running in RelWithDebInfo / Release mode
+// #define O2_FORCE_LOGGER_SIGNPOST
+#include "Framework/Signpost.h"
 #include <Monitoring/Monitoring.h>
 
 #include "TFile.h"
@@ -541,14 +544,20 @@ DataProcessorSpec CommonDataProcessors::getGlobalFairMQSink(std::vector<InputSpe
   return specifyFairMQDeviceOutputProxy("internal-dpl-injected-output-proxy", danglingOutputInputs, defaultChannelConfig.c_str());
 }
 
+O2_DECLARE_DYNAMIC_LOG(dummy_sync);
+
 DataProcessorSpec CommonDataProcessors::getDummySink(std::vector<InputSpec> const& danglingOutputInputs, std::string rateLimitingChannelConfig)
 {
   return DataProcessorSpec{
     .name = "internal-dpl-injected-dummy-sink",
     .inputs = danglingOutputInputs,
     .algorithm = AlgorithmSpec{adaptStateful([](CallbackService& callbacks) {
+      // Uncomment to enable on linux. On mac, you need to use the Instruments
+      // GUI since this is a Dynamic log.
+      // O2_LOG_ENABLE_DYNAMIC(dummy_sync);
       auto domainInfoUpdated = [](ServiceRegistryRef services, size_t timeslice, ChannelIndex channelIndex) {
-        LOGP(debug, "Domain info updated with timeslice {}", timeslice);
+        O2_SIGNPOST_ID_GENERATE(sid, dummy_sync);
+        O2_SIGNPOST_START(dummy_sync, sid, "domainInfoUpdated", "Domain info updated with timeslice %" PRIu64, (uint64_t)timeslice);
         static size_t lastTimeslice = -1;
         auto& timesliceIndex = services.get<TimesliceIndex>();
         auto device = services.get<RawDeviceService>().device();
@@ -566,6 +575,7 @@ DataProcessorSpec CommonDataProcessors::getDummySink(std::vector<InputSpec> cons
         }
         auto& stats = services.get<DataProcessingStats>();
         stats.updateStats({(int)ProcessingStatsId::CONSUMED_TIMEFRAMES, DataProcessingStats::Op::Set, (int64_t)oldestPossingTimeslice});
+        O2_SIGNPOST_END(dummy_sync, sid, "domainInfoUpdated", "Consumed timeframes %" PRIi64, (int64_t)oldestPossingTimeslice);
       };
       callbacks.set<CallbackService::Id::DomainInfoUpdated>(domainInfoUpdated);
 
