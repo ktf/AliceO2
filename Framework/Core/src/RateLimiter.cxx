@@ -15,6 +15,8 @@
 #include "Framework/RunningWorkflowInfo.h"
 #include "Framework/DataTakingContext.h"
 #include "Framework/DeviceState.h"
+#define O2_FORCE_LOGGER_SIGNPOST
+#include "Framework/Signpost.h"
 #include <fairmq/Device.h>
 #include <uv.h>
 #include <fairmq/shmem/Monitor.h>
@@ -24,9 +26,15 @@
 
 using namespace o2::framework;
 
+O2_DECLARE_DYNAMIC_LOG(rate_limiter);
+
 void RateLimiter::check(ProcessingContext& ctx, int maxInFlight, size_t minSHM)
 {
+  O2_LOG_ENABLE_DYNAMIC(rate_limiter);
+  O2_SIGNPOST_ID_GENERATE(sid, rate_limiter);
+  O2_SIGNPOST_START(rate_limiter, sid, "RateLimiter::check", "Starting check with maxInFlight %d", maxInFlight);
   if (!maxInFlight && !minSHM) {
+    O2_SIGNPOST_END(rate_limiter, sid, "RateLimiter::check", "Nothing to do");
     return;
   }
   auto device = ctx.services().get<RawDeviceService>().device();
@@ -36,6 +44,8 @@ void RateLimiter::check(ProcessingContext& ctx, int maxInFlight, size_t minSHM)
     int recvTimeot = 0;
     auto& dtc = ctx.services().get<DataTakingContext>();
     while ((mSentTimeframes - mConsumedTimeframes) >= maxInFlight) {
+      O2_SIGNPOST_EVENT_EMIT(rate_limiter, sid, "RateLimiter::check", "Difference is %d - %d >= %d",
+		             mSentTimeframes, mConsumedTimeframes, maxInFlight);
       if (recvTimeot == -1 && waitMessage == 0) {
         if (dtc.deploymentMode == DeploymentMode::OnlineDDS || dtc.deploymentMode == DeploymentMode::OnlineECS || dtc.deploymentMode == DeploymentMode::FST) {
           LOG(alarm) << "Maximum number of TF in flight reached (" << maxInFlight << ": published " << mSentTimeframes << " - finished " << mConsumedTimeframes << "), waiting";
@@ -54,6 +64,7 @@ void RateLimiter::check(ProcessingContext& ctx, int maxInFlight, size_t minSHM)
       assert(msg->GetSize() == 8);
       mConsumedTimeframes = *(int64_t*)msg->GetData();
     }
+    O2_SIGNPOST_END(rate_limiter, sid, "RateLimiter::check", "Done");
     if (waitMessage) {
       if (dtc.deploymentMode == DeploymentMode::OnlineDDS || dtc.deploymentMode == DeploymentMode::OnlineECS || dtc.deploymentMode == DeploymentMode::FST) {
         LOG(important) << (mSentTimeframes - mConsumedTimeframes) << " / " << maxInFlight << " TF in flight, continuing to publish";
