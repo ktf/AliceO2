@@ -55,76 +55,17 @@
 // the signpost information to the log.
 #include <atomic>
 #include <array>
-#include <cstdio>
-#include "Framework/RuntimeError.h"
-
 #include <cassert>
-#include <atomic>
-#include <cstdarg>
 #include <cinttypes>
+#include <cstddef>
 
-namespace {
+namespace
+{
 struct _o2_lock_free_stack {
   static constexpr size_t N = 1024;
   std::atomic<size_t> top = 0;
   int stack[N];
 };
-
-// returns true if the push was successful, false if the stack was full
-// @param spin if true, will spin until the stack is not full
-bool _o2_lock_free_stack_push(_o2_lock_free_stack& stack, const int& value, bool spin = false)
-{
-  size_t currentTop = stack.top.load(std::memory_order_relaxed);
-  while (true) {
-    if (currentTop == _o2_lock_free_stack::N && spin == false) {
-      return false;
-    } else if (currentTop == _o2_lock_free_stack::N) {
-// Avoid consuming too much CPU time if we are spinning.
-#if defined(__x86_64__) || defined(__i386__)
-      __asm__ __volatile__("pause" ::
-                             : "memory");
-#elif defined(__aarch64__)
-      __asm__ __volatile__("yield" ::
-                             : "memory");
-#endif
-      continue;
-    }
-
-    if (stack.top.compare_exchange_weak(currentTop, currentTop + 1,
-                                        std::memory_order_release,
-                                        std::memory_order_relaxed)) {
-      stack.stack[currentTop] = value;
-      return true;
-    }
-  }
-}
-
-bool _o2_lock_free_stack_pop(_o2_lock_free_stack& stack, int& value, bool spin = false)
-{
-  size_t currentTop = stack.top.load(std::memory_order_relaxed);
-  while (true) {
-    if (currentTop == 0 && spin == false) {
-      return false;
-    } else if (currentTop == 0) {
-// Avoid consuming too much CPU time if we are spinning.
-#if defined(__x86_64__) || defined(__i386__)
-      __asm__ __volatile__("pause" ::
-                             : "memory");
-#elif defined(__aarch64__)
-      __asm__ __volatile__("yield" ::
-                             : "memory");
-#endif
-      continue;
-    }
-
-    if (stack.top.compare_exchange_weak(currentTop, currentTop - 1,
-                                        std::memory_order_acquire,
-                                        std::memory_order_relaxed)) {
-      value = stack.stack[currentTop - 1];
-      return true;
-    }
-  }
-}
 
 // A log is simply an inbox which keeps track of the available id, so that we can print out different signposts
 // with different indentation levels.
@@ -162,6 +103,18 @@ struct _o2_log_t {
   std::atomic<int> stacktrace = 1;
 };
 
+bool _o2_lock_free_stack_push(_o2_lock_free_stack& stack, const int& value, bool spin = false);
+bool _o2_lock_free_stack_pop(_o2_lock_free_stack& stack, int& value, bool spin = false);
+//_o2_signpost_id_t _o2_signpost_id_generate_local(_o2_log_t* log);
+//_o2_signpost_id_t _o2_signpost_id_make_with_pointer(_o2_log_t* log, void* pointer);
+_o2_signpost_index_t o2_signpost_id_make_with_pointer(_o2_log_t* log, void* pointer);
+_o2_log_t* _o2_log_create(char const* name, int stacktrace);
+void _o2_signpost_event_emit(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, ...);
+void _o2_signpost_interval_begin(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, ...);
+void _o2_signpost_interval_end_v(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, va_list args);
+void _o2_signpost_interval_end(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, ...);
+void _o2_log_set_stacktrace(_o2_log_t* log, int stacktrace);
+ 
 // This generates a unique id for a signpost. Do not use this directly, use O2_SIGNPOST_ID_GENERATE instead.
 // Notice that this is only valid on a given computer.
 // This is guaranteed to be unique at 5 GHz for at least 63 years, if my math is correct.
@@ -189,6 +142,71 @@ inline _o2_signpost_index_t o2_signpost_id_make_with_pointer(_o2_log_t* log, voi
   _o2_lock_free_stack_pop(log->slots, signpost_index, true);
   log->ids[signpost_index].id = (int64_t)pointer;
   return signpost_index;
+}
+} // namespace
+
+// Implementation start here. Include this file with O2_SIGNPOST_IMPLEMENTATION defined in one file of your
+// project.
+#ifdef O2_SIGNPOST_IMPLEMENTATION
+#include <cstdarg>
+#include <cstdio>
+#include "Framework/RuntimeError.h"
+namespace
+{
+// returns true if the push was successful, false if the stack was full
+// @param spin if true, will spin until the stack is not full
+bool _o2_lock_free_stack_push(_o2_lock_free_stack& stack, const int& value, bool spin)
+{
+  size_t currentTop = stack.top.load(std::memory_order_relaxed);
+  while (true) {
+    if (currentTop == _o2_lock_free_stack::N && spin == false) {
+      return false;
+    } else if (currentTop == _o2_lock_free_stack::N) {
+// Avoid consuming too much CPU time if we are spinning.
+#if defined(__x86_64__) || defined(__i386__)
+      __asm__ __volatile__("pause" ::
+                             : "memory");
+#elif defined(__aarch64__)
+      __asm__ __volatile__("yield" ::
+                             : "memory");
+#endif
+      continue;
+    }
+
+    if (stack.top.compare_exchange_weak(currentTop, currentTop + 1,
+                                        std::memory_order_release,
+                                        std::memory_order_relaxed)) {
+      stack.stack[currentTop] = value;
+      return true;
+    }
+  }
+}
+
+bool _o2_lock_free_stack_pop(_o2_lock_free_stack& stack, int& value, bool spin)
+{
+  size_t currentTop = stack.top.load(std::memory_order_relaxed);
+  while (true) {
+    if (currentTop == 0 && spin == false) {
+      return false;
+    } else if (currentTop == 0) {
+// Avoid consuming too much CPU time if we are spinning.
+#if defined(__x86_64__) || defined(__i386__)
+      __asm__ __volatile__("pause" ::
+                             : "memory");
+#elif defined(__aarch64__)
+      __asm__ __volatile__("yield" ::
+                             : "memory");
+#endif
+      continue;
+    }
+
+    if (stack.top.compare_exchange_weak(currentTop, currentTop - 1,
+                                        std::memory_order_acquire,
+                                        std::memory_order_relaxed)) {
+      value = stack.stack[currentTop - 1];
+      return true;
+    }
+  }
 }
 
 _o2_log_t* _o2_log_create(char const* name, int stacktrace)
@@ -318,7 +336,8 @@ void _o2_log_set_stacktrace(_o2_log_t* log, int stacktrace)
 {
   log->stacktrace = stacktrace;
 }
-}
+} // anonymous namespace
+#endif // O2_SIGNPOST_IMPLEMENTATION
 
 /// Dynamic logs need to be enabled via the O2_LOG_ENABLE_DYNAMIC macro. Notice this will only work
 /// for the logger based logging, since the Apple version needs instruments to enable them.
