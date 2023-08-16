@@ -12,17 +12,15 @@
 #include <catch_amalgamated.hpp>
 #include "Framework/SignpostRegistry.h"
 
-
 using namespace o2::framework;
 
-TEST_CASE("TestSignpostRegistry") {
+TEST_CASE("TestSignpostRegistry")
+{
   SignpostRegistry registry;
-  registry.registerSignpost( {
-      .kind = SignpostKind::Dynamic,
-      .name = "test",
-      }
+  registry.registerSignpost({
+    .kind = SignpostKind::Dynamic,
+    .name = "test",
+  }
 
-      );
-
+  );
 }
-
