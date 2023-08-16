@@ -11,4 +11,3 @@
 
 #define O2_SIGNPOST_IMPLEMENTATION
 #include "Framework/Signpost.h"
-

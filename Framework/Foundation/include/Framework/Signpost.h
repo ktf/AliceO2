@@ -114,7 +114,7 @@ void _o2_signpost_interval_begin(_o2_log_t* log, _o2_signpost_id_t id, char cons
 void _o2_signpost_interval_end_v(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, va_list args);
 void _o2_signpost_interval_end(_o2_log_t* log, _o2_signpost_id_t id, char const* name, char const* const format, ...);
 void _o2_log_set_stacktrace(_o2_log_t* log, int stacktrace);
- 
+
 // This generates a unique id for a signpost. Do not use this directly, use O2_SIGNPOST_ID_GENERATE instead.
 // Notice that this is only valid on a given computer.
 // This is guaranteed to be unique at 5 GHz for at least 63 years, if my math is correct.
