@@ -120,6 +120,7 @@ o2_add_library(Framework
                        src/SimpleRawDeviceService.cxx
                        src/StreamOperators.cxx
                        src/StreamContext.cxx
+                       src/SignpostRegistry.cxx
                        src/TMessageSerializer.cxx
                        src/TableBuilder.cxx
                        src/TableConsumer.cxx
@@ -229,6 +230,7 @@ add_executable(o2-test-framework-core
               test/test_PtrHelpers.cxx
               test/test_RootConfigParamHelpers.cxx
               test/test_Services.cxx
+              test/test_SignpostRegistry.cxx
               test/test_StringHelpers.cxx
               test/test_StaticFor.cxx
               test/test_TMessageSerializer.cxx

@@ -14,6 +14,8 @@
 #if !defined(O2_FORCE_LOGGER_SIGNPOST) && defined(__APPLE__) && (!defined(NDEBUG) || defined(O2_FORCE_SIGNPOSTS))
 #include <os/log.h>
 #include <os/signpost.h>
+
+using o2_log_t = os_log_t;
 #define O2_DECLARE_DYNAMIC_LOG(x) static os_log_t private_o2_log_##x = os_log_create("ch.cern.aliceo2." #x, OS_LOG_CATEGORY_DYNAMIC_TRACING)
 #define O2_DECLARE_DYNAMIC_STACKTRACE_LOG(x) static os_log_t private_o2_log_##x = os_log_create("ch.cern.aliceo2." #x, OS_LOG_CATEGORY_DYNAMIC_STACK_TRACING)
 // This is a no-op on macOS using the os_signpost API because only external instruments can enable/disable dynamic signposts
@@ -161,6 +163,10 @@ struct _o2_log_t {
   // >1 means the current signpost and n levels of the stacktrace are printed.
   std::atomic<int> stacktrace = 1;
 };
+
+// We define it as a pointer, because os_log_t is a pointer itself
+// so we do not need to have different code for the apple and linux implementation.
+using o2_log_t = _o2_log_t*;
 
 // This generates a unique id for a signpost. Do not use this directly, use O2_SIGNPOST_ID_GENERATE instead.
 // Notice that this is only valid on a given computer.
@@ -339,6 +345,8 @@ void _o2_log_set_stacktrace(_o2_log_t* log, int stacktrace)
 #define O2_SIGNPOST_END(log, id, name, ...) _o2_signpost_interval_end(private_o2_log_##log, id, name, __VA_ARGS__)
 #define O2_ENG_TYPE(x, what) "%" what
 #else // This is the release implementation, it does nothing.
+// Hide details when unneeded.
+using o2_log_t = void*;
 #define O2_DECLARE_DYNAMIC_LOG(x)
 #define O2_DECLARE_DYNAMIC_STACKTRACE_LOG(x)
 #define O2_DECLARE_LOG(x, category)
