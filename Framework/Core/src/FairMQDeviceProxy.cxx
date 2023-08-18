@@ -320,6 +320,12 @@ void FairMQDeviceProxy::bind(std::vector<OutputRoute> const& outputs, std::vecto
     LOGP(detail, "Forwards.size(): {}", forwards.size());
     size_t ri = 0;
     std::unordered_map<std::string, ChannelIndex> channelNameToChannel;
+    // We only allow one forward for DPL channels, like it was
+    // before. This should not happen, but apparently it does.
+    // Basically we allow extracting messages from the topology as many
+    // times as we want, but we do not allow multiple forwards inside
+    // the topology.
+    bool dplChannelForwarded = false;
 
     for (auto& route : forwards) {
       // If the channel is not yet registered, register it.
@@ -342,9 +348,17 @@ void FairMQDeviceProxy::bind(std::vector<OutputRoute> const& outputs, std::vecto
         LOGP(detail, "Using index {} for forward channel {}", channelPos->second.value, route.channel);
         channelIndex = channelPos->second;
       }
-      LOGP(detail, "Binding forward route {}@{}%{} to index {} and channelIndex {}", DataSpecUtils::describe(route.matcher), route.timeslice, route.maxTimeslices, ri, channelIndex.value);
-      mForwardRoutes.emplace_back(RouteState{channelIndex, false});
+      LOGP(detail, "Binding forward route {}@{}%{} to index {} and channelIndex {}",
+           DataSpecUtils::describe(route.matcher), route.timeslice, route.maxTimeslices, ri, channelIndex.value);
       ri++;
+      bool dplChannel = mForwardChannelInfos[channelIndex.value].channelType == ChannelAccountingType::DPL;
+      if (dplChannelForwarded && dplChannel) {
+        continue;
+      }
+      if (dplChannel) {
+        dplChannelForwarded = true;
+      }
+      mForwardRoutes.emplace_back(RouteState{channelIndex, false});
     }
     LOGP(detail, "Total forward channels found {}, total routes {}", mForwardChannelInfos.size(), mForwardRoutes.size());
     assert(mForwardRoutes.size() == forwards.size());
