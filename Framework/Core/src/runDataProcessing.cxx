@@ -1417,6 +1417,8 @@ int runStateMachine(DataProcessorSpecs const& workflow,
 
   uv_timer_t metricDumpTimer;
   metricDumpTimer.data = &serverContext;
+  bool allChildrenGone = false;
+  guiContext.allChildrenGone = &allChildrenGone;
 
   while (true) {
     // If control forced some transition on us, we push it to the queue.
@@ -2083,7 +2085,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
         driverInfo.sigchldRequested = false;
         processChildrenOutput(driverInfo, infos, runningWorkflow.devices, controls);
         hasError = processSigChild(infos, runningWorkflow.devices);
-        bool allChildrenGone = areAllChildrenGone(infos);
+        allChildrenGone = areAllChildrenGone(infos);
         bool canExit = checkIfCanExit(infos);
         bool supposedToQuit = (guiQuitRequested || canExit || graceful_exit);
 
