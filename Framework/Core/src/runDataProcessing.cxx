@@ -1294,7 +1294,8 @@ int runStateMachine(DataProcessorSpecs const& workflow,
 
   DebugGUI* debugGUI = nullptr;
   void* window = nullptr;
-  decltype(debugGUI->getGUIDebugger(infos, runningWorkflow.devices, allStates, dataProcessorInfos, metricsInfos, driverInfo, controls, driverControl)) debugGUICallback;
+  GuiCallbackContext guiContext;
+  decltype(debugGUI->getGUIDebugger(infos, runningWorkflow.devices, allStates, dataProcessorInfos, metricsInfos, driverInfo, controls, driverControl, guiContext)) debugGUICallback;
 
   // An empty frameworkId means this is the driver, so we initialise the GUI
   auto initDebugGUI = []() -> DebugGUI* {
@@ -1381,7 +1382,6 @@ int runStateMachine(DataProcessorSpecs const& workflow,
   ServiceRegistryRef ref{serviceRegistry};
   ref.registerService(ServiceRegistryHelpers::handleForService<DevicesManager>(devicesManager));
 
-  GuiCallbackContext guiContext;
   guiContext.plugin = debugGUI;
   guiContext.frameLast = uv_hrtime();
   guiContext.frameLatency = &driverInfo.frameLatency;
@@ -1874,7 +1874,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
             uv_timer_stop(gui_timer);
           }
 
-          auto callback = debugGUI->getGUIDebugger(infos, runningWorkflow.devices, allStates, dataProcessorInfos, metricsInfos, driverInfo, controls, driverControl);
+          auto callback = debugGUI->getGUIDebugger(infos, runningWorkflow.devices, allStates, dataProcessorInfos, metricsInfos, driverInfo, controls, driverControl, guiContext);
           guiContext.callback = [&serviceRegistry, &driverServices, &debugGUI, &infos, &runningWorkflow, &dataProcessorInfos, &metricsInfos, &driverInfo, &controls, &driverControl, callback]() {
             callback();
             for (auto& service : driverServices) {
