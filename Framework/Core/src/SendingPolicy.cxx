@@ -18,7 +18,9 @@
 #include "Framework/Logger.h"
 #include "Headers/STFHeader.h"
 #include "DeviceSpecHelpers.h"
+#include "Framework/DeviceState.h"
 #include <fairmq/Device.h>
+#include <uv.h>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -113,7 +115,15 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
               auto res = channel->Send(parts, timeout);
               if (res == (size_t)fair::mq::TransferCode::timeout) {
                 LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on {}.", timeout/1000, channel->GetName());
-                channel->Send(parts);
+                while (res == (size_t)fair::mq::TransferCode::timeout) {
+                  res = channel->Send(parts, timeout);
+                  auto &deviceState = registry.get<DeviceState>();
+                  uv_run(deviceState.loop, UV_RUN_NOWAIT);
+                  if (deviceState.nextFairMQState.empty() == false) {
+                    LOGP(warning, "Device state changed to {} while we were waiting for backpressure to finish", 
+                                  deviceState.nextFairMQState.back());
+                  }
+                }
                 LOGP(info, "Downstream backpressure on {} recovered.", channel->GetName());
               } else if (res == (size_t) fair::mq::TransferCode::error) {
                 LOGP(fatal, "Error while sending on channel {}", channel->GetName());
