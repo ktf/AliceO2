@@ -21,6 +21,8 @@
 #include <fairmq/Message.h>
 #include <fairmq/TransportFactory.h>
 
+#include <unordered_set>
+
 namespace o2::framework
 {
 
@@ -142,9 +144,11 @@ void FairMQDeviceProxy::getMatchingForwardChannelIndexes(std::vector<ChannelInde
       result.emplace_back(mForwardRoutes[ri].channel);
     }
   }
-  // Make it unique. A given set of payloads needs to be forwarded only once per channel.
-  std::sort(result.begin(), result.end(), [](ChannelIndex const& a, ChannelIndex const& b) { return a.value < b.value; });
-  result.erase(std::unique(result.begin(), result.end(), [](ChannelIndex const& a, ChannelIndex const& b) { return a.value == b.value; }), result.end());
+  // Remove duplicates, keeping the order of the channels.
+  std::unordered_set<int> numSet;
+  auto iter = std::stable_partition(result.begin(), result.end(), 
+                                    [&](ChannelIndex n) { bool ret = !numSet.count(n.value); numSet.insert(n.value); return ret; }); // returns true if the item has not been "seen"
+  result.erase(iter, result.end());
 }
 
 ChannelIndex FairMQDeviceProxy::getOutputChannelIndexByName(std::string const& name) const
