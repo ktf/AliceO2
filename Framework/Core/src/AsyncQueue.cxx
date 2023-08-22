@@ -50,7 +50,7 @@ auto AsyncQueueHelpers::run(AsyncQueue& queue, TimesliceId oldestPossible) -> vo
   }
 
   // Sort by runnable, timeslice, then priority and finally debounce
-  std::sort(order.begin(), order.end(), [&queue](int a, int b) {
+  std::stable_sort(order.begin(), order.end(), [&queue](int a, int b) {
     if (queue.tasks[a].runnable && !queue.tasks[b].runnable) {
       return true;
     }
