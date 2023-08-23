@@ -133,7 +133,8 @@ void FairMQDeviceProxy::getMatchingForwardChannelIndexes(std::vector<ChannelInde
 
     LOGP(debug, "matching: {} to route {}", dh, DataSpecUtils::describe(route.matcher));
     if (DataSpecUtils::match(route.matcher, dh.dataOrigin, dh.dataDescription, dh.subSpecification) && ((timeslice % route.maxTimeslices) == route.timeslice)) {
-      auto& info = mForwardChannelInfos[ri];
+      auto channelInfoIndex = mForwardRoutes[ri].channel;
+      auto& info = mForwardChannelInfos[channelInfoIndex.value];
       // We need to make sure that we forward the same payload only once per channel.
       if (info.channelType == ChannelAccountingType::DPL) {
         if (dplChannelMatched) {
@@ -141,7 +142,7 @@ void FairMQDeviceProxy::getMatchingForwardChannelIndexes(std::vector<ChannelInde
         }
         dplChannelMatched = true;
       }
-      result.emplace_back(mForwardRoutes[ri].channel);
+      result.emplace_back(channelInfoIndex);
     }
   }
   // Remove duplicates, keeping the order of the channels.
