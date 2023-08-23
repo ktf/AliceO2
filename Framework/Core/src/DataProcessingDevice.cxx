@@ -636,6 +636,16 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
       if (copy) {
         for (auto& cachedForwardingChoice : cachedForwardingChoices) {
           auto&& newHeader = header->GetTransport()->CreateMessage();
+          auto *dh = o2::header::get<DataHeader*>(header->GetData());
+          if (dh) {
+            LOGP(info, "Forwarding {} to {}", DataSpecUtils::describe({dh->dataOrigin, dh->dataDescription, dh->subSpecification}), cachedForwardingChoice.value);
+          } else {
+            auto dih = o2::header::get<DomainInfoHeader*>(newHeader->GetData());
+            if (dih) {
+              LOGP(info, "DomainInfoHeader being forwarded");
+            }
+            LOGP(error, "Data is missing DataHeader");
+          }
           newHeader->Copy(*header);
           forwardedParts[cachedForwardingChoice.value].AddPart(std::move(newHeader));
 
