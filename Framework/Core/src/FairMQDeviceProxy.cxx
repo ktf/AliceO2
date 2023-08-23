@@ -147,7 +147,7 @@ void FairMQDeviceProxy::getMatchingForwardChannelIndexes(std::vector<ChannelInde
   }
   // Remove duplicates, keeping the order of the channels.
   std::unordered_set<int> numSet;
-  auto iter = std::stable_partition(result.begin(), result.end(), 
+  auto iter = std::stable_partition(result.begin(), result.end(),
                                     [&](ChannelIndex n) { bool ret = !numSet.count(n.value); numSet.insert(n.value); return ret; }); // returns true if the item has not been "seen"
   result.erase(iter, result.end());
 }

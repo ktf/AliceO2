@@ -636,7 +636,7 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
       if (copy) {
         for (auto& cachedForwardingChoice : cachedForwardingChoices) {
           auto&& newHeader = header->GetTransport()->CreateMessage();
-          auto *dh = o2::header::get<DataHeader*>(header->GetData());
+          auto* dh = o2::header::get<DataHeader*>(header->GetData());
           if (dh) {
             LOGP(info, "Forwarding {} to {}", DataSpecUtils::describe({dh->dataOrigin, dh->dataDescription, dh->subSpecification}), cachedForwardingChoice.value);
           } else {
