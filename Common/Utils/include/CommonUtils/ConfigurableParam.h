@@ -9,7 +9,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-//first version 8/2018, Sandro Wenzel
+// first version 8/2018, Sandro Wenzel
 
 #ifndef COMMON_SIMCONFIG_INCLUDE_SIMCONFIG_CONFIGURABLEPARAM_H_
 #define COMMON_SIMCONFIG_INCLUDE_SIMCONFIG_CONFIGURABLEPARAM_H_
@@ -18,7 +18,7 @@
 #include <cassert>
 #include <map>
 #include <unordered_map>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 #include <typeinfo>
 #include <iostream>
 
@@ -26,9 +26,7 @@ class TFile;
 class TRootIOCtor;
 class TDataMember;
 
-namespace o2
-{
-namespace conf
+namespace o2::conf
 {
 // Base class for a configurable parameter.
 //
@@ -89,7 +87,7 @@ namespace conf
 struct EnumLegalValues {
   std::vector<std::pair<std::string, int>> vvalues;
 
-  bool isLegal(const std::string& value) const
+  [[nodiscard]] bool isLegal(const std::string& value) const
   {
     for (auto& v : vvalues) {
       if (v.first == value) {
@@ -99,7 +97,7 @@ struct EnumLegalValues {
     return false;
   }
 
-  bool isLegal(int value) const
+  [[nodiscard]] bool isLegal(int value) const
   {
     for (auto& v : vvalues) {
       if (v.second == value) {
@@ -109,8 +107,8 @@ struct EnumLegalValues {
     return false;
   }
 
-  std::string toString() const;
-  int getIntValue(const std::string& value) const;
+  [[nodiscard]] std::string toString() const;
+  [[nodiscard]] int getIntValue(const std::string& value) const;
 };
 
 class EnumRegistry
@@ -118,12 +116,12 @@ class EnumRegistry
  public:
   void add(const std::string& key, const TDataMember* dm);
 
-  bool contains(const std::string& key) const
+  [[nodiscard]] bool contains(const std::string& key) const
   {
     return entries.count(key) > 0;
   }
 
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
   const EnumLegalValues* operator[](const std::string& key) const
   {
@@ -158,17 +156,17 @@ class ConfigurableParam
   }
 
   // get the name of the configurable Parameter
-  virtual std::string getName() const = 0;
+  [[nodiscard]] virtual std::string getName() const = 0;
 
   // print the current keys and values to screen (optionally with provenance information)
   virtual void printKeyValues(bool showprov = true, bool useLogger = false) const = 0;
 
   // get a single size_t hash_value of this parameter (can be used as a checksum to see
   // if object changed or different)
-  virtual size_t getHash() const = 0;
+  [[nodiscard]] virtual size_t getHash() const = 0;
 
   // return the provenance of the member key
-  virtual EParamProvenance getMemberProvenance(const std::string& key) const = 0;
+  [[nodiscard]] virtual EParamProvenance getMemberProvenance(const std::string& key) const = 0;
 
   static EParamProvenance getProvenance(const std::string& key);
 
@@ -181,9 +179,6 @@ class ConfigurableParam
   static void setInputDir(const std::string& d) { sInputDir = d; }
   static void setOutputDir(const std::string& d) { sOutputDir = d; }
 
-  static boost::property_tree::ptree readINI(std::string const& filepath);
-  static boost::property_tree::ptree readJSON(std::string const& filepath);
-  static boost::property_tree::ptree readConfigFile(std::string const& filepath);
   static bool configFileExists(std::string const& filepath);
 
   // writes a human readable JSON file of all parameters
@@ -195,10 +190,12 @@ class ConfigurableParam
   template <typename T>
   static T getValueAs(std::string key)
   {
-    if (!sIsFullyInitialized) {
-      initialize();
-    }
-    return sPtree->get<T>(key);
+    return [](auto* tree, const std::string& key) -> T {
+      if (!sIsFullyInitialized) {
+        initialize();
+      }
+      return tree->template get<T>(key);
+    }(sPtree, key);
   }
 
   template <typename T>
@@ -207,19 +204,21 @@ class ConfigurableParam
     if (!sIsFullyInitialized) {
       initialize();
     }
-    assert(sPtree);
-    try {
-      auto key = mainkey + "." + subkey;
-      if (sPtree->get_optional<std::string>(key).is_initialized()) {
-        sPtree->put(key, x);
-        auto changed = updateThroughStorageMap(mainkey, subkey, typeid(T), (void*)&x);
-        if (changed != EParamUpdateStatus::Failed) {
-          sValueProvenanceMap->find(key)->second = kRT; // set to runtime
+    return [&subkey, &x, &mainkey](auto* tree) -> void {
+      assert(tree);
+      try {
+        auto key = mainkey + "." + subkey;
+        if (tree->template get_optional<std::string>(key).is_initialized()) {
+          tree->put(key, x);
+          auto changed = updateThroughStorageMap(mainkey, subkey, typeid(T), (void*)&x);
+          if (changed != EParamUpdateStatus::Failed) {
+            sValueProvenanceMap->find(key)->second = kRT; // set to runtime
+          }
         }
+      } catch (std::exception const& e) {
+        std::cerr << "Error in setValue (T) " << e.what() << "\n";
       }
-    } catch (std::exception const& e) {
-      std::cerr << "Error in setValue (T) " << e.what() << "\n";
-    }
+    }(sPtree);
   }
 
   static void setProvenance(std::string const& mainkey, std::string const& subkey, EParamProvenance p)
@@ -241,25 +240,7 @@ class ConfigurableParam
 
   // specialized for std::string
   // which means that the type will be converted internally
-  static void setValue(std::string const& key, std::string const& valuestring)
-  {
-    if (!sIsFullyInitialized) {
-      initialize();
-    }
-    assert(sPtree);
-    try {
-      if (sPtree->get_optional<std::string>(key).is_initialized()) {
-        sPtree->put(key, valuestring);
-        auto changed = updateThroughStorageMapWithConversion(key, valuestring);
-        if (changed != EParamUpdateStatus::Failed) {
-          sValueProvenanceMap->find(key)->second = kRT; // set to runtime
-        }
-      }
-    } catch (std::exception const& e) {
-      std::cerr << "Error in setValue (string) " << e.what() << "\n";
-    }
-  }
-
+  static void setValue(std::string const& key, std::string const& valuestring);
   static void setEnumValue(const std::string&, const std::string&);
   static void setArrayValue(const std::string&, const std::string&);
 
@@ -324,7 +305,7 @@ class ConfigurableParam
   static std::string sOutputDir;
 
   void setRegisterMode(bool b) { sRegisterMode = b; }
-  bool isInitialized() const { return sIsFullyInitialized; }
+  [[nodiscard]] bool isInitialized() const { return sIsFullyInitialized; }
 
   // friend class o2::ccdb::CcdbApi;
  private:
@@ -336,8 +317,7 @@ class ConfigurableParam
   static bool sRegisterMode;                  //! (flag to enable/disable autoregistering of child classes)
 };
 
-} // end namespace conf
-} // end namespace o2
+} // namespace o2::conf
 
 // a helper macro for boilerplate code in parameter classes
 #define O2ParamDef(classname, key)               \

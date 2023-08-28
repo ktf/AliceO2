@@ -9,7 +9,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-//first version 8/2018, Sandro Wenzel
+// first version 8/2018, Sandro Wenzel
 
 #include "CommonUtils/ConfigurableParam.h"
 #include "CommonUtils/StringUtils.h"
@@ -39,10 +39,12 @@
 #include "TEnumConstant.h"
 #include <filesystem>
 
-namespace o2
+namespace o2::conf
 {
-namespace conf
-{
+boost::property_tree::ptree readINI(std::string const& filepath);
+boost::property_tree::ptree readJSON(std::string const& filepath);
+boost::property_tree::ptree readConfigFile(std::string const& filepath);
+
 std::vector<ConfigurableParam*>* ConfigurableParam::sRegisteredParamClasses = nullptr;
 boost::property_tree::ptree* ConfigurableParam::sPtree = nullptr;
 std::map<std::string, std::pair<std::type_info const&, void*>>* ConfigurableParam::sKeyToStorageMap = nullptr;
@@ -199,9 +201,9 @@ bool ConfigurableParam::configFileExists(std::string const& filepath)
 
 // ------------------------------------------------------------------
 
-boost::property_tree::ptree ConfigurableParam::readConfigFile(std::string const& filepath)
+boost::property_tree::ptree readConfigFile(std::string const& inputDir, std::string const& filepath)
 {
-  auto inpfilename = o2::utils::Str::concat_string(sInputDir, filepath);
+  auto inpfilename = o2::utils::Str::concat_string(inputDir, filepath);
   if (!std::filesystem::exists(inpfilename)) {
     LOG(fatal) << inpfilename << " : config file does not exist!";
   }
@@ -219,9 +221,28 @@ boost::property_tree::ptree ConfigurableParam::readConfigFile(std::string const&
   return pt;
 }
 
+void ConfigurableParam::setValue(std::string const& key, std::string const& valuestring)
+{
+  if (!sIsFullyInitialized) {
+    initialize();
+  }
+  assert(sPtree);
+  try {
+    if (sPtree->get_optional<std::string>(key).is_initialized()) {
+      sPtree->put(key, valuestring);
+      auto changed = updateThroughStorageMapWithConversion(key, valuestring);
+      if (changed != EParamUpdateStatus::Failed) {
+        sValueProvenanceMap->find(key)->second = kRT; // set to runtime
+      }
+    }
+  } catch (std::exception const& e) {
+    std::cerr << "Error in setValue (string) " << e.what() << "\n";
+  }
+}
+
 // ------------------------------------------------------------------
 
-boost::property_tree::ptree ConfigurableParam::readINI(std::string const& filepath)
+boost::property_tree::ptree readINI(std::string const& filepath)
 {
   boost::property_tree::ptree pt;
   try {
@@ -237,7 +258,7 @@ boost::property_tree::ptree ConfigurableParam::readINI(std::string const& filepa
 
 // ------------------------------------------------------------------
 
-boost::property_tree::ptree ConfigurableParam::readJSON(std::string const& filepath)
+boost::property_tree::ptree readJSON(std::string const& filepath)
 {
   boost::property_tree::ptree pt;
 
@@ -258,7 +279,7 @@ void ConfigurableParam::writeJSON(std::string const& filename, std::string const
     LOG(info) << "ignoring writing of json file " << filename;
     return;
   }
-  initPropertyTree();     // update the boost tree before writing
+  initPropertyTree(); // update the boost tree before writing
   auto outfilename = o2::utils::Str::concat_string(sOutputDir, filename);
   if (!keyOnly.empty()) { // write ini for selected key only
     try {
@@ -409,7 +430,7 @@ void ConfigurableParam::updateFromFile(std::string const& configFile, std::strin
     return;
   }
 
-  boost::property_tree::ptree pt = readConfigFile(cfgfile);
+  boost::property_tree::ptree pt = readConfigFile(ConfigurableParam::sInputDir, cfgfile);
 
   std::vector<std::pair<std::string, std::string>> keyValPairs;
   auto request = o2::utils::Str::tokenize(paramsList, ',', true);
@@ -953,5 +974,4 @@ ConfigurableParam::EParamUpdateStatus ConfigurableParam::updateThroughStorageMap
   return ConfigurableParam::EParamUpdateStatus::Failed;
 }
 
-} // namespace conf
-} // namespace o2
+} // namespace o2::conf

@@ -20,9 +20,7 @@
 #include <typeinfo>
 #include "TFile.h"
 
-namespace o2
-{
-namespace conf
+namespace o2::conf
 {
 
 // ----------------------------------------------------------------
@@ -34,7 +32,7 @@ struct ParamDataMember {
   std::string value;
   std::string provenance;
 
-  std::string toString(std::string const& prefix, bool showProv) const;
+  [[nodiscard]] std::string toString(std::string const& prefix, bool showProv) const;
 };
 
 // ----------------------------------------------------------------
@@ -82,14 +80,14 @@ class ConfigurableParamHelper : virtual public ConfigurableParam
 
   // ----------------------------------------------------------------
 
-  std::string getName() const final
+  [[nodiscard]] std::string getName() const final
   {
     return P::sKey;
   }
 
   // ----------------------------------------------------------------
   // get the provenace of the member with given key
-  EParamProvenance getMemberProvenance(const std::string& key) const final
+  [[nodiscard]] EParamProvenance getMemberProvenance(const std::string& key) const final
   {
     return getProvenance(getName() + '.' + key);
   }
@@ -107,7 +105,7 @@ class ConfigurableParamHelper : virtual public ConfigurableParam
   }
 
   //
-  size_t getHash() const final
+  [[nodiscard]] size_t getHash() const final
   {
     return _ParamHelper::getHashImpl(getName(), getDataMembers());
   }
@@ -124,7 +122,7 @@ class ConfigurableParamHelper : virtual public ConfigurableParam
 
   // Grab the list of ConfigurableParam data members
   // Returns a nullptr if the TClass of the P template class cannot be created.
-  std::vector<ParamDataMember>* getDataMembers() const
+  [[nodiscard]] std::vector<ParamDataMember>* getDataMembers() const
   {
     // just a helper line to make sure P::sInstance is looked-up
     // and that compiler complains about missing static sInstance of type P
@@ -197,7 +195,6 @@ class ConfigurableParamHelper : virtual public ConfigurableParam
   }
 };
 
-} // namespace conf
 } // namespace o2
 
 #endif /* COMMON_SIMCONFIG_INCLUDE_SIMCONFIG_CONFIGURABLEPARAMHELPER_H_ */
