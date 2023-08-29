@@ -1070,10 +1070,13 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
   }
 
   auto decideEarlyForward = [&context, &spec, this]() -> bool {
-    // There is nothing produced by this device, so we can forward early
-    // because this is a proxy.
+    // There is no outputs and only forwards. It means that we
+    // should try to avoid the early forwarding because it will
+    // involve an unneeded copy.
+    // Notice however that in case of multiple forward routes we
+    // will still enable the copy inside the forwardInputs function.
     if (spec.forwards.empty() == false && spec.outputs.empty() == true) {
-      return true;
+      return false;
     }
     /// We must make sure there is no optional
     /// if we want to optimize the forwarding
