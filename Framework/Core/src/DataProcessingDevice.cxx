@@ -1075,7 +1075,7 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
     // involve an unneeded copy.
     // Notice however that in case of multiple forward routes we
     // will still enable the copy inside the forwardInputs function.
-      return false;
+    return false;
     }
     /// We must make sure there is no optional
     /// if we want to optimize the forwarding
