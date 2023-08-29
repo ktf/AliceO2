@@ -1075,7 +1075,6 @@ void DataProcessingDevice::fillContext(DataProcessorContext& context, DeviceCont
     // involve an unneeded copy.
     // Notice however that in case of multiple forward routes we
     // will still enable the copy inside the forwardInputs function.
-    if (spec.forwards.empty() == false && spec.outputs.empty() == true) {
       return false;
     }
     /// We must make sure there is no optional
