@@ -58,12 +58,12 @@ namespace o2::framework
 {
 struct ServiceRegistry;
 
-#define ERROR_STRING                                          \
-  "data type T not supported by API, "                        \
-  "\n specializations available for"                          \
-  "\n - trivially copyable, non-polymorphic structures"       \
-  "\n - arrays of those"                                      \
-  "\n - TObject with additional constructor arguments"        \
+#define ERROR_STRING                                    \
+  "data type T not supported by API, "                  \
+  "\n specializations available for"                    \
+  "\n - trivially copyable, non-polymorphic structures" \
+  "\n - arrays of those"                                \
+  "\n - TObject with additional constructor arguments"  \
   "\n - std containers of those"
 
 /// Helper to allow framework managed objecs to have a callback

@@ -117,11 +117,11 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
                 LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on {}.", timeout/1000, channel->GetName());
                 while (res == (size_t)fair::mq::TransferCode::timeout) {
                   res = channel->Send(parts, timeout);
-                  auto &deviceState = registry.get<DeviceState>();
+                  auto& deviceState = registry.get<DeviceState>();
                   uv_run(deviceState.loop, UV_RUN_NOWAIT);
                   if (deviceState.nextFairMQState.empty() == false) {
-                    LOGP(warning, "Device state changed to {} while we were waiting for backpressure to finish", 
-                                  deviceState.nextFairMQState.back());
+                    LOGP(warning, "Device state changed to {} while we were waiting for backpressure to finish",
+                         deviceState.nextFairMQState.back());
                   }
                 }
                 LOGP(info, "Downstream backpressure on {} recovered.", channel->GetName());
