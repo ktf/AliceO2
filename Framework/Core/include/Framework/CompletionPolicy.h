@@ -60,6 +60,8 @@ struct CompletionPolicy {
     ConsumeAndRescan,
     /// Like Wait but mark the cacheline as dirty
     Retry,
+    /// There was an error while applying the policy.
+    Error
   };
 
   using Matcher = std::function<bool(DeviceSpec const& device)>;

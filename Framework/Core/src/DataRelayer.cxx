@@ -295,12 +295,19 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
       continue;
     }
     mPruneOps.push_back(PruneOp{si});
+    bool unexpectedDrop = false;
     for (size_t mi = 0; mi < mInputs.size(); ++mi) {
       auto& input = mInputs[mi];
       auto& element = mCache[si * mInputs.size() + mi];
       if (element.size() != 0) {
         if (input.lifetime != Lifetime::Condition && mCompletionPolicy.name != "internal-dpl-injected-dummy-sink") {
-          LOGP(error, "Dropping incomplete {} Lifetime::{} data in slot {} with timestamp {} < {} as it can never be completed.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
+          unexpectedDrop = true;
+          LOGP(error, "Dropping incomplete {} Lifetime::{} data in slot {} with timestamp {} < {} as it can never be completed.", 
+               DataSpecUtils::describe(input),
+               input.lifetime,
+               si,
+               timestamp.value,
+               newOldest.timeslice.value);
         } else {
           LOGP(debug,
                "Silently dropping data {} in pipeline slot {} because it has timeslice {} < {} after receiving data from channel {}."
@@ -309,6 +316,39 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
                mTimesliceIndex.getChannelInfo(channel).channel->GetName());
         }
       }
+    }
+    if (unexpectedDrop) {
+      auto getPartialRecord = [&cache = mCache, numInputTypes = mDistinctRoutesIndex.size()](int li) -> gsl::span<MessageSet const> {
+        auto offset = li * numInputTypes;
+        assert(cache.size() >= offset + numInputTypes);
+        auto const start = cache.data() + offset;
+        auto const end = cache.data() + offset + numInputTypes;
+        return {start, end};
+      };
+      auto partial = getPartialRecord(proposed.value);
+      // TODO: get the data ref from message model
+      auto getter = [&partial](size_t idx, size_t part) {
+        if (partial[idx].size() > 0 && partial[idx].header(part).get()) {
+          auto header = partial[idx].header(part).get();
+          auto payload = partial[idx].payload(part).get();
+          return DataRef{nullptr,
+                         reinterpret_cast<const char*>(header->GetData()),
+                         reinterpret_cast<char const*>(payload ? payload->GetData() : nullptr),
+                         payload ? payload->GetSize() : 0};
+        }
+        return DataRef{};
+      };
+      auto nPartsGetter = [&partial](size_t idx) {
+        return partial[idx].size();
+      };
+      InputSpan span{getter, nPartsGetter, static_cast<size_t>(partial.size())};
+      CompletionPolicy::CompletionOp action = CompletionPolicy::CompletionOp::Error;
+      if (mCompletionPolicy.callback) {
+        action = mCompletionPolicy.callback(span);
+      } else if (mCompletionPolicy.callbackFull) {
+        action = mCompletionPolicy.callbackFull(span, mInputs, mContext);
+      }
+      LOGP(error, "Completion policy {} returned {} for unexpectedly dropped timeslice.", mCompletionPolicy.name, action);
     }
   }
 }
