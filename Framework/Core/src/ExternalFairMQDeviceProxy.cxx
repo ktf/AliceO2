@@ -686,28 +686,44 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
       ctx.services().get<CallbackService>().set<CallbackService::Id::DeviceStateChanged>(drainMessages);
     }
 
-    static auto countEoS = [](fair::mq::Parts& inputs) -> int {
-      int count = 0;
+    struct InputStats {
+      int numberOfEoS = 0;
+      int numberOfO2Messages = 0;
+      int numberOfMissingHeaders = 0;
+    };
+
+    static auto inputStats = [](fair::mq::Parts& inputs) -> InputStats {
+      InputStats stats;
       for (int msgidx = 0; msgidx < inputs.Size() / 2; ++msgidx) {
         // Skip when we have nullptr for the header.
         // Not sure it can actually happen, but does not hurt.
         if (inputs.At(msgidx * 2).get() == nullptr) {
+          stats.numberOfMissingHeaders++;
           continue;
         }
         auto const sih = o2::header::get<SourceInfoHeader*>(inputs.At(msgidx * 2)->GetData());
         if (sih != nullptr && sih->state == InputChannelState::Completed) {
-          count++;
+          stats.numberOfEoS++;
+          continue;
+        }
+        auto const dph = o2::header::get<DataProcessingHeader*>(inputs.At(msgidx * 2 + 1)->GetData());
+        if (dph != nullptr) {
+          stats.numberOfO2Messages++;
+          continue;
         }
       }
-      return count;
+      return stats;
     };
 
+    /// Actual handling of the incoming messages. It should return the number of non-EoS messages,
+    /// which have been processed. If only EoS messages have been processed, it should return 0
+    /// and the caller should try again.
     auto dataHandler = [device, converter, doInjectMissingData,
                         outputRoutes = std::move(outputRoutes),
                         control = &ctx.services().get<ControlService>(),
                         deviceState = &ctx.services().get<DeviceState>(),
                         timesliceIndex = &ctx.services().get<TimesliceIndex>(),
-                        outputChannels = std::move(outputChannels)](TimingInfo& timingInfo, fair::mq::Parts& inputs, int, size_t ci, bool newRun) {
+                        outputChannels = std::move(outputChannels)](TimingInfo& timingInfo, fair::mq::Parts& inputs, int, size_t ci, bool newRun) -> InputStats {
       // pass a copy of the outputRoutes
       auto channelRetriever = [&outputRoutes](OutputSpec const& query, DataProcessingHeader::StartTime timeslice) -> std::string {
         for (auto& route : outputRoutes) {
@@ -721,8 +737,8 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
 
       std::string const& channel = channels[ci];
       // we buffer the condition since the converter will forward messages by move
-      int nEos = countEoS(inputs);
-      numberOfEoS[ci] += nEos;
+      InputStats stats = inputStats(inputs);
+      numberOfEoS[ci] += stats.numberOfEoS;
       if (newRun) {
         std::fill(numberOfEoS.begin(), numberOfEoS.end(), 0);
         std::fill(eosPeersCount.begin(), eosPeersCount.end(), 0);
@@ -743,7 +759,7 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
       // * If a connection sends two EoS.
       // * If a connection sends an end of stream closes and another one opens.
       // Finally, if we didn't receive an EoS this time, out counting of the connected peers is off, so the best thing we can do is delay the EoS reporting
-      bool everyEoS = shouldstop || (numberOfEoS[ci] >= eosPeersCount[ci] && nEos);
+      bool everyEoS = shouldstop || (numberOfEoS[ci] >= eosPeersCount[ci] && stats.numberOfEoS > 0);
 
       if (everyEoS) {
         // Mark all input channels as closed
@@ -754,6 +770,7 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
         std::fill(eosPeersCount.begin(), eosPeersCount.end(), 0);
         control->endOfStream();
       }
+      return stats;
     };
 
     auto runHandler = [dataHandler, minSHM, sendTFcounter](ProcessingContext& ctx) {
@@ -766,47 +783,53 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
         inStopTransition = true;
       }
 
-      for (size_t ci = 0; ci < channels.size(); ++ci) {
-        std::string const& channel = channels[ci];
-        int waitTime = channels.size() == 1 ? -1 : 1;
-        int maxRead = 1000;
-        while (maxRead-- > 0) {
-          fair::mq::Parts parts;
-          auto res = device->Receive(parts, channel, 0, waitTime);
-          if (res == (size_t)fair::mq::TransferCode::error) {
-            LOGP(error, "Error while receiving on channel {}", channel);
-          }
-          // Populate TimingInfo from the first message
-          unsigned int nReceived = parts.Size();
-          if (nReceived != 0) {
-            auto const dh = o2::header::get<DataHeader*>(parts.At(0)->GetData());
-            auto& timingInfo = ctx.services().get<TimingInfo>();
-            if (dh != nullptr) {
-              if (currentRunNumber != -1 && dh->runNumber != currentRunNumber) {
-                newRun = true;
-                inStopTransition = false;
+      int totalNumberOfMessages = 0;
+      // Keep running until we actually go some data or we were requested to stop
+      while (totalNumberOfMessages == 0) {
+        for (size_t ci = 0; ci < channels.size(); ++ci) {
+          std::string const& channel = channels[ci];
+          int waitTime = channels.size() == 1 ? -1 : 1;
+          int maxRead = 1000;
+          while (maxRead-- > 0) {
+            fair::mq::Parts parts;
+            auto res = device->Receive(parts, channel, 0, waitTime);
+            if (res == (size_t)fair::mq::TransferCode::error) {
+              LOGP(error, "Error while receiving on channel {}", channel);
+            }
+            // Populate TimingInfo from the first message
+            unsigned int nReceived = parts.Size();
+            if (nReceived != 0) {
+              auto const dh = o2::header::get<DataHeader*>(parts.At(0)->GetData());
+              auto& timingInfo = ctx.services().get<TimingInfo>();
+              if (dh != nullptr) {
+                if (currentRunNumber != -1 && dh->runNumber != currentRunNumber) {
+                  newRun = true;
+                  inStopTransition = false;
+                }
+                currentRunNumber = dh->runNumber;
+                timingInfo.runNumber = dh->runNumber;
+                timingInfo.firstTForbit = dh->firstTForbit;
+                timingInfo.tfCounter = dh->tfCounter;
               }
-              currentRunNumber = dh->runNumber;
-              timingInfo.runNumber = dh->runNumber;
-              timingInfo.firstTForbit = dh->firstTForbit;
-              timingInfo.tfCounter = dh->tfCounter;
+              auto const dph = o2::header::get<DataProcessingHeader*>(parts.At(0)->GetData());
+              if (dph != nullptr) {
+                timingInfo.timeslice = dph->startTime;
+                timingInfo.creation = dph->creation;
+              }
+              InputStats stats;
+              if (!inStopTransition) {
+                stats = dataHandler(timingInfo, parts, 0, ci, newRun);
+              }
+              totalNumberOfMessages += stats.numberOfO2Messages;
+              if (sendTFcounter) {
+                ctx.services().get<o2::monitoring::Monitoring>().send(o2::monitoring::Metric{(uint64_t)timingInfo.tfCounter, "df-sent"}.addTag(o2::monitoring::tags::Key::Subsystem, o2::monitoring::tags::Value::DPL));
+              }
             }
-            auto const dph = o2::header::get<DataProcessingHeader*>(parts.At(0)->GetData());
-            if (dph != nullptr) {
-              timingInfo.timeslice = dph->startTime;
-              timingInfo.creation = dph->creation;
+            if (nReceived == 0 || channels.size() == 1) {
+              break;
             }
-            if (!inStopTransition) {
-              dataHandler(timingInfo, parts, 0, ci, newRun);
-            }
-            if (sendTFcounter) {
-              ctx.services().get<o2::monitoring::Monitoring>().send(o2::monitoring::Metric{(uint64_t)timingInfo.tfCounter, "df-sent"}.addTag(o2::monitoring::tags::Key::Subsystem, o2::monitoring::tags::Value::DPL));
-            }
+            waitTime = 0;
           }
-          if (nReceived == 0 || channels.size() == 1) {
-            break;
-          }
-          waitTime = 0;
         }
       }
     };
