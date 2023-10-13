@@ -126,7 +126,7 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
                 }
                 LOGP(info, "Downstream backpressure on {} recovered.", channel->GetName());
               }
-              if (res == (size_t) fair::mq::TransferCode::error) {
+              if (res == (size_t)fair::mq::TransferCode::error) {
                 LOGP(fatal, "Error while sending on channel {}", channel->GetName());
               } }}};
 }
