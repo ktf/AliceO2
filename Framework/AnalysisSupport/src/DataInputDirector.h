@@ -138,7 +138,6 @@ class DataInputDirector
   DataInputDescriptor* getDataInputDescriptor(header::DataHeader dh);
   int getNumberInputDescriptors() { return mdataInputDescriptors.size(); }
 
-  std::unique_ptr<TTreeReader> getTreeReader(header::DataHeader dh, int counter, int numTF, std::string treeName);
   bool readTree(DataAllocator& outputs, header::DataHeader dh, int counter, int numTF, size_t& totalSizeCompressed, size_t& totalSizeUncompressed);
   uint64_t getTimeFrameNumber(header::DataHeader dh, int counter, int numTF);
   FileAndFolder getFileFolder(header::DataHeader dh, int counter, int numTF);
