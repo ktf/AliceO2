@@ -50,6 +50,7 @@ enum SamplingTypes {
   sampleID = 2,       ///< sample every n IDs (per example track)
   sampleIDGlobal = 3, ///< in case different streamers have access to the same IDs use this gloabl ID
   sampleWeights = 4,  ///< perform sampling on weights, defined where the streamer is called
+  sampleTsallis = 5,  ///< perform sampling on tsallis pdf
 };
 
 #if !defined(GPUCA_GPUCODE) && !defined(GPUCA_STANDALONE)
@@ -163,10 +164,12 @@ class DebugStreamer
   /// \return returns integer index for given streamer flag
   static int getIndex(const StreamFlags streamFlag);
 
+  /// get random value between min and max
+  static float getRandom(float min = 0, float max = 1);
+
  private:
   using StreamersPerFlag = tbb::concurrent_unordered_map<size_t, std::unique_ptr<o2::utils::TreeStreamRedirector>>;
   StreamersPerFlag mTreeStreamer; ///< streamer which is used for the debugging
-
 #else
 
   // empty implementation of the class for GPU or when the debug streamer is not build for CPU
