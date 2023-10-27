@@ -47,7 +47,7 @@ InjectorFunction dcs2dpl()
 // InjectorFunction dcs2dpl()
 {
   return [](TimingInfo&, ServiceRegistryRef const& services, fair::mq::Parts& parts, ChannelRetriever channelRetriever, size_t newTimesliceId, bool&) -> bool {
-    auto *device = services.get<RawDeviceService>().device();
+    auto* device = services.get<RawDeviceService>().device();
     std::string messageHeader{static_cast<const char*>(parts.At(0)->GetData()), parts.At(0)->GetSize()};
     size_t dataSize = parts.At(1)->GetSize();
     std::string messageData{static_cast<const char*>(parts.At(1)->GetData()), parts.At(1)->GetSize()};
@@ -91,6 +91,7 @@ InjectorFunction dcs2dpl()
     outParts.AddPart(std::move(plMessageF));
     sendOnChannel(*device, outParts, channel, newTimesliceId);
     LOG(info) << "Sent CTP counters DPL message" << std::flush;
+    services.get<MessageContext>().fakeDispatch();
     return true;
   };
 }
