@@ -92,9 +92,9 @@ TEST_CASE("RootTree2Table")
     REQUIRE(array->length() == 3000);
     const float* c = reinterpret_cast<float const*>(array->values()->data());
 
-    //auto array = std::static_pointer_cast<arrow::FixedSizeBinaryArray>(table->column(0)->chunk(0));
-    //CHECK_EQUAL(array->byte_width(), sizeof(float[3]));
-    //const float* c = reinterpret_cast<float const*>(array->Value(0));
+    // auto array = std::static_pointer_cast<arrow::FixedSizeBinaryArray>(table->column(0)->chunk(0));
+    // CHECK_EQUAL(array->byte_width(), sizeof(float[3]));
+    // const float* c = reinterpret_cast<float const*>(array->Value(0));
 
     CHECK(c[0] == 1);
     CHECK(c[1] == 2);
