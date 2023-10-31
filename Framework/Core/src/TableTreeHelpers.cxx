@@ -441,7 +441,6 @@ TableToTree::TableToTree(std::shared_ptr<arrow::Table> const& table, TFile* file
   mTree = std::make_shared<TTree>(treeName.c_str(), treeName.c_str());
 }
 
-
 void TableToTree::addColumn(std::shared_ptr<arrow::ChunkedArray> const& column, std::shared_ptr<arrow::Field> const& field)
 {
   if (mRows == 0) {
