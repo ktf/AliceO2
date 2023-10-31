@@ -272,7 +272,7 @@ void sendVariableContextMetrics(VariableContext& context, TimesliceSlot slot, Da
       state += ";";
     }
     states.updateState({.id = short((int)ProcessingStateId::CONTEXT_VARIABLES_BASE + slot.index),
-                        .size = (int)state.size(), 
+                        .size = (int)state.size(),
                         .data = state.data()});
   },
                   &states, slot);
