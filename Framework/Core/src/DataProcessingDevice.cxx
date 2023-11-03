@@ -1677,7 +1677,7 @@ void DataProcessingDevice::ResetTask()
 {
   ServiceRegistryRef ref{mServiceRegistry};
   ref.get<DataRelayer>().clear();
-  auto &deviceContext = ref.get<DeviceContext>();
+  auto& deviceContext = ref.get<DeviceContext>();
   // Stop the signal handler
   if (deviceContext.sigusr1Handle) {
     uv_signal_stop(deviceContext.sigusr1Handle);
