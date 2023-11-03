@@ -972,10 +972,12 @@ void DataProcessingDevice::InitTask()
   // an event from the outside, making sure that the event loop can
   // be unblocked (e.g. by a quitting DPL driver) even when there
   // is no data pending to be processed.
-  auto* sigusr1Handle = (uv_signal_t*)malloc(sizeof(uv_signal_t));
-  uv_signal_init(state.loop, sigusr1Handle);
-  sigusr1Handle->data = &mServiceRegistry;
-  uv_signal_start(sigusr1Handle, on_signal_callback, SIGUSR1);
+  if (deviceContext.sigusr1Handle == nullptr) {
+    deviceContext.sigusr1Handle = (uv_signal_t*)malloc(sizeof(uv_signal_t));
+    deviceContext.sigusr1Handle->data = &mServiceRegistry;
+    uv_signal_init(state.loop, deviceContext.sigusr1Handle);
+  }
+  uv_signal_start(deviceContext.sigusr1Handle, on_signal_callback, SIGUSR1);
 
   /// Initialise the pollers
   DataProcessingDevice::initPollers();
@@ -1675,6 +1677,11 @@ void DataProcessingDevice::ResetTask()
 {
   ServiceRegistryRef ref{mServiceRegistry};
   ref.get<DataRelayer>().clear();
+  auto &deviceContext = ref.get<DeviceContext>();
+  // Stop the signal handler
+  if (deviceContext.sigusr1Handle) {
+    uv_signal_stop(deviceContext.sigusr1Handle);
+  }
 }
 
 struct WaitBackpressurePolicy {
