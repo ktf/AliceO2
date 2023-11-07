@@ -287,7 +287,7 @@ struct Descriptor {
   bool operator!=(const Descriptor& other) const { return not this->operator==(other); }
 
   // Convesion operators for comparison with their implicitly convertible types
-  friend bool operator==(const Descriptor& lhs, ImplicitConversion rhs) { return static_cast<ImplicitConversion>(lhs)==rhs; }
+  friend bool operator==(const Descriptor& lhs, ImplicitConversion rhs) { return static_cast<ImplicitConversion>(lhs) == rhs; }
   // explicitly forbid comparison with e.g. const char* strings
   // use: value == Descriptor<N>("DESC") for the appropriate
   // template instantiation instead
