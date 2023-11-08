@@ -78,12 +78,12 @@ struct PVertexerParams : public o2::conf::ConfigurableParamHelper<PVertexerParam
   float addZSigma2Debris = 0.005 * 0.005;  ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
 
   // extra debris reduction cut, ignored if maxTDiffDebrisExtra == 0. The maxTDiffDebrisExtra must not exceed maxTDiffDebris
-  float maxTDiffDebrisExtra = 0;                ///< when reducing debris, don't consider vertices separated by time > this value in \mus if >0, if <0: mult factor to ITS ROF
-  float maxZDiffDebrisExtra = 0.05;             ///< don't consider vertices separated by Z > this value in cm
-  float maxMultRatDebrisExtra = 1.0;            ///< don't consider vertices with multiplicity ratio above this
-  float maxChi2TZDebrisExtra = 100.;            ///< don't consider vertices with mutual chi2 exceeding this (for pp should be ~10)
-  float addTimeSigma2DebrisExtra = 225.;        ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
-  float addZSigma2DebrisExtra = 1.e-3;          ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
+  float maxTDiffDebrisExtra = 0;         ///< when reducing debris, don't consider vertices separated by time > this value in \mus if >0, if <0: mult factor to ITS ROF
+  float maxZDiffDebrisExtra = 0.05;      ///< don't consider vertices separated by Z > this value in cm
+  float maxMultRatDebrisExtra = 1.0;     ///< don't consider vertices with multiplicity ratio above this
+  float maxChi2TZDebrisExtra = 100.;     ///< don't consider vertices with mutual chi2 exceeding this (for pp should be ~10)
+  float addTimeSigma2DebrisExtra = 225.; ///< increment time error^2 by this amount when calculating vertex-to-vertex chi2
+  float addZSigma2DebrisExtra = 1.e-3;   ///< increment z error^2 by this amount when calculating vertex-to-vertex chi2
 
   float maxITSOnlyFraction = 1.0; ///< max ITS-only tracks fraction to accept, recommended value for PbPb = 0.85
   float minITSOnlyFraction = 0.0; ///< min ITS-only tracks fraction to accept
