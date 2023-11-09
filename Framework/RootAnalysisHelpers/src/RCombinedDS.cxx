@@ -224,8 +224,8 @@ void RCombinedDS::Initialise()
 {
   fEntryRanges = fIndex->BuildIndex(fLeftDF, fRightDF);
 
-  fLeft->Initialise();
-  fRight->Initialise();
+  fLeft->Initialize();
+  fRight->Initialize();
 }
 
 /// Creates a RDataFrame using an arrow::Table as input.
