@@ -694,9 +694,14 @@ DataProcessorSpec specifyExternalFairMQDeviceProxy(char const* name,
 
       // Continue iterating until all channels have seen a new state.
       while (std::all_of(lastNewStatePending.begin(), lastNewStatePending.end(), [](bool b) { return b; }) != true) {
-        if (uv_now(deviceState.loop) - start > 5000) {
+        // In case there is a new state pending, we break out of the loop after 5 seconds.
+        if (device->NewStatePending() && uv_now(deviceState.loop) - start > 5000) {
           LOGP(info, "Timeout while draining messages, going to next state anyway.");
           break;
+        }
+        // Reset the start time if we have not seen a new state yet.
+        if (!device->NewStatePending()) {
+          start = uv_now(deviceState.loop);
         }
         fair::mq::Parts parts;
         for (size_t ci = 0; ci < deviceState.inputChannelInfos.size(); ++ci) {

@@ -152,7 +152,6 @@ GPUd() bool GPUTPCGMTrackParam::Fit(GPUTPCGMMerger* GPUrestrict() merger, int iT
 
       const bool allowModification = refit && (iWay == 0 || (((nWays - iWay) & 1) ? (ihit >= CAMath::Min(maxN / 2, 30)) : (ihit <= CAMath::Max(maxN / 2, maxN - 30))));
       int ihitMergeFirst = ihit;
-      prop.SetStatErrorCurCluster(&clusters[ihit]);
 
       float xx, yy, zz;
       if (merger->Param().par.earlyTpcTransform) {
@@ -1153,6 +1152,7 @@ GPUd() void GPUTPCGMTrackParam::RefitTrack(GPUTPCGMMergedTrack& GPUrestrict() tr
     track.SetLastX(xx * cosA - yy * sinA);
     track.SetLastY(xx * sinA + yy * cosA);
     track.SetLastZ(zz);
+    // merger->DebugRefitMergedTrack(track);
   }
 }
 
@@ -1168,7 +1168,7 @@ GPUd() void GPUTPCGMTrackParam::Rotate(float alpha)
   float j2 = cosPhi / cosPhi0;
   mX = x0 * cA + mP[0] * sA;
   mP[0] = -x0 * sA + mP[0] * cA;
-  mP[2] = sinPhi + j2;
+  mP[2] = sinPhi;
   mC[0] *= j0 * j0;
   mC[1] *= j0;
   mC[3] *= j0;
