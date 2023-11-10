@@ -15,6 +15,9 @@
 #ifndef O2_FRAMEWORK_DEVICECONTEXT_H_
 #define O2_FRAMEWORK_DEVICECONTEXT_H_
 
+#include <cstddef>
+#include <atomic>
+
 typedef struct uv_timer_s uv_timer_t;
 typedef struct uv_signal_s uv_signal_t;
 
