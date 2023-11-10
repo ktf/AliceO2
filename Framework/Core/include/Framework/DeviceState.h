@@ -19,6 +19,7 @@
 #include <string>
 #include <map>
 #include <utility>
+#include <atomic>
 
 typedef struct uv_loop_s uv_loop_t;
 typedef struct uv_timer_s uv_timer_t;
