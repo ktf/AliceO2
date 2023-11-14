@@ -107,10 +107,10 @@ endif()
 if(HepMC3_FOUND)
   list(APPEND headers include/Generators/GeneratorHepMC.h)
   list(APPEND headers include/Generators/GeneratorHepMCParam.h)
-  list(APPEND headers include/Generators/AODToHepMC.h)
 endif()
 
-o2_target_root_dictionary(Generators HEADERS ${headers})
+o2_target_root_dictionary(Generators HEADERS ${headers}
+                                             $<$<BOOL:${HepMC3_FOUND}>:include/Generators/AODToHepMC.h>)
 
 o2_add_test_root_macro(share/external/extgen.C
                        PUBLIC_LINK_LIBRARIES O2::Generators FairRoot::Base
