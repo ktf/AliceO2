@@ -104,13 +104,16 @@ if(pythia_FOUND)
               include/Generators/GeneratorFactory.h)
 endif()
 
+list(APPEND root_headers ${headers})
 if(HepMC3_FOUND)
   list(APPEND headers include/Generators/GeneratorHepMC.h)
   list(APPEND headers include/Generators/GeneratorHepMCParam.h)
+  list(APPEND root_headers include/Generators/GeneratorHepMC.h)
+  list(APPEND root_headers include/Generators/GeneratorHepMCParam.h)
   list(APPEND headers include/Generators/AODToHepMC.h)
 endif()
 
-o2_target_root_dictionary(Generators HEADERS ${headers})
+o2_target_root_dictionary(Generators HEADERS ${root_headers})
 
 o2_add_test_root_macro(share/external/extgen.C
                        PUBLIC_LINK_LIBRARIES O2::Generators FairRoot::Base
