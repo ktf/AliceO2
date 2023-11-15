@@ -1233,4 +1233,30 @@ std::vector<InputSpec> WorkflowHelpers::computeDanglingOutputs(WorkflowSpec cons
 }
 
 #pragma diagnostic pop
+void WorkflowHelpers::validateEdges(WorkflowSpec const& workflow,
+                                    std::vector<DeviceConnectionEdge> const& edges,
+                                    std::vector<OutputSpec> const& outputs)
+{
+  // Iterate over all the edges.
+  // Get the input lifetime and the output lifetime.
+  // Output lifetime must be Timeframe if the input lifetime is Timeframe.
+  std::string errors;
+  for (auto& edge : edges) {
+    auto& producer = workflow[edge.producer];
+    auto& consumer = workflow[edge.consumer];
+    auto& output = outputs[edge.outputGlobalIndex];
+    auto& input = consumer.inputs[edge.consumerInputIndex];
+    // We cannot simply say "!Timeframe" because we want to allow
+    // e.g. Enumeration => Timeframe
+    if (input.lifetime == Lifetime::Timeframe && output.lifetime == Lifetime::Sporadic) {
+      errors += fmt::format("Input {} of {} has lifetime Timeframe, but output {} of {} has lifetime Sporadic\n",
+                            DataSpecUtils::describe(input).c_str(), consumer.name,
+                            DataSpecUtils::describe(output).c_str(), producer.name);
+    }
+  }
+  if (!errors.empty()) {
+    throw std::runtime_error(errors);
+  }
+}
+
 } // namespace o2::framework
