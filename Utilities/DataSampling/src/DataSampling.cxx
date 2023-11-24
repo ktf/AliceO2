@@ -95,7 +95,7 @@ void DataSampling::DoGenerateInfrastructure(Dispatcher& dispatcher, WorkflowSpec
     spec.inputs = dispatcher.getInputSpecs();
     spec.outputs = dispatcher.getOutputSpecs();
     spec.maxInputTimeslices = threads;
-    spec.labels = {{"DataSampling"}, {"Dispatcher"}};
+    spec.labels = {{"DataSampling"}, {"Dispatcher"}, {"resilient"}};
     spec.options = dispatcher.getOptions();
     spec.algorithm = adaptFromTask<Dispatcher>(std::move(dispatcher));
 
