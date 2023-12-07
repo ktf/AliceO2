@@ -874,6 +874,7 @@ bool processSigChild(DeviceInfos& infos, DeviceSpecs& specs)
         } else {
           if (WIFSIGNALED(status)) {
             int exitSignal = WTERMSIG(status);
+            es = exitSignal + 128;
             LOGP(error, "Workflow crashed - pid {} ({}) was killed abnormally with {} and exited with {}", pid, id, strsignal(exitSignal), es);
           } else {
             LOGP(error, "pid {} ({}) exited with {}", pid, id, es);
