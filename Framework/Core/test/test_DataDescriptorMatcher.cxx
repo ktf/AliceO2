@@ -668,10 +668,10 @@ TEST_CASE("DataQuery")
   REQUIRE(result5[0].metadata[1].defaultValue.get<std::string>() == "GLO/Config/GRPECS");
   REQUIRE(result5[0].metadata[2].name == "key3");
   REQUIRE(result5[0].metadata[2].defaultValue.get<std::string>() == "value3");
-
 }
 
-TEST_CASE("DataQueryLifetime") {
+TEST_CASE("DataQueryLifetime")
+{
   auto result0 = DataDescriptorQueryBuilder::parse("x:TST/A1?lifetime=timeframe");
   REQUIRE(result0.size() == 1);
   REQUIRE(result0[0].lifetime == Lifetime::Timeframe);
