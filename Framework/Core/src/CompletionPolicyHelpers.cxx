@@ -15,14 +15,12 @@
 #include "Framework/DeviceSpec.h"
 #include "Framework/CompilerBuiltins.h"
 #include "Framework/Logger.h"
+#include "Framework/TimesliceIndex.h"
 #include "Framework/TimingInfo.h"
 #include "DecongestionService.h"
 
 #include <cassert>
 #include <regex>
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 
 namespace o2::framework
 {
@@ -35,7 +33,7 @@ CompletionPolicy CompletionPolicyHelpers::defineByNameOrigin(std::string const& 
 
   auto originReceived = std::make_shared<std::vector<uint64_t>>();
 
-  auto callback = [originReceived, origin, op](InputSpan const& inputRefs) -> CompletionPolicy::CompletionOp {
+  auto callback = [originReceived, origin, op](InputSpan const& inputRefs, std::vector<InputSpec> const&, ServiceRegistryRef&) -> CompletionPolicy::CompletionOp {
     // update list of the start times of inputs with origin @origin
     for (auto& ref : inputRefs) {
       if (ref.header != nullptr) {
@@ -77,7 +75,7 @@ CompletionPolicy CompletionPolicyHelpers::defineByName(std::string const& name, 
   auto matcher = [name](DeviceSpec const& device) -> bool {
     return std::regex_match(device.name.begin(), device.name.end(), std::regex(name));
   };
-  auto callback = [op](InputSpan const&) -> CompletionPolicy::CompletionOp {
+  auto callback = [op](InputSpan const&, std::vector<InputSpec> const& specs, ServiceRegistryRef& ref) -> CompletionPolicy::CompletionOp {
     return op;
   };
   switch (op) {
@@ -108,11 +106,34 @@ CompletionPolicy CompletionPolicyHelpers::defineByName(std::string const& name, 
 
 CompletionPolicy CompletionPolicyHelpers::consumeWhenAll(const char* name, CompletionPolicy::Matcher matcher)
 {
-  auto callback = [](InputSpan const& inputs) -> CompletionPolicy::CompletionOp {
+  auto callback = [](InputSpan const& inputs, std::vector<InputSpec> const& specs, ServiceRegistryRef& ref) -> CompletionPolicy::CompletionOp {
+    assert(inputs.size() == spec.size());
+
+    size_t si = 0;
+    bool missingSporadic = false;
+    size_t currentTimeslice = -1;
     for (auto& input : inputs) {
-      if (input.header == nullptr) {
+      assert(si < specs.size());
+      auto& spec = specs[si++];
+      if (input.header == nullptr && spec.lifetime != Lifetime::Sporadic) {
         return CompletionPolicy::CompletionOp::Wait;
       }
+      if (input.header == nullptr && spec.lifetime == Lifetime::Sporadic) {
+        missingSporadic |= true;
+      }
+      if (input.header != nullptr) {
+        auto const* dph = framework::DataRefUtils::getHeader<o2::framework::DataProcessingHeader*>(input);
+        if (dph && !TimingInfo::timesliceIsTimer(dph->startTime)) {
+          currentTimeslice = dph->startTime;
+          break;
+        }
+      }
+    }
+    // If some sporadic inputs are missing, we wait for them util we are sure they will not come,
+    // i.e. until the oldest possible timeslice is beyond the timeslice of the input.
+    auto& timesliceIndex = ref.get<TimesliceIndex>();
+    if (missingSporadic && currentTimeslice >= timesliceIndex.getOldestPossibleInput().timeslice.value) {
+      return CompletionPolicy::CompletionOp::Wait;
     }
     return CompletionPolicy::CompletionOp::Consume;
   };
@@ -123,7 +144,7 @@ CompletionPolicy CompletionPolicyHelpers::consumeWhenAllOrdered(const char* name
 {
   auto callbackFull = [](InputSpan const& inputs, std::vector<InputSpec> const&, ServiceRegistryRef& ref) -> CompletionPolicy::CompletionOp {
     auto& decongestionService = ref.get<DecongestionService>();
-    decongestionService.orderedCompletionPolicyActive = 1;
+    decongestionService.orderedCompletionPolicyActive = true;
     for (auto& input : inputs) {
       if (input.header == nullptr) {
         return CompletionPolicy::CompletionOp::Wait;
@@ -199,7 +220,7 @@ CompletionPolicy CompletionPolicyHelpers::consumeExistingWhenAny(const char* nam
 
 CompletionPolicy CompletionPolicyHelpers::consumeWhenAny(const char* name, CompletionPolicy::Matcher matcher)
 {
-  auto callback = [](InputSpan const& inputs) -> CompletionPolicy::CompletionOp {
+  auto callback = [](InputSpan const& inputs, std::vector<InputSpec> const&, ServiceRegistryRef& ref) -> CompletionPolicy::CompletionOp {
     for (auto& input : inputs) {
       if (input.header != nullptr) {
         return CompletionPolicy::CompletionOp::Consume;
@@ -289,7 +310,7 @@ CompletionPolicy CompletionPolicyHelpers::consumeWhenAnyWithAllConditions(std::s
 
 CompletionPolicy CompletionPolicyHelpers::processWhenAny(const char* name, CompletionPolicy::Matcher matcher)
 {
-  auto callback = [](InputSpan const& inputs) -> CompletionPolicy::CompletionOp {
+  auto callback = [](InputSpan const& inputs, std::vector<InputSpec> const&, ServiceRegistryRef& ref) -> CompletionPolicy::CompletionOp {
     size_t present = 0;
     for (auto& input : inputs) {
       if (input.header != nullptr) {
@@ -307,4 +328,3 @@ CompletionPolicy CompletionPolicyHelpers::processWhenAny(const char* name, Compl
 }
 
 } // namespace o2::framework
-#pragma GCC diagnostic pop
