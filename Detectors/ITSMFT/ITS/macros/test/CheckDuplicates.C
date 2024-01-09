@@ -23,7 +23,6 @@
 #include <TStyle.h>
 #include <TGaxis.h>
 
-
 #include "DataFormatsITS/TrackITS.h"
 #endif
 #include "DataFormatsITSMFT/ROFRecord.h"
