@@ -23,13 +23,13 @@ struct o2_log_handle_t {
 // Helper function which replaces engineering types with a printf
 // compatible format string.
 template <auto N>
-constexpr auto remove_engineering_type(char const (&src)[N]) {
+constexpr auto remove_engineering_type(char const (&src)[N])
+{
   std::array<char, N> res = {};
   // do whatever string manipulation you want in res.
-  char *t = res.data();
+  char* t = res.data();
   for (int i = 0; i < N; ++i) {
-    if (src[i] == '%' && src[i+1] == '{')
-    {
+    if (src[i] == '%' && src[i + 1] == '{') {
       *t++ = src[i];
       while (src[i] != '}' && src[i] != 0) {
         ++i;
