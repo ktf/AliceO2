@@ -190,7 +190,6 @@ void on_connect(uv_connect_t* connection, int status)
     } else {
       O2_LOG_DISABLE(monitoring_service);
     }
-
   });
 
   // Client will be filled in the line after. I can probably have a single
