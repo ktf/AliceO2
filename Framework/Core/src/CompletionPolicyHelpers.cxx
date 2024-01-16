@@ -131,6 +131,9 @@ CompletionPolicy CompletionPolicyHelpers::consumeWhenAll(const char* name, Compl
         // we are sure that no more data will come.
         needsProcessing |= (spec.lifetime != Lifetime::Condition);
       }
+      if (input.header != nullptr && spec.lifetime != Lifetime::Condition) {
+        needsProcessing = true;
+      }
     }
     // If some sporadic inputs are missing, we wait for them util we are sure they will not come,
     // i.e. until the oldest possible timeslice is beyond the timeslice of the input.
