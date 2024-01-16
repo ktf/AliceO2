@@ -127,7 +127,7 @@ CompletionPolicy CompletionPolicyHelpers::consumeWhenAll(const char* name, Compl
         if (dph && !TimingInfo::timesliceIsTimer(dph->startTime)) {
           currentTimeslice = dph->startTime;
         }
-        // If we have at least some data, we can consume, otherwise we can Discard once 
+        // If we have at least some data, we can consume, otherwise we can Discard once
         // we are sure that no more data will come.
         needsProcessing |= (spec.lifetime != Lifetime::Condition);
       }
