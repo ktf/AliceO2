@@ -679,7 +679,7 @@ void DeviceSpecHelpers::processOutEdgeActions(ConfigContext const& configContext
     assert(policyPtr != nullptr);
 
     if (edge.isForward == false) {
-      auto &matcher = outputsMatchers[edge.outputGlobalIndex];
+      auto& matcher = outputsMatchers[edge.outputGlobalIndex];
       if (matcher.enabled == false) {
         throw runtime_error_f("Output %s is disabled but it was still used in topology", DataSpecUtils::describe(matcher).data());
       }
@@ -692,7 +692,7 @@ void DeviceSpecHelpers::processOutEdgeActions(ConfigContext const& configContext
       };
       device.outputs.emplace_back(route);
     } else {
-      auto &matcher = workflow[edge.consumer].inputs[edge.consumerInputIndex];
+      auto& matcher = workflow[edge.consumer].inputs[edge.consumerInputIndex];
       if (matcher.enabled == false) {
         throw runtime_error_f("Output %s is disabled but it was still used in topology", DataSpecUtils::describe(matcher).data());
       }
