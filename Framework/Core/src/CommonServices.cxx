@@ -458,7 +458,7 @@ o2::framework::ServiceSpec CommonServices::ccdbSupportSpec()
       // For any output that is a FLP/DISTSUBTIMEFRAME with subspec != 0,
       // we create a new message.
       InputSpec matcher{"matcher", ConcreteDataTypeMatcher{"FLP", "DISTSUBTIMEFRAME"}};
-      auto &streamContext = pc.services().get<StreamContext>();
+      auto& streamContext = pc.services().get<StreamContext>();
       for (size_t oi = 0; oi < pc.services().get<DeviceSpec const>().outputs.size(); ++oi) {
         OutputRoute const& output = pc.services().get<DeviceSpec const>().outputs[oi];
         if ((output.timeslice % output.maxTimeslices) != 0) {
