@@ -216,8 +216,7 @@ o2::framework::ServiceSpec CommonServices::streamContextSpec()
           LOGP(error, "Expected Lifetime::Timeframe data {} was not created for timeslice {} and might result in dropped timeframes", DataSpecUtils::describe(matcher), timeslice);
         }
       } 
-      O2_LOG_DISABLE(stream_context);
-      },
+      O2_LOG_DISABLE(stream_context); },
     .kind = ServiceKind::Stream};
 }
 
