@@ -18,6 +18,7 @@
 #include "Framework/DataDescriptorMatcher.h"
 #include "Framework/DataMatcherWalker.h"
 #include "Framework/Logger.h"
+#include "Framework/Signpost.h"
 
 #include <rapidjson/reader.h>
 #include <rapidjson/prettywriter.h>
@@ -26,6 +27,8 @@
 #include <iostream>
 #include <algorithm>
 #include <memory>
+
+O2_DECLARE_DYNAMIC_LOG(workflow_importer);
 
 namespace o2::framework
 {
@@ -58,6 +61,7 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     IN_INPUT_ORIGIN,
     IN_INPUT_DESCRIPTION,
     IN_INPUT_SUBSPEC,
+    IN_INPUT_ENABLED,
     IN_INPUT_ORIGIN_REF,
     IN_INPUT_DESCRIPTION_REF,
     IN_INPUT_SUBSPEC_REF,
@@ -72,6 +76,7 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     IN_OUTPUT_BINDING,
     IN_OUTPUT_ORIGIN,
     IN_OUTPUT_DESCRIPTION,
+    IN_OUTPUT_ENABLED,
     IN_OUTPUT_SUBSPEC,
     IN_OUTPUT_LIFETIME,
     IN_OUTPUT_OPTIONS,
@@ -164,6 +169,9 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       case State::IN_INPUT_SUBSPEC:
         s << "IN_INPUT_SUBSPEC";
         break;
+      case State::IN_INPUT_ENABLED:
+        s << "IN_INPUT_ENABLED";
+        break;
       case State::IN_INPUT_ORIGIN_REF:
         s << "IN_INPUT_ORIGIN_REF";
         break;
@@ -214,6 +222,9 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
         break;
       case State::IN_OUTPUT_OPTIONS:
         s << "IN_OUTPUT_OPTIONS";
+        break;
+      case WorkflowImporter::State::IN_OUTPUT_ENABLED:
+        s << "IN_OUTPUT_ENABLED";
         break;
       case State::IN_OPTION:
         s << "IN_OPTION";
@@ -299,6 +310,7 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       dataProcessors.push_back(DataProcessorSpec{});
     } else if (in(State::IN_INPUTS)) {
       push(State::IN_INPUT);
+      enabled = true;
       inputMatcherNodes.clear();
     } else if (in(State::IN_INPUT_MATCHER)) {
       // start a new embedded matcher
@@ -310,6 +322,7 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       // will be merged into the parent matcher
     } else if (in(State::IN_OUTPUTS)) {
       push(State::IN_OUTPUT);
+      enabled = true;
       outputHasSubSpec = false;
     } else if (in(State::IN_OPTIONS)) {
       push(State::IN_OPTION);
@@ -367,9 +380,9 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       } else {
         dataProcessors.back().inputs.push_back(InputSpec({binding}, std::move(*matcher), lifetime, inputOptions));
       }
+      dataProcessors.back().inputs.back().enabled = enabled;
       inputMatcherNodes.clear();
       inputOptions.clear();
-
     } else if (in(State::IN_INPUT_MATCHER) && inputMatcherNodes.size() > 1) {
       data_matcher::Node child = std::move(inputMatcherNodes.back());
       inputMatcherNodes.pop_back();
@@ -430,6 +443,7 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       } else {
         dataProcessors.back().outputs.push_back(OutputSpec({binding}, {origin, description}, lifetime));
       }
+      dataProcessors.back().outputs.back().enabled = enabled;
       outputHasSubSpec = false;
     } else if (in(State::IN_OPTION)) {
       std::unique_ptr<ConfigParamSpec> opt{nullptr};
@@ -542,12 +556,14 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       push(State::IN_DATAPROCESSORS);
     } else if (in(State::IN_INPUTS)) {
       push(State::IN_INPUT);
+      enabled = true;
     } else if (in(State::IN_INPUT_OPTIONS)) {
       push(State::IN_OPTION);
     } else if (in(State::IN_OUTPUT_OPTIONS)) {
       push(State::IN_OPTION);
     } else if (in(State::IN_OUTPUTS)) {
       push(State::IN_OUTPUT);
+      enabled = true;
       outputHasSubSpec = false;
     } else if (in(State::IN_OPTIONS)) {
       push(State::IN_OPTION);
@@ -599,6 +615,8 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       push(State::IN_INPUT_DESCRIPTION_REF);
     } else if (in(State::IN_INPUT) && strncmp(str, "subspecRef", length) == 0) {
       push(State::IN_INPUT_SUBSPEC_REF);
+    } else if (in(State::IN_INPUT) && strncmp(str, "enabled", length) == 0) {
+      push(State::IN_INPUT_ENABLED);
     } else if (in(State::IN_INPUT) && strncmp(str, "matcher", length) == 0) {
       // the outermost matcher is starting here
       // we create a placeholder which is being updated later
@@ -661,6 +679,8 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       push(State::IN_OUTPUT_LIFETIME);
     } else if (in(State::IN_OUTPUT) && strncmp(str, "metadata", length) == 0) {
       push(State::IN_OUTPUT_OPTIONS);
+    } else if (in(State::IN_OUTPUT) && strncmp(str, "enabled", length) == 0) {
+      push(State::IN_OUTPUT_ENABLED);
     } else if (in(State::IN_DATAPROCESSOR) && strncmp(str, "name", length) == 0) {
       push(State::IN_DATAPROCESSOR_NAME);
     } else if (in(State::IN_DATAPROCESSOR) && strncmp(str, "ranks", length) == 0) {
@@ -731,6 +751,8 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       metadata.back().executable = s;
     } else if (in(State::IN_INPUT_BINDING)) {
       binding = s;
+    } else if (in(State::IN_INPUT_ENABLED)) {
+      enabled = (s == "true");
     } else if (in(State::IN_INPUT_ORIGIN)) {
       origin.runtimeInit(s.c_str(), std::min(s.size(), 4UL));
       std::string v(s.c_str(), std::min(s.size(), 4UL));
@@ -811,7 +833,7 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
   bool Uint(unsigned i)
   {
-    debug << "Uint(" << i << ")" << std::endl;
+    O2_SIGNPOST_EVENT_EMIT(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()}, "import", "Uint(%d)", i);
     if (in(State::IN_INPUT_SUBSPEC)) {
       subspec = i;
       inputMatcherNodes.push_back(SubSpecificationTypeValueMatcher{i});
@@ -838,6 +860,10 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
       dataProcessors.back().inputTimeSliceId = i;
     } else if (in(State::IN_DATAPROCESSOR_MAX_TIMESLICES)) {
       dataProcessors.back().maxInputTimeslices = i;
+    } else if (in(State::IN_INPUT_ENABLED)) {
+      enabled = (i == 1);
+    } else if (in(State::IN_OUTPUT_ENABLED)) {
+      enabled = (i == 1);
     }
     pop();
     return true;
@@ -845,28 +871,31 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
 
   bool Int(int i)
   {
-    debug << "Int(" << i << ")" << std::endl;
+    O2_SIGNPOST_EVENT_EMIT(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()}, "import", "Int(%d)", i);
     return true;
   }
   bool Uint64(uint64_t u)
   {
-    debug << "Uint64(" << u << ")" << std::endl;
+    O2_SIGNPOST_EVENT_EMIT(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()}, "import", "Uint64(%" PRIu64 ")", u);
     return true;
   }
   bool Double(double d)
   {
-    debug << "Double(" << d << ")" << std::endl;
+    O2_SIGNPOST_EVENT_EMIT(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()}, "import", "Double(%f)", d);
     return true;
   }
 
   void enter(char const* what)
   {
-    debug << "ENTER: " << what << std::endl;
+    O2_SIGNPOST_EVENT_EMIT(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()}, "import", "ENTER: %s", what);
   }
+
   void push(State state)
   {
-    debug << "PUSH: " << state << std::endl;
+    debug.str("");
+    debug << state;
     states.push_back(state);
+    O2_SIGNPOST_START(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()}, "import", "PUSH: %s", debug.str().c_str());
   }
 
   State pop()
@@ -877,11 +906,12 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
     }
     auto result = states.back();
     states.pop_back();
-    debug << "POP: " << result;
+    debug.str("");
+    debug << result;
     if (!states.empty()) {
       debug << " now in " << states.back();
     }
-    debug << std::endl;
+    O2_SIGNPOST_END(workflow_importer, _o2_signpost_id_t{(int64_t)states.size()+1}, "import", "POP: %s", debug.str().c_str());
     return result;
   }
   bool in(State o)
@@ -908,6 +938,9 @@ struct WorkflowImporter : public rapidjson::BaseReaderHandler<rapidjson::UTF8<>,
   header::DataDescription description;
   size_t subspec;
   size_t ref;
+  // Keep track of the enabled state of the input/output
+  // Unless specified, inputs are enabled by default.
+  bool enabled = true;
   Lifetime lifetime;
   std::string metadatumKey;
   std::string metadatumValue;
@@ -1096,6 +1129,8 @@ void WorkflowSerializationHelpers::dump(std::ostream& out,
       }
       w.Key("lifetime");
       w.Uint((int)input.lifetime);
+      w.Key("enabled");
+      w.Uint((int)input.enabled);
       if (input.metadata.empty() == false) {
         w.Key("metadata");
         w.StartArray();
@@ -1145,6 +1180,8 @@ void WorkflowSerializationHelpers::dump(std::ostream& out,
       }
       w.Key("lifetime");
       w.Uint((int)output.lifetime);
+      w.Key("enabled");
+      w.Uint((int)output.enabled);
       if (output.metadata.empty() == false) {
         w.Key("metadata");
         w.StartArray();
