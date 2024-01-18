@@ -45,7 +45,7 @@ TEST_CASE("RootTree2Table")
   t1.Branch("ev", &ev, "ev/I");
   t1.Branch("xyz", xyz, "xyz[3]/F");
   t1.Branch("ij", ij, "ij[2]/I");
-  //fill the tree
+  // fill the tree
   for (Int_t i = 0; i < 1000; i++) {
     xyz[0] = 1;
     xyz[1] = 2;
@@ -146,7 +146,7 @@ TEST_CASE("RootTree2TableViaASoA")
   t2.Branch("ev", &ev, "ev/I");
   t2.Branch("xyz", xyz, "xyz[3]/F");
   t2.Branch("ij", ij, "ij[2]/I");
-  //fill the tree
+  // fill the tree
   for (Int_t i = 0; i < 1000; i++) {
     gRandom->Rannor(xyz[0], xyz[1]);
     gRandom->Rannor(px, py);
