@@ -17,9 +17,10 @@ O2_DECLARE_DYNAMIC_LOG(data_processor_context);
 namespace o2::framework
 {
 
-namespace {
+namespace
+{
 template <typename T, typename... ARGS>
-void invokeAll(T& handles, char const* callbackName, o2::framework::DataProcessorSpec *spec, ARGS&... args)
+void invokeAll(T& handles, char const* callbackName, o2::framework::DataProcessorSpec* spec, ARGS&... args)
 {
   assert(callbackName);
   O2_SIGNPOST_ID_FROM_POINTER(dpid, data_processor_context, spec);
@@ -35,7 +36,7 @@ void invokeAll(T& handles, char const* callbackName, o2::framework::DataProcesso
   }
   O2_SIGNPOST_END(data_processor_context, dpid, "callbacks", "Ending %{public}s::%{public}s", dataProcessorName, callbackName);
 }
-}
+} // namespace
 
 /// Invoke callbacks to be executed before every dangling check
 void DataProcessorContext::preProcessingCallbacks(ProcessingContext& ctx)
