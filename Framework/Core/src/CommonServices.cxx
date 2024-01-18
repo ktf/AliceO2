@@ -199,6 +199,11 @@ o2::framework::ServiceSpec CommonServices::streamContextSpec()
                                messageContext.didDispatch());
         return;
       }
+      if (didCreate == false && messageContext.didDispatch() == false) {
+        O2_SIGNPOST_ID_FROM_POINTER(cid, stream_context, service);
+        O2_SIGNPOST_EVENT_EMIT(stream_context, cid, "postProcessingCallbacks", "No data created");
+        return;
+      }
       for (size_t ri = 0; ri < routes.size(); ++ri) {
         auto &route = routes[ri];
         auto &matcher = route.matcher;
