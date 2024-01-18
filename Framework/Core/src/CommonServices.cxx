@@ -214,8 +214,7 @@ o2::framework::ServiceSpec CommonServices::streamContextSpec()
         if (matcher.lifetime == Lifetime::Timeframe) {
           LOGP(error, "Expected Lifetime::Timeframe data {} was not created for timeslice {} and might result in dropped timeframes", DataSpecUtils::describe(matcher), timeslice);
         }
-      } 
-      },
+      } },
     .kind = ServiceKind::Stream};
 }
 
