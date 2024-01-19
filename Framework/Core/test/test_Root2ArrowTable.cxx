@@ -91,7 +91,6 @@ TEST_CASE("RootTree2Table")
     REQUIRE(array->length() == 3000);
     const float* c = reinterpret_cast<float const*>(array->values()->data());
 
-
     CHECK(c[0] == 1);
     CHECK(c[1] == 2);
     CHECK(c[2] == 1);
