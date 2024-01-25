@@ -621,7 +621,7 @@ o2::framework::ServiceSpec CommonServices::decongestionSpec()
           O2_SIGNPOST_ID_FROM_POINTER(cid, data_processor_context, &decongestion);
           if (decongestion.lastTimeslice >= oldestPossibleOutput.timeslice.value) {
             O2_SIGNPOST_EVENT_EMIT(data_processor_context, cid, "oldest_possible_timeslice", "Not sending already sent value: %" PRIu64 "> %" PRIu64,
-                decongestion.lastTimeslice, (uint64_t)oldestPossibleOutput.timeslice.value);
+                                   decongestion.lastTimeslice, (uint64_t)oldestPossibleOutput.timeslice.value);
             return;
           }
           O2_SIGNPOST_EVENT_EMIT(data_processor_context, cid, "oldest_possible_timeslice", "Running oldest possible timeslice %" PRIu64 " propagation.",
