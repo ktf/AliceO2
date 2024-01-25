@@ -58,7 +58,8 @@ int xnu_write(int pid, void* addr, unsigned char* data, size_t dsize)
   return kret;
 }
 #elif __linux__
-int xnu_write(int pid, void *addr, unsigned char *data, size_t dsize) {
+int xnu_write(int pid, void* addr, unsigned char* data, size_t dsize)
+{
   if ((ptrace(PTRACE_ATTACH, pid, NULL, NULL)) < 0) {
     perror("ptrace(ATTACH)");
     exit(1);
