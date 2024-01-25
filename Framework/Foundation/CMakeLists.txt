@@ -41,6 +41,11 @@ add_executable(o2-test-framework-Signpost
 add_executable(o2-test-framework-ThreadSanitizer
                test/test_ThreadSanitizer.cxx)
 
+if (APPLE)
+add_executable(o2-log
+               src/o2LogMac.cxx)
+endif()
+
 target_link_libraries(o2-test-framework-Signpost PRIVATE O2::FrameworkFoundation)
 target_link_libraries(o2-test-framework-ThreadSanitizer
                       PRIVATE O2::FrameworkFoundation Threads::Threads)
