@@ -2361,12 +2361,14 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
           (context.statefulProcess)(processContext);
           O2_SIGNPOST_END(device, pcid, "device", "Stateful process");
         } else if (context.statelessProcess && shouldProcess(action)) {
+          updateRunInformation(action.slot);
           O2_SIGNPOST_START(device, pcid, "device", "Stateful process");
           (context.statelessProcess)(processContext);
           O2_SIGNPOST_END(device, pcid, "device", "Stateful process");
         } else if (context.statelessProcess || context.statefulProcess) {
           O2_SIGNPOST_EVENT_EMIT(device, pcid, "device", "Skipping processing because we are discarding.");
         } else {
+          updateRunInformation(action.slot);
           O2_SIGNPOST_EVENT_EMIT(device, pcid, "device", "No processing callback provided. Switching to %{public}s.", "Idle");
           state.streaming = StreamingState::Idle;
         }
