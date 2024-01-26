@@ -2134,7 +2134,6 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
   // create messages) because the messages need to have the timeslice id into
   // it.
   auto prepareAllocatorForCurrentTimeSlice = [ref](TimesliceSlot i) -> void {
-    auto& dataProcessorContext = ref.get<DataProcessorContext>();
     auto& relayer = ref.get<DataRelayer>();
     auto& timingInfo = ref.get<TimingInfo>();
     ZoneScopedN("DataProcessingDevice::prepareForCurrentTimeslice");
@@ -2145,17 +2144,6 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
     timingInfo.firstTForbit = relayer.getFirstTFOrbitForSlot(i);
     timingInfo.runNumber = relayer.getRunNumberForSlot(i);
     timingInfo.creation = relayer.getCreationTimeForSlot(i);
-    timingInfo.globalRunNumberChanged = !TimingInfo::timesliceIsTimer(timeslice.value) && dataProcessorContext.lastRunNumberProcessed != timingInfo.runNumber;
-    // A switch to runNumber=0 should not appear and thus does not set globalRunNumberChanged, unless it is seen in the first processed timeslice
-    timingInfo.globalRunNumberChanged &= (dataProcessorContext.lastRunNumberProcessed == -1 || timingInfo.runNumber != 0);
-    // We report wether or not this timing info refers to a new Run.
-    if (timingInfo.globalRunNumberChanged) {
-      dataProcessorContext.lastRunNumberProcessed = timingInfo.runNumber;
-    }
-    // FIXME: for now there is only one stream, however we
-    //        should calculate this correctly once we finally get the
-    //        the StreamContext in.
-    timingInfo.streamRunNumberChanged = timingInfo.globalRunNumberChanged;
   };
 
   // When processing them, timers will have to be cleaned up
@@ -2277,9 +2265,9 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
       continue;
     }
 
-    prepareAllocatorForCurrentTimeSlice(TimesliceSlot{action.slot});
     bool shouldConsume = action.op == CompletionPolicy::CompletionOp::Consume ||
                          action.op == CompletionPolicy::CompletionOp::Discard;
+    prepareAllocatorForCurrentTimeSlice(TimesliceSlot{action.slot});
     InputSpan span = getInputSpan(action.slot, shouldConsume);
     auto& spec = ref.get<DeviceSpec const>();
     InputRecord record{spec.inputs,
@@ -2338,6 +2326,23 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
             return false;
         }
       };
+      auto updateRunInformation = [ref](TimesliceSlot i) -> void {
+        auto& dataProcessorContext = ref.get<DataProcessorContext>();
+        auto& relayer = ref.get<DataRelayer>();
+        auto& timingInfo = ref.get<TimingInfo>();
+        auto timeslice = relayer.getTimesliceForSlot(i);
+        timingInfo.globalRunNumberChanged = !TimingInfo::timesliceIsTimer(timeslice.value) && dataProcessorContext.lastRunNumberProcessed != timingInfo.runNumber;
+        // A switch to runNumber=0 should not appear and thus does not set globalRunNumberChanged, unless it is seen in the first processed timeslice
+        timingInfo.globalRunNumberChanged &= (dataProcessorContext.lastRunNumberProcessed == -1 || timingInfo.runNumber != 0);
+        // We report wether or not this timing info refers to a new Run.
+        if (timingInfo.globalRunNumberChanged) {
+          dataProcessorContext.lastRunNumberProcessed = timingInfo.runNumber;
+        }
+        // FIXME: for now there is only one stream, however we
+        //        should calculate this correctly once we finally get the
+        //        the StreamContext in.
+        timingInfo.streamRunNumberChanged = timingInfo.globalRunNumberChanged;
+      };
       if (state.quitRequested == false) {
         {
           // Callbacks from services
@@ -2349,6 +2354,7 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
         }
         O2_SIGNPOST_ID_FROM_POINTER(pcid, device, &processContext);
         if (context.statefulProcess && shouldProcess(action)) {
+          updateRunInformation(action.slot);
           // This way, usercode can use the the same processing context to identify
           // its signposts and we can map user code to device iterations.
           O2_SIGNPOST_START(device, pcid, "device", "Stateful process");
