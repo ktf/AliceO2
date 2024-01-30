@@ -9,7 +9,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#include "GlobalTrackingStudy/TPCTrackStudy.h"
+#include "GlobalTrackingStudy/TrackMCStudy.h"
 #include "ReconstructionDataFormats/GlobalTrackID.h"
 #include "DetectorsCommonDataFormats/DetID.h"
 #include "CommonUtils/ConfigurableParam.h"
@@ -20,8 +20,6 @@
 #include "DetectorsBase/DPLWorkflowUtils.h"
 #include "GlobalTrackingWorkflowHelpers/InputHelper.h"
 #include "DetectorsRaw/HBFUtilsInitializer.h"
-#include "TPCCalibration/CorrectionMapsLoader.h"
-#include "TPCWorkflow/TPCScalerSpec.h"
 
 using namespace o2::framework;
 using GID = o2::dataformats::GlobalTrackID;
@@ -38,12 +36,11 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
 {
   // option allowing to set parameters
   std::vector<o2::framework::ConfigParamSpec> options{
-    {"disable-mc", o2::framework::VariantType::Bool, false, {"disable MC propagation"}},
     {"track-sources", VariantType::String, std::string{GID::ALL}, {"comma-separated list of track sources to use"}},
     {"cluster-sources", VariantType::String, std::string{GID::ALL}, {"comma-separated list of cluster sources to use"}},
     {"disable-root-input", VariantType::Bool, false, {"disable root-files input reader"}},
+    {"disable-mc", o2::framework::VariantType::Bool, false, {"disable MC propagation, never use it"}},
     {"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings ..."}}};
-  o2::tpc::CorrectionMapsLoader::addGlobalOptions(options);
   o2::raw::HBFUtilsInitializer::addConfigOption(options);
   std::swap(workflowOptions, options);
 }
@@ -55,26 +52,22 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
 WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
 {
   WorkflowSpec specs;
-
-  GID::mask_t allowedSourcesTrc = GID::getSourcesMask("TPC");
-  GID::mask_t allowedSourcesClus = GID::getSourcesMask("TPC");
+  auto useMC = !configcontext.options().get<bool>("disable-mc");
+  if (!useMC) {
+    throw std::runtime_error("MC cannot be disabled for this workflow");
+  }
+  GID::mask_t allowedSourcesTrc = GID::getSourcesMask("ITS,TPC,ITS-TPC,TPC-TOF,TPC-TRD,ITS-TPC-TRD,TPC-TRD-TOF,ITS-TPC-TOF,ITS-TPC-TRD-TOF");
+  GID::mask_t allowedSourcesClus = GID::getSourcesMask("none");
 
   // Update the (declared) parameters if changed from the command line
   o2::conf::ConfigurableParam::updateFromString(configcontext.options().get<std::string>("configKeyValues"));
-  auto useMC = !configcontext.options().get<bool>("disable-mc");
-  auto sclOpt = o2::tpc::CorrectionMapsLoader::parseGlobalOptions(configcontext.options());
+
   GID::mask_t srcTrc = allowedSourcesTrc & GID::getSourcesMask(configcontext.options().get<std::string>("track-sources"));
   GID::mask_t srcCls = allowedSourcesClus & GID::getSourcesMask(configcontext.options().get<std::string>("cluster-sources"));
-  if (sclOpt.lumiType == 1) {
-    srcTrc = srcTrc | GID::getSourcesMask("CTP");
-    srcCls = srcCls | GID::getSourcesMask("CTP");
-  }
-  o2::globaltracking::InputHelper::addInputSpecs(configcontext, specs, srcCls, srcTrc, srcTrc, useMC);
-  o2::globaltracking::InputHelper::addInputSpecsPVertex(configcontext, specs, useMC); // P-vertex is always needed
-  if (sclOpt.needTPCScalersWorkflow() && !configcontext.options().get<bool>("disable-root-input")) {
-    specs.emplace_back(o2::tpc::getTPCScalerSpec(sclOpt.lumiType == 2, sclOpt.enableMShapeCorrection));
-  }
-  specs.emplace_back(o2::trackstudy::getTPCTrackStudySpec(srcTrc, srcCls, useMC, sclOpt));
+
+  o2::globaltracking::InputHelper::addInputSpecs(configcontext, specs, srcCls, srcTrc, srcTrc, true);
+  o2::globaltracking::InputHelper::addInputSpecsPVertex(configcontext, specs, true); // P-vertex is always needed
+  specs.emplace_back(o2::trackstudy::getTrackMCStudySpec(srcTrc, srcCls));
 
   // configure dpl timer to inject correct firstTForbit: start from the 1st orbit of TF containing 1st sampled orbit
   o2::raw::HBFUtilsInitializer hbfIni(configcontext, specs);

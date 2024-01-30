@@ -9,15 +9,21 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifdef __CLING__
+#ifndef O2_TRACKING_STUDY_H
+#define O2_TRACKING_STUDY_H
 
-#pragma link off all globals;
-#pragma link off all classes;
-#pragma link off all functions;
+#include "ReconstructionDataFormats/GlobalTrackID.h"
+#include "Framework/Task.h"
+#include "Framework/DataProcessorSpec.h"
+#include "ReconstructionDataFormats/Track.h"
+#include "MathUtils/detail/Bracket.h"
+#include "DataFormatsTPC/ClusterNative.h"
 
-#pragma link C++ class o2::mergers::MergeInterface + ;
-#pragma link C++ class o2::mergers::CustomMergeableObject + ;
-#pragma link C++ class o2::mergers::CustomMergeableTObject + ;
-#pragma link C++ class std::vector < TObject*> + ;
+namespace o2::trackstudy
+{
+/// create a processor spec
+o2::framework::DataProcessorSpec getTrackMCStudySpec(o2::dataformats::GlobalTrackID::mask_t srcTracks, o2::dataformats::GlobalTrackID::mask_t srcClus);
+
+} // namespace o2::trackstudy
 
 #endif
