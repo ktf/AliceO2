@@ -58,7 +58,7 @@ RouteIndex DataAllocator::matchDataHeader(const Output& spec, size_t timeslice)
     if (DataSpecUtils::match(route.matcher, spec.origin, spec.description, spec.subSpec) && ((timeslice % route.maxTimeslices) == route.timeslice)) {
       stream.routeCreated.at(ri) = true;
       auto sid = _o2_signpost_id_t{(int64_t)&stream};
-      O2_SIGNPOST_EVENT_EMIT(stream_context, sid, "data_allocator", "Route %" PRIu64 " (%{public}s) created for timeslice %" PRIu64, 
+      O2_SIGNPOST_EVENT_EMIT(stream_context, sid, "data_allocator", "Route %" PRIu64 " (%{public}s) created for timeslice %" PRIu64,
                              (uint64_t)ri, DataSpecUtils::describe(route.matcher).c_str(), (uint64_t)timeslice);
       return RouteIndex{ri};
     }
