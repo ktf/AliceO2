@@ -355,7 +355,7 @@ void displayDeviceInspector(DeviceSpec const& spec,
   configurationTable(info.currentConfig, info.currentProvenance);
   optionsTable("Workflow Options", metadata.workflowOptions, control);
   if (ImGui::CollapsingHeader("Labels", ImGuiTreeNodeFlags_DefaultOpen)) {
-    for (auto &label : spec.labels) {
+    for (auto& label : spec.labels) {
       ImGui::Text("%s", label.value.c_str());
     }
   }
