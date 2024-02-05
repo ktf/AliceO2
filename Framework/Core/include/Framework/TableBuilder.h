@@ -644,17 +644,21 @@ auto constexpr to_tuple(T&& object) noexcept
 template <typename... ARGS>
 constexpr auto makeHolderTypes()
 {
-  return []<std::size_t... Is>(std::index_sequence<Is...>) {
+  return []<std::size_t... Is>(std::index_sequence<Is...>)
+  {
     return std::tuple(typename HolderTrait<Is, ARGS>::Holder(arrow::default_memory_pool())...);
-  }(std::make_index_sequence<sizeof...(ARGS)>{});
+  }
+  (std::make_index_sequence<sizeof...(ARGS)>{});
 }
 
 template <typename... ARGS>
 auto makeHolders(arrow::MemoryPool* pool, size_t nRows)
 {
-  return [pool, nRows]<std::size_t... Is>(std::index_sequence<Is...>) {
+  return [ pool, nRows ]<std::size_t... Is>(std::index_sequence<Is...>)
+  {
     return new std::tuple(typename HolderTrait<Is, ARGS>::Holder(pool, nRows)...);
-  }(std::make_index_sequence<sizeof...(ARGS)>{});
+  }
+  (std::make_index_sequence<sizeof...(ARGS)>{});
 }
 
 template <typename... ARGS>
