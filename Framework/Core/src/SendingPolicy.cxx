@@ -104,6 +104,23 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
                 LOGP(fatal, "Error while sending on channel {}", channel->GetName());
               } }},
           SendingPolicy{
+            .name = "expendable",
+            .matcher = [](DataProcessorSpec const& source, DataProcessorSpec const& dest, ConfigContext const&) { 
+              auto has_label = [](DataProcessorLabel const& label) {
+                return label.value == "expendable";
+              };
+              return std::find_if(dest.labels.begin(), dest.labels.end(), has_label) != dest.labels.end(); },
+            .send = [](fair::mq::Parts& parts, ChannelIndex channelIndex, ServiceRegistryRef registry) {
+              auto &proxy = registry.get<FairMQDeviceProxy>();
+              auto *channel = proxy.getOutputChannel(channelIndex);
+              auto timeout = 1000;
+              auto res = channel->Send(parts, timeout);
+              if (res == (size_t)fair::mq::TransferCode::timeout) {
+                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}.", timeout/1000, channel->GetName());
+              } else if (res == (size_t) fair::mq::TransferCode::error) {
+                LOGP(info, "Error while sending on channel {}", channel->GetName());
+              } }},
+          SendingPolicy{
             .name = "default",
             .matcher = [](DataProcessorSpec const&, DataProcessorSpec const&, ConfigContext const&) { return true; },
             .send = [](fair::mq::Parts& parts, ChannelIndex channelIndex, ServiceRegistryRef registry) {
