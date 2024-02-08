@@ -680,19 +680,21 @@ void DeviceSpecHelpers::processOutEdgeActions(ConfigContext const& configContext
 
     if (edge.isForward == false) {
       OutputRoute route{
-        edge.timeIndex,
-        consumer.maxInputTimeslices,
-        outputsMatchers[edge.outputGlobalIndex],
-        channel.name,
-        policyPtr,
+        .timeslice = edge.timeIndex,
+        .maxTimeslices = consumer.maxInputTimeslices,
+        .matcher = outputsMatchers[edge.outputGlobalIndex],
+        .channel = channel.name,
+        .policy = policyPtr,
       };
       device.outputs.emplace_back(route);
     } else {
       ForwardRoute route{
-        edge.timeIndex,
-        consumer.maxInputTimeslices,
-        workflow[edge.consumer].inputs[edge.consumerInputIndex],
-        channel.name};
+        .timeslice = edge.timeIndex,
+        .maxTimeslices = consumer.maxInputTimeslices,
+        .matcher = workflow[edge.consumer].inputs[edge.consumerInputIndex],
+        .channel = channel.name,
+        .policy = policyPtr,
+      };
       device.forwards.emplace_back(route);
     }
   };
