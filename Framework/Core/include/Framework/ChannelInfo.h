@@ -74,6 +74,7 @@ struct OutputChannelInfo {
   ChannelAccountingType channelType = ChannelAccountingType::DPL;
   fair::mq::Channel& channel;
   SendingPolicy const* policy;
+  ChannelIndex index = {-1};
 };
 
 struct OutputChannelState {
@@ -89,6 +90,8 @@ struct ForwardChannelInfo {
   /// Wether or not it's a DPL internal channel.
   ChannelAccountingType channelType = ChannelAccountingType::DPL;
   fair::mq::Channel& channel;
+  SendingPolicy const* policy;
+  ChannelIndex index = {-1};
 };
 
 struct ForwardChannelState {
