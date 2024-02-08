@@ -43,7 +43,7 @@ void DataProcessingHelpers::sendEndOfStream(ServiceRegistryRef const& ref, Outpu
   LOGP(info, "Sending end-of-stream message to channel {}", channel.name);
 }
 
-void doSendOldestPossibleTimeframe(ServiceRegistryRef ref, fair::mq::TransportFactory *transport, ChannelIndex index, SendingPolicy::SendingCallback const& callback, size_t timeslice)
+void doSendOldestPossibleTimeframe(ServiceRegistryRef ref, fair::mq::TransportFactory* transport, ChannelIndex index, SendingPolicy::SendingCallback const& callback, size_t timeslice)
 {
   fair::mq::Parts parts;
   fair::mq::MessagePtr payload(transport->CreateMessage());
@@ -81,7 +81,7 @@ bool DataProcessingHelpers::sendOldestPossibleTimeframe(ServiceRegistryRef const
 
 void DataProcessingHelpers::broadcastOldestPossibleTimeslice(ServiceRegistryRef const& ref, size_t timeslice)
 {
-  auto &proxy = ref.get<FairMQDeviceProxy>();
+  auto& proxy = ref.get<FairMQDeviceProxy>();
   for (int ci = 0; ci < proxy.getNumOutputChannels(); ++ci) {
     auto& info = proxy.getOutputChannelInfo({ci});
     auto& state = proxy.getOutputChannelState({ci});
