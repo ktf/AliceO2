@@ -32,6 +32,14 @@ struct SendingPolicy {
   static std::vector<SendingPolicy> createDefaultPolicies();
 };
 
+struct ForwardingPolicy {
+  using ForwardingCallback = std::function<void(fair::mq::Parts&, ChannelIndex channelIndex, ServiceRegistryRef registry)>;
+  std::string name = "invalid";
+  EdgeMatcher matcher = nullptr;
+  ForwardingCallback forward = nullptr;
+  static std::vector<ForwardingPolicy> createDefaultPolicies();
+};
+
 } // namespace o2::framework
 
 #endif // O2_FRAMEWORK_SENDINGPOLICY_H_
