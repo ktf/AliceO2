@@ -29,6 +29,7 @@
 #include "Framework/TimingInfo.h"
 #include "Framework/DeviceState.h"
 #include "Framework/Monitoring.h"
+#include "Framework/SendingPolicy.h"
 #include "Headers/DataHeader.h"
 #include "Headers/Stack.h"
 #include "DecongestionService.h"
@@ -1010,7 +1011,13 @@ DataProcessorSpec specifyFairMQDeviceMultiOutputProxy(char const* name,
         if (device->GetChannels().count(channel) == 0) {
           throw std::runtime_error("no corresponding output channel found for input '" + channel + "'");
         }
-        ForwardRoute route{0, 1, spec, channel};
+        static auto policy = ForwardingPolicy::createDefaultForwardingPolicy();
+        ForwardRoute route{
+          .timeslice = 0,
+          .maxTimeslices = 1,
+          .matcher = spec,
+          .channel = channel,
+          .policy = &policy};
         // this we will try to fix on the framework level, there will be an API to
         // set external routes. Basically, this has to be added while setting up the
         // workflow. After that, the actual spec provided by the service is supposed
