@@ -238,7 +238,7 @@ ServiceSpec* DIServicePlugin::create()
               }
 
               // Send copy to proxy
-              auto proxyMessages = data_inspector::serializeO2Messages(refs, registry.get < DeviceSpec const>().name);
+              auto proxyMessages = data_inspector::serializeO2Messages(refs, registry.get<DeviceSpec const>().name);
               for (auto &proxyMessage: proxyMessages) {
                 diService.send(std::move(proxyMessage));
               }
