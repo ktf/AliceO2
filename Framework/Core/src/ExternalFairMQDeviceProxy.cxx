@@ -924,10 +924,16 @@ DataProcessorSpec specifyFairMQDeviceOutputProxy(char const* name,
     auto lastDataProcessingHeader = std::make_shared<DataProcessingHeader>(0, 0);
 
     auto& spec = const_cast<DeviceSpec&>(deviceSpec);
+    static auto policy = ForwardingPolicy::createDefaultForwardingPolicy();
     for (auto const& inputSpec : inputSpecs) {
       // this is a prototype, in principle we want to have all spec objects const
       // and so only the const object can be retrieved from service registry
-      ForwardRoute route{0, 1, inputSpec, outputChannelName};
+      ForwardRoute route{
+        .timeslice = 0,
+        .maxTimeslices = 1,
+        .matcher = inputSpec,
+        .channel = outputChannelName,
+        .policy = &policy};
       spec.forwards.emplace_back(route);
     }
 
