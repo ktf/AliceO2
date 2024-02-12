@@ -8,29 +8,25 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
-#ifndef FRAMEWORK_FORWARDROUTE_H
-#define FRAMEWORK_FORWARDROUTE_H
 
-#include "Framework/InputSpec.h"
-#include <cstddef>
+/// @file   ReaderDriverSpec.h
+
+#ifndef O2_READER_DRIVER_
+#define O2_READER_DRIVER_
+
+#include "Framework/DataProcessorSpec.h"
 #include <string>
 
-namespace o2::framework
+namespace o2
+{
+namespace globaltracking
 {
 
-struct ForwardingPolicy;
+/// create a processor spec
+/// pushes an empty output to provide timing to downstream devices
+framework::DataProcessorSpec getReaderDriverSpec(const std::string& metricChannel = "", size_t minSHM = 0);
 
-/// This uniquely identifies a route to be forwarded by the device if
-/// the InputSpec @a matcher matches an input which should also go to
-/// @a channel
-struct ForwardRoute {
-  size_t timeslice;
-  size_t maxTimeslices;
-  InputSpec matcher;
-  std::string channel;
-  // The policy to use to send to on this route.
-  ForwardingPolicy const* policy;
-};
-
+} // namespace globaltracking
 } // namespace o2
-#endif // FRAMEWORK_FORWARDROUTE_H
+
+#endif
