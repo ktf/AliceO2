@@ -223,7 +223,7 @@ std::vector<ForwardingPolicy> ForwardingPolicy::createDefaultPolicies()
                 timeout = 0;
               }
               if (state.droppedMessages == 1) {
-                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}. Switching to dropping mode.", timeout/1000, channel->GetName());
+                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}. Switching to dropping mode.", timeout / 1000, channel->GetName());
               }
               if (state.droppedMessages == 0) {
                 timeout = 1000;
