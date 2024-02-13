@@ -113,12 +113,18 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
             .send = [](fair::mq::Parts& parts, ChannelIndex channelIndex, ServiceRegistryRef registry) {
               auto &proxy = registry.get<FairMQDeviceProxy>();
               auto *channel = proxy.getOutputChannel(channelIndex);
+              OutputChannelState& state = proxy.getOutputChannelState(channelIndex);
               auto timeout = 1000;
+              if (state.droppedMessages > 0) {
+                timeout = 0;
+              }
               auto res = channel->Send(parts, timeout);
               if (res == (size_t)fair::mq::TransferCode::timeout) {
-                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}.", timeout/1000, channel->GetName());
+                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}. Switching to dropping mode.", timeout/1000, channel->GetName());
+                state.droppedMessages++;
               } else if (res == (size_t) fair::mq::TransferCode::error) {
-                LOGP(info, "Error while sending on channel {}", channel->GetName());
+                LOGP(warning, "Error while sending on expendable channel {}. Switching to lossy mode for that channel.", channel->GetName());
+                state.droppedMessages++;
               } }},
           SendingPolicy{
             .name = "default",
@@ -204,12 +210,18 @@ std::vector<ForwardingPolicy> ForwardingPolicy::createDefaultPolicies()
             .forward = [](fair::mq::Parts& parts, ChannelIndex channelIndex, ServiceRegistryRef registry) {
               auto &proxy = registry.get<FairMQDeviceProxy>();
               auto *channel = proxy.getForwardChannel(channelIndex);
+              OutputChannelState& state = proxy.getOutputChannelState(channelIndex);
               auto timeout = 1000;
+              if (state.droppedMessages > 0) {
+                timeout = 0;
+              }
               auto res = channel->Send(parts, timeout);
               if (res == (size_t)fair::mq::TransferCode::timeout) {
-                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}.", timeout/1000, channel->GetName());
+                LOGP(warning, "Timed out sending after {}s. Downstream backpressure detected on expendable channel {}. Switching to dropping mode.", timeout/1000, channel->GetName());
+                state.droppedMessages++;
               } else if (res == (size_t) fair::mq::TransferCode::error) {
-                LOGP(info, "Error while sending on channel {}", channel->GetName());
+                LOGP(warning, "Error sending after {}s. Downstream backpressure detected on expendable channel {}. Switching to dropping mode.", timeout/1000, channel->GetName());
+                state.droppedMessages++;
               } }},
           createDefaultForwardingPolicy()};
 }
