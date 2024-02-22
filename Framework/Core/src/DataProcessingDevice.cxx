@@ -1777,7 +1777,7 @@ void DataProcessingDevice::handleData(ServiceRegistryRef ref, InputChannelInfo& 
       }
       auto dph = o2::header::get<DataProcessingHeader*>(headerData);
       // We only deal with the tracking of parts if the log is enabled.
-      // This is because in principle we should track the size of each of 
+      // This is because in principle we should track the size of each of
       // the parts and sum it up. Not for now.
       if (O2_LOG_ENABLED(parts) == true) {
         O2_SIGNPOST_ID_FROM_POINTER(pid, parts, headerData);
