@@ -80,14 +80,6 @@ struct TMessageSerializer {
   template <typename T = TObject>
   static inline std::unique_ptr<T> deserialize(std::byte* buffer, size_t size);
 
-  // load the schema information from a message/buffer
-  static void loadSchema(const fair::mq::Message& msg);
-  static void loadSchema(gsl::span<std::byte> buffer);
-
-  // write the schema into an empty message/buffer
-  static void fillSchema(fair::mq::Message& msg, const StreamerList& streamers);
-  static void fillSchema(FairTMessage& msg, const StreamerList& streamers);
-
   // get the streamers
   static StreamerList getStreamers();
 
