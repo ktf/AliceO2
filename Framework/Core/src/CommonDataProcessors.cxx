@@ -580,11 +580,11 @@ DataProcessorSpec CommonDataProcessors::getDummySink(std::vector<InputSpec> cons
         auto oldestPossingTimeslice = timesliceIndex.getOldestPossibleOutput().timeslice.value;
         if (channel != device->GetChannels().end()) {
           fair::mq::MessagePtr payload(device->NewMessage());
-          size_t* consumed = (size_t*)malloc(sizeof(size_t));
+          auto* consumed = (size_t*)malloc(sizeof(size_t));
           *consumed = oldestPossingTimeslice;
           if (*consumed != lastTimeslice) {
             payload->Rebuild(consumed, sizeof(int64_t), nullptr, nullptr);
-            channel->second[0].Send(payload);
+            auto result = channel->second[0].Send(payload, 100);
             lastTimeslice = *consumed;
           }
         }
