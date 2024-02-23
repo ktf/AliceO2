@@ -64,8 +64,8 @@ struct TMessageSerializer {
                         CompressionLevel compressionLevel = -1);
 
   template <typename T>
-  static void serialize(FairTMessage& msg, const T* input,                               //
-                        const TClass* cl, 
+  static void serialize(FairTMessage& msg, const T* input, //
+                        const TClass* cl,
                         CompressionLevel compressionLevel = -1);
 
   template <typename T = TObject>
@@ -86,7 +86,7 @@ inline void TMessageSerializer::serialize(FairTMessage& tm, const TObject* input
 }
 
 template <typename T>
-inline void TMessageSerializer::serialize(FairTMessage& tm, const T* input,           //
+inline void TMessageSerializer::serialize(FairTMessage& tm, const T* input, //
                                           const TClass* cl, CompressionLevel compressionLevel)
 {
   if (compressionLevel >= 0) {
@@ -149,8 +149,8 @@ inline void TMessageSerializer::Serialize(fair::mq::Message& msg, const TObject*
 }
 
 template <typename T>
-inline void TMessageSerializer::Serialize(fair::mq::Message& msg, const T* input,       //
-                                          const TClass* cl,                             //
+inline void TMessageSerializer::Serialize(fair::mq::Message& msg, const T* input, //
+                                          const TClass* cl,                       //
                                           TMessageSerializer::CompressionLevel compressionLevel)
 {
   std::unique_ptr<FairTMessage> tm = std::make_unique<FairTMessage>(kMESS_OBJECT);
