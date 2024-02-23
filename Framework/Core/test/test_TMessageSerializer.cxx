@@ -11,6 +11,7 @@
 
 #include "Framework/TMessageSerializer.h"
 #include "Framework/RuntimeError.h"
+#include <fairmq/TransportFactory.h>
 #include "TestClasses.h"
 #include <catch_amalgamated.hpp>
 #include <utility>
@@ -49,14 +50,14 @@ TEST_CASE("TestTMessageSerializer")
   array.SetOwner();
   array.Add(new TNamed(testname, testtitle));
 
-  FairTMessage msg;
-  TMessageSerializer::serialize(msg, &array);
+  auto transport = fair::mq::TransportFactory::CreateTransportFactory("zeromq");
+  auto msg = transport->CreateMessage(4096);
+  FairOutputTBuffer buffer(*msg);
+  TMessageSerializer::serialize(buffer, &array);
 
-  auto buf = as_span(msg);
-  REQUIRE(buf.size() == msg.BufferSize());
-  REQUIRE(static_cast<void*>(buf.data()) == static_cast<void*>(msg.Buffer()));
+  FairInputTBuffer msg2((char*)msg->GetData(), msg->GetSize());
   // test deserialization with TObject as target class (default)
-  auto out = TMessageSerializer::deserialize(buf);
+  auto out = TMessageSerializer::deserialize(msg2);
 
   auto* outarr = dynamic_cast<TObjArray*>(out.get());
   REQUIRE(out.get() == outarr);
@@ -66,9 +67,9 @@ TEST_CASE("TestTMessageSerializer")
   REQUIRE(named->GetTitle() == std::string(testtitle));
 
   // test deserialization with a wrong target class and check the exception
-  REQUIRE_THROWS_AS(TMessageSerializer::deserialize<TNamed>(buf), o2::framework::RuntimeErrorRef);
+  REQUIRE_THROWS_AS(TMessageSerializer::deserialize<TNamed>(msg2), o2::framework::RuntimeErrorRef);
 
-  REQUIRE_THROWS_MATCHES(TMessageSerializer::deserialize<TNamed>(buf), o2::framework::RuntimeErrorRef,
+  REQUIRE_THROWS_MATCHES(TMessageSerializer::deserialize<TNamed>(msg2), o2::framework::RuntimeErrorRef,
                          ExceptionMatcher("can not convert serialized class TObjArray into target class TNamed"));
 }
 
@@ -87,18 +88,21 @@ TEST_CASE("TestTMessageSerializer_NonTObject")
   TClass* cl = TClass::GetClass("std::vector<o2::test::Polymorphic>");
   REQUIRE(cl != nullptr);
 
-  FairTMessage msg;
+  auto transport = fair::mq::TransportFactory::CreateTransportFactory("zeromq");
+  auto msg = transport->CreateMessage(4096);
+  FairOutputTBuffer buffer(*msg);
   char* in = reinterpret_cast<char*>(&data);
-  TMessageSerializer::serialize(msg, in, cl);
+  TMessageSerializer::serialize(buffer, in, cl);
+  FairInputTBuffer msg2((char*)msg->GetData(), msg->GetSize());
 
-  auto out = TMessageSerializer::deserialize<std::vector<o2::test::Polymorphic>>(as_span(msg));
+  auto out = TMessageSerializer::deserialize<std::vector<o2::test::Polymorphic>>(msg2);
   REQUIRE(out);
   REQUIRE((*out.get()).size() == 2);
   REQUIRE((*out.get())[0] == o2::test::Polymorphic(0xaffe));
   REQUIRE((*out.get())[1] == o2::test::Polymorphic(0xd00f));
 
   // test deserialization with a wrong target class and check the exception
-  REQUIRE_THROWS_AS(TMessageSerializer::deserialize(as_span(msg)), RuntimeErrorRef);
+  REQUIRE_THROWS_AS(TMessageSerializer::deserialize(msg2), RuntimeErrorRef);
 }
 
 TEST_CASE("TestTMessageSerializer_InvalidBuffer")
@@ -119,5 +123,6 @@ TEST_CASE("TestTMessageSerializer_InvalidBuffer")
   struct Dummy {
   };
   auto matcher = ExceptionMatcher("class is not ROOT-serializable: ZL22CATCH2_INTERNAL_TEST_4vE5Dummy");
-  REQUIRE_THROWS_MATCHES(TMessageSerializer::deserialize<Dummy>((std::byte*)buffer, strlen(buffer)), o2::framework::RuntimeErrorRef, matcher);
+  FairInputTBuffer msg2((char*)buffer, strlen(buffer));
+  REQUIRE_THROWS_MATCHES(TMessageSerializer::deserialize<Dummy>(msg2), o2::framework::RuntimeErrorRef, matcher);
 }
