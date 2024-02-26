@@ -9,26 +9,21 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file DescriptorInnerBarrelITS3Param.h
-/// \brief Implementation of the DescriptorInnerBarrelITS3Param class
+#ifndef O2_MID_ALICE3_BASEPARAM_H
+#define O2_MID_ALICE3_BASEPARAM_H
 
-#include "ITS3Base/DescriptorInnerBarrelITS3Param.h"
-O2ParamImpl(o2::its3::DescriptorInnerBarrelITS3Param);
+#include "CommonUtils/ConfigurableParam.h"
+#include "CommonUtils/ConfigurableParamHelper.h"
 
 namespace o2
 {
-namespace its3
+namespace mi3
 {
+struct MIDBaseParam : public o2::conf::ConfigurableParamHelper<MIDBaseParam> {
+  O2ParamDef(MIDBaseParam, "MIDBase");
+};
 
-namespace
-{
-static const std::string confstrings[5] = {"", "ThreeLayersNoDeadZones", "ThreeLayers", "FourLayers", "FiveLayers"};
-}
-
-std::string const& DescriptorInnerBarrelITS3Param::getITS3LayerConfigString() const
-{
-  return confstrings[(int)mVersion];
-}
-
-} // namespace its3
+} // namespace mi3
 } // end namespace o2
+
+#endif
