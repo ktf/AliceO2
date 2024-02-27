@@ -65,8 +65,8 @@ class FairInputTBuffer : public TBufferFile
   // of overhead, where the source embedded the pointer for the reallocation.
   // Notice this will break if the sender and receiver are not using the same
   // size for a pointer.
-  FairInputTBuffer(char * data, size_t size)
-    : TBufferFile(TBuffer::kRead, size-sizeof(char*), data + sizeof(char*), false, nullptr)
+  FairInputTBuffer(char* data, size_t size)
+    : TBufferFile(TBuffer::kRead, size - sizeof(char*), data + sizeof(char*), false, nullptr)
   {
   }
 };
@@ -86,7 +86,7 @@ struct TMessageSerializer {
   static void serialize(o2::framework::FairOutputTBuffer& msg, const T* input, const TClass* cl);
 
   template <typename T = TObject>
-  static inline std::unique_ptr<T> deserialize(FairInputTBuffer & buffer);
+  static inline std::unique_ptr<T> deserialize(FairInputTBuffer& buffer);
 };
 
 inline void TMessageSerializer::serialize(FairOutputTBuffer& tm, const TObject* input)
@@ -106,7 +106,7 @@ inline void TMessageSerializer::serialize(FairOutputTBuffer& tm, const T* input,
 }
 
 template <typename T>
-inline std::unique_ptr<T> TMessageSerializer::deserialize(FairInputTBuffer & buffer)
+inline std::unique_ptr<T> TMessageSerializer::deserialize(FairInputTBuffer& buffer)
 {
   TClass* tgtClass = TClass::GetClass(typeid(T));
   if (tgtClass == nullptr) {

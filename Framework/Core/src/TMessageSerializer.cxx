@@ -15,7 +15,8 @@
 
 using namespace o2::framework;
 
-void* FairOutputTBuffer::embedInItself(fair::mq::Message& msg) {
+void* FairOutputTBuffer::embedInItself(fair::mq::Message& msg)
+{
   // The first bytes of the message are used to store the pointer to the message itself
   // so that we can reallocate it if needed.
   if (sizeof(char*) > msg.GetSize()) {
@@ -28,7 +29,8 @@ void* FairOutputTBuffer::embedInItself(fair::mq::Message& msg) {
 }
 
 // Reallocation function. Get the message pointer from the data and call Rebuild.
-char *FairOutputTBuffer::fairMQrealloc(char *oldData, size_t newSize, size_t oldSize) {
+char* FairOutputTBuffer::fairMQrealloc(char* oldData, size_t newSize, size_t oldSize)
+{
   // Old data is the pointer at the beginning of the message, so the pointer
   // to the message is **stored** in the 8 bytes before it.
   auto* msg = *(fair::mq::Message**)(oldData - sizeof(char*));
@@ -43,8 +45,8 @@ char *FairOutputTBuffer::fairMQrealloc(char *oldData, size_t newSize, size_t old
   // sure the old message is not deleted until the new one is ready.
   // We need 8 extra bytes for the pointer to the message itself (realloc does not know about it)
   // and we need to copy 8 bytes more than the old size (again, the extra pointer).
-  msg->Rebuild(newSize+8, fair::mq::Alignment{64});
-  memcpy(msg->GetData(), oldMsg->GetData(), oldSize+8);
+  msg->Rebuild(newSize + 8, fair::mq::Alignment{64});
+  memcpy(msg->GetData(), oldMsg->GetData(), oldSize + 8);
 
   return reinterpret_cast<char*>(msg->GetData()) + sizeof(char*);
 }

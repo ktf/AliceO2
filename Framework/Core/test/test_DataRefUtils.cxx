@@ -21,7 +21,8 @@
 
 using namespace o2::framework;
 
-TEST_CASE("PureRootTest") {
+TEST_CASE("PureRootTest")
+{
   TBufferFile buffer(TBuffer::kWrite);
   TObjString s("test");
   buffer.WriteObject(&s);
@@ -29,12 +30,12 @@ TEST_CASE("PureRootTest") {
   TBufferFile buffer2(TBuffer::kRead, buffer.BufferSize(), buffer.Buffer(), false);
   buffer2.SetReadMode();
   buffer2.InitMap();
-  TClass *storedClass = buffer2.ReadClass();
+  TClass* storedClass = buffer2.ReadClass();
   // ReadClass advances the buffer, so we need to reset it.
   buffer2.SetBufferOffset(0);
   buffer2.ResetMap();
   REQUIRE(storedClass != nullptr);
-  auto *outS = (TObjString*)buffer2.ReadObjectAny(storedClass);
+  auto* outS = (TObjString*)buffer2.ReadObjectAny(storedClass);
   REQUIRE(outS != nullptr);
   REQUIRE(outS->GetString() == "test");
 }

@@ -137,12 +137,12 @@ TEST_CASE("TestTMessageSerializer_CheckExpansion")
   auto msg = transport->CreateMessage(strlen(buffer) + 8);
   FairOutputTBuffer msg2(*msg);
   // The buffer starts after 8 bytes.
-  REQUIRE(msg2.Buffer() == (char*)msg->GetData()+8);
+  REQUIRE(msg2.Buffer() == (char*)msg->GetData() + 8);
   // The first 8 bytes of the buffer store the pointer to the message itself.
   REQUIRE(*(fair::mq::Message**)msg->GetData() == msg.get());
   // Notice that TBuffer does the same trick with the reallocation function,
   // so in the end the useful buffer size is the message size minus 16.
-  REQUIRE(msg2.BufferSize() == (msg->GetSize()-16));
+  REQUIRE(msg2.BufferSize() == (msg->GetSize() - 16));
   // This will not fit the original buffer size, so the buffer will be expanded.
   msg2.Expand(100);
 }
