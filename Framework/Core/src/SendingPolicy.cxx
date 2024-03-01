@@ -64,7 +64,7 @@ std::vector<SendingPolicy> SendingPolicy::createDefaultPolicies()
               if (state.droppedMessages > 10) {
                 timeout = 0;
               }
-              int64_t result = info.channel.Send(parts, timeout*(state.droppedMessages+1));
+              int64_t result = info.channel.Send(parts, timeout * (state.droppedMessages + 1));
               if (result >= 0) {
                 state.droppedMessages = 0;
               } else if (state.droppedMessages < std::numeric_limits<decltype(state.droppedMessages)>::max()) {
