@@ -34,6 +34,7 @@ namespace o2::framework
 struct CCDBFetcherHelper {
   struct CCDBCacheInfo {
     std::string etag;
+    size_t cacheValidUntil = 0;
     size_t cacheMiss = 0;
     size_t cacheHit = 0;
     size_t minSize = -1ULL;
@@ -177,6 +178,11 @@ auto getOrbitResetTime(o2::pmr::vector<char> const& v) -> Long64_t
   return (*ctp)[0];
 };
 
+bool isOnlineRun(DataTakingContext const& dtc)
+{
+  return dtc.deploymentMode == DeploymentMode::OnlineAUX || dtc.deploymentMode == DeploymentMode::OnlineDDS || dtc.deploymentMode == DeploymentMode::OnlineECS;
+}
+
 auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
                        int64_t timestamp,
                        TimingInfo& timingInfo,
@@ -187,6 +193,8 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
   int objCnt = -1;
   // We use the timeslice, so that we hook into the same interval as the rest of the
   // callback.
+  static bool isOnline = isOnlineRun(dtc);
+
   auto sid = _o2_signpost_id_t{(int64_t)timingInfo.timeslice};
   O2_SIGNPOST_START(ccdb, sid, "populateCacheWith", "Starting to populate cache with CCDB objects");
   for (auto& route : helper->routes) {
@@ -218,7 +226,9 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
     const auto url2uuid = helper->mapURL2UUID.find(path);
     if (url2uuid != helper->mapURL2UUID.end()) {
       etag = url2uuid->second.etag;
-      checkValidity = std::abs(int(timingInfo.tfCounter - url2uuid->second.lastCheckedTF)) >= chRate;
+      // We check validity every chRate timeslices or if the cache is expired
+      uint64_t validUntil = url2uuid->second.cacheValidUntil;
+      checkValidity = (std::abs(int(timingInfo.tfCounter - url2uuid->second.lastCheckedTF)) >= chRate) && (isOnline || (validUntil <= timestamp));
     } else {
       checkValidity = true; // never skip check if the cache is empty
     }
@@ -241,6 +251,7 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
       helper->mapURL2UUID[path].lastCheckedTF = timingInfo.tfCounter;
       if (etag.empty()) {
         helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
+        helper->mapURL2UUID[path].cacheValidUntil = headers["Cache-Valid-Until"].empty() ? 0 : std::stoul(headers["Cache-Valid-Until"]);
         helper->mapURL2UUID[path].cacheMiss++;
         helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
         helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
@@ -252,6 +263,7 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
       if (v.size()) { // but should be overridden by fresh object
         // somewhere here pruneFromCache should be called
         helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
+        helper->mapURL2UUID[path].cacheValidUntil = headers["Cache-Valid-Until"].empty() ? 0 : std::stoul(headers["Cache-Valid-Until"]);
         helper->mapURL2UUID[path].cacheMiss++;
         helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
         helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
