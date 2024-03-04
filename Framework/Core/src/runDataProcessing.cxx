@@ -10,6 +10,7 @@
 // or submit itself to any jurisdiction.
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <stdexcept>
+#include "Framework/DeploymentMode.h"
 #include "Framework/BoostOptionsRetriever.h"
 #include "Framework/CallbacksPolicy.h"
 #include "Framework/ChannelConfigurationPolicy.h"

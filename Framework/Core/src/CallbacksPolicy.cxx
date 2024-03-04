@@ -17,6 +17,7 @@
 #include "Framework/CommonServices.h"
 #include "Framework/DataTakingContext.h"
 #include "Framework/DefaultsHelpers.h"
+#include "Framework/DeploymentMode.h"
 #include <cstdlib>
 #include <uv.h>
 

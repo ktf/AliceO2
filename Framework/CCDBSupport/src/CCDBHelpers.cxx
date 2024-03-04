@@ -17,6 +17,7 @@
 #include "Framework/DataTakingContext.h"
 #include "Framework/RawDeviceService.h"
 #include "Framework/DataSpecUtils.h"
+#include "Framework/DeploymentMode.h"
 #include "CCDB/CcdbApi.h"
 #include "CommonConstants/LHCConstants.h"
 #include "Framework/Signpost.h"

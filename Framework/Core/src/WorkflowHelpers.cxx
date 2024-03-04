@@ -24,6 +24,7 @@
 #include "Framework/Plugins.h"
 #include "Framework/DataTakingContext.h"
 #include "Framework/DefaultsHelpers.h"
+#include "Framework/DeploymentMode.h"
 
 #include "Headers/DataHeader.h"
 #include <algorithm>
