@@ -328,6 +328,15 @@
   #ifndef GPUCA_LB_GPUTPCCompressionKernels_step1unattached
     #define GPUCA_LB_GPUTPCCompressionKernels_step1unattached 256
   #endif
+  #ifndef GPUCA_LB_GPUTPCDecompressionKernels_step0attached
+    #define GPUCA_LB_GPUTPCDecompressionKernels_step0attached 256
+  #endif
+  #ifndef GPUCA_LB_GPUTPCDecompressionKernels_step1unattached
+    #define GPUCA_LB_GPUTPCDecompressionKernels_step1unattached 256
+  #endif
+  #ifndef GPUCA_LB_GPUTPCDecompressionUtilKernels_sortPerSectorRow
+    #define GPUCA_LB_GPUTPCDecompressionUtilKernels_sortPerSectorRow 256
+  #endif
   #ifndef GPUCA_LB_GPUTPCCFDecodeZS
     #define GPUCA_LB_GPUTPCCFDecodeZS 128, 4
   #endif

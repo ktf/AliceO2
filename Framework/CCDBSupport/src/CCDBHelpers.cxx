@@ -33,6 +33,7 @@ namespace o2::framework
 struct CCDBFetcherHelper {
   struct CCDBCacheInfo {
     std::string etag;
+    size_t cacheValidUntil = 0;
     size_t cacheMiss = 0;
     size_t cacheHit = 0;
     size_t minSize = -1ULL;
@@ -217,7 +218,9 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
     const auto url2uuid = helper->mapURL2UUID.find(path);
     if (url2uuid != helper->mapURL2UUID.end()) {
       etag = url2uuid->second.etag;
-      checkValidity = std::abs(int(timingInfo.tfCounter - url2uuid->second.lastCheckedTF)) >= chRate;
+      // We check validity every chRate timeslices or if the cache is expired
+      uint64_t validUntil = url2uuid->second.cacheValidUntil;
+      checkValidity = (std::abs(int(timingInfo.tfCounter - url2uuid->second.lastCheckedTF)) >= chRate) || (validUntil <= timestamp);
     } else {
       checkValidity = true; // never skip check if the cache is empty
     }
@@ -240,6 +243,7 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
       helper->mapURL2UUID[path].lastCheckedTF = timingInfo.tfCounter;
       if (etag.empty()) {
         helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
+        helper->mapURL2UUID[path].cacheValidUntil = headers["Cache-Valid-Until"].empty() ? 0 : std::stoul(headers["Cache-Valid-Until"]);
         helper->mapURL2UUID[path].cacheMiss++;
         helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
         helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
@@ -251,6 +255,7 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
       if (v.size()) { // but should be overridden by fresh object
         // somewhere here pruneFromCache should be called
         helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
+        helper->mapURL2UUID[path].cacheValidUntil = headers["Cache-Valid-Until"].empty() ? 0 : std::stoul(headers["Cache-Valid-Until"]);
         helper->mapURL2UUID[path].cacheMiss++;
         helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
         helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
