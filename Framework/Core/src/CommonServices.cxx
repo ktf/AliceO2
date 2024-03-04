@@ -29,6 +29,7 @@
 #include "Framework/CommonMessageBackends.h"
 #include "Framework/DanglingContext.h"
 #include "Framework/DataProcessingHelpers.h"
+#include "Framework/DeploymentMode.h"
 #include "InputRouteHelpers.h"
 #include "Framework/EndOfStreamContext.h"
 #include "Framework/RawDeviceService.h"

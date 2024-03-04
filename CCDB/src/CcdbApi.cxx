@@ -22,6 +22,7 @@
 #include "CommonUtils/MemFileHelper.h"
 #include "Framework/DefaultsHelpers.h"
 #include "Framework/DataTakingContext.h"
+#include "Framework/DeploymentMode.h"
 #include <chrono>
 #include <memory>
 #include <sstream>

@@ -16,6 +16,7 @@
 #include "Framework/DataTakingContext.h"
 #include "Framework/DeviceState.h"
 #include "Framework/DeviceContext.h"
+#include "Framework/DeploymentMode.h"
 #include <fairmq/Device.h>
 #include <uv.h>
 #include <fairmq/shmem/Monitor.h>
