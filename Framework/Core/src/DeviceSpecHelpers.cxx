@@ -705,6 +705,12 @@ void DeviceSpecHelpers::processOutEdgeActions(ConfigContext const& configContext
         .channel = channel.name,
         .policy = forwardPolicyPtr,
       };
+      // In case we have a timer, the data it creates should be
+      // forwarded as a timeframe to the next device, so that
+      // we have synchronization.
+      if (route.matcher.lifetime == Lifetime::Timer) {
+        route.matcher.lifetime = Lifetime::Timeframe;
+      }
       device.forwards.emplace_back(route);
     }
   };
@@ -947,6 +953,13 @@ void DeviceSpecHelpers::processInEdgeActions(std::vector<DeviceSpec>& devices,
       if (existingRoute.inputSpecIndex == edge.consumerInputIndex) {
         return;
       }
+    }
+
+    // In case we add a new route to the device, we remap any
+    // Lifetime::Timer to Lifetime::Timeframe, so that we can
+    // synchronize the devices without creating a new timer.
+    if (edge.isForward && route.matcher.lifetime == Lifetime::Timer) {
+      route.matcher.lifetime = Lifetime::Timeframe;
     }
 
     consumerDevice.inputs.push_back(route);
