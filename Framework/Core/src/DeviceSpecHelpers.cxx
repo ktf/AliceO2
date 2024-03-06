@@ -960,12 +960,12 @@ void DeviceSpecHelpers::processInEdgeActions(std::vector<DeviceSpec>& devices,
     // Lifetime::Timer to Lifetime::Timeframe, so that we can
     // synchronize the devices without creating a new timer.
     if (edge.isForward && route.matcher.lifetime == Lifetime::Timer) {
-      LOGP(warn, "Warning: Forwarding timer {} from {} to a {} as both requested it."
-                 " If this is undesired, please make sure to use two different data matchers for their InputSpec.", 
-          DataSpecUtils::describe(route.matcher).c_str(),
-          producer.name.c_str(),
-          consumer.name.c_str()
-          );
+      LOGP(warn,
+           "Warning: Forwarding timer {} from {} to a {} as both requested it."
+           " If this is undesired, please make sure to use two different data matchers for their InputSpec.",
+           DataSpecUtils::describe(route.matcher).c_str(),
+           producer.name.c_str(),
+           consumer.name.c_str());
       route.matcher.lifetime = Lifetime::Timeframe;
     }
 
