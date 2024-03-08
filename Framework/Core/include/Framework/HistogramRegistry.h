@@ -417,6 +417,10 @@ void HistogramRegistry::fill(const HistName& histName, Ts&&... positionAndWeight
   std::visit([&positionAndWeight...](auto&& hist) { HistFiller::fillHistAny(hist, std::forward<Ts>(positionAndWeight)...); }, mRegistryValue[getHistIndex(histName)]);
 }
 
+extern template void HistogramRegistry::fill(const HistName& histName, double);
+extern template void HistogramRegistry::fill(const HistName& histName, float);
+extern template void HistogramRegistry::fill(const HistName& histName, int);
+
 template <typename... Cs, typename T>
 void HistogramRegistry::fill(const HistName& histName, const T& table, const o2::framework::expressions::Filter& filter)
 {
