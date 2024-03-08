@@ -182,7 +182,8 @@ void doBoostException(boost::exception& e, const char*);
 void doDPLException(o2::framework::RuntimeErrorRef& ref, char const*);
 void doUnknownException(std::string const& s, char const*);
 
-char *getIdString(int argc, char** argv) {
+char* getIdString(int argc, char** argv)
+{
   for (int argi = 0; argi < argc; argi++) {
     if (strcmp(argv[argi], "--id") == 0 && argi + 1 < argc) {
       return argv[argi + 1];

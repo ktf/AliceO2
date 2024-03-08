@@ -210,7 +210,7 @@ int mainNoCatch(int argc, char** argv)
 }
 
 int callMain(int argc, char** argv, int (*)(int, char**));
-char *getIdString(int argc, char** argv);
+char* getIdString(int argc, char** argv);
 
 int main(int argc, char** argv)
 {
