@@ -329,14 +329,14 @@ void GPUTPCGMMerger::DebugRefitMergedTrack(const GPUTPCGMMergedTrack& track) con
 #endif
 }
 
-std::vector<unsigned short> GPUTPCGMMerger::StreamerOccupancyBin(int iSlice, int iRow, float time) const
+std::vector<unsigned int> GPUTPCGMMerger::StreamerOccupancyBin(int iSlice, int iRow, float time) const
 {
-  std::vector<unsigned short> retVal(1 + 2 * Param().rec.tpc.occupancyMapTimeBinsAverage);
+  std::vector<unsigned int> retVal(1 + 2 * Param().rec.tpc.occupancyMapTimeBinsAverage);
 #ifdef DEBUG_STREAMER
   const int bin = CAMath::Max(0.f, time / Param().rec.tpc.occupancyMapTimeBins);
   for (int i = 0; i < 1 + 2 * Param().rec.tpc.occupancyMapTimeBinsAverage; i++) {
     const int mybin = bin + i - Param().rec.tpc.occupancyMapTimeBinsAverage;
-    retVal[i] = (mybin >= 0 && mybin < GPUTPCClusterOccupancyMapBin::getNBins(Param())) ? Param().occupancyMap[i] : 0;
+    retVal[i] = (mybin >= 0 && mybin < (int)GPUTPCClusterOccupancyMapBin::getNBins(Param())) ? Param().occupancyMap[mybin] : 0;
   }
 #endif
   return retVal;
@@ -351,7 +351,7 @@ std::vector<float> GPUTPCGMMerger::StreamerUncorrectedZY(int iSlice, int iRow, c
   return retVal;
 }
 
-void GPUTPCGMMerger::DebugStreamerUpdate(int iTrk, int ihit, float xx, float yy, float zz, const GPUTPCGMMergedTrackHit& cluster, const o2::tpc::ClusterNative& clusterNative, const GPUTPCGMTrackParam& track, const GPUTPCGMPropagator& prop, const gputpcgmmergertypes::InterpolationErrorHit& interpolation, char rejectChi2, bool refit, int retVal) const
+void GPUTPCGMMerger::DebugStreamerUpdate(int iTrk, int ihit, float xx, float yy, float zz, const GPUTPCGMMergedTrackHit& cluster, const o2::tpc::ClusterNative& clusterNative, const GPUTPCGMTrackParam& track, const GPUTPCGMPropagator& prop, const gputpcgmmergertypes::InterpolationErrorHit& interpolation, char rejectChi2, bool refit, int retVal, float avgCharge, float charge) const
 {
 #ifdef DEBUG_STREAMER
   float time = clusterNative.getTime();
@@ -372,6 +372,8 @@ void GPUTPCGMMerger::DebugStreamerUpdate(int iTrk, int ihit, float xx, float yy,
                                                                                     << "retVal=" << retVal
                                                                                     << "occupancyBins=" << occupancyBins
                                                                                     << "trackUncorrectedYZ=" << uncorrectedYZ
+                                                                                    << "avgCharge=" << avgCharge
+                                                                                    << "charge=" << charge
                                                                                     << "\n";
 #endif
 }

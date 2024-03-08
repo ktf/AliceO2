@@ -301,8 +301,12 @@ GPUdic(2, 1) void GPUTPCTrackletConstructor::UpdateTracklet(int /*nBlocks*/, int
 #endif //! GPUCA_TEXTURE_FETCH_CONSTRUCTOR
 #if !defined(__OPENCL__) || defined(__OPENCLCPP__)
         tracker.GetConstantMem()->calibObjects.fastTransformHelper->InverseTransformYZtoNominalYZ(tracker.ISlice(), iRow, yUncorrected, zUncorrected, yUncorrected, zUncorrected);
-
 #endif
+
+        if (tracker.Param().rec.tpc.rejectEdgeClustersInSeeding && tracker.Param().rejectEdgeClusterByY(yUncorrected, iRow)) {
+          rowHit = CALINK_INVAL;
+          break;
+        }
         calink best = CALINK_INVAL;
 
         float err2Y, err2Z;
@@ -354,6 +358,9 @@ GPUdic(2, 1) void GPUTPCTrackletConstructor::UpdateTracklet(int /*nBlocks*/, int
 
         if (best == CALINK_INVAL) {
           if (r.mNHits == 0 && r.mStage < 3) {
+            if (rowHit == CALINK_INVAL || rowHit == CALINK_DEAD_CHANNEL) {
+              break;
+            }
             best = rowHit;
           } else {
             rowHit = CALINK_INVAL;
@@ -395,7 +402,7 @@ GPUdic(2, 1) void GPUTPCTrackletConstructor::UpdateTracklet(int /*nBlocks*/, int
 #endif
     } while (0);
   }
-  if (r.mNHits == 8 && r.mNMissed == 0 && rowHit != CALINK_INVAL && rowHit != CALINK_DEAD_CHANNEL && rowHits && tracker.Param().par.continuousTracking) {
+  if (r.mNHits == 8 && r.mNMissed == 0 && rowHit != CALINK_INVAL && rowHit != CALINK_DEAD_CHANNEL && rowHits && tracker.Param().par.continuousTracking && rowHits[r.mFirstRow] != CALINK_INVAL && rowHits[r.mFirstRow] != CALINK_DEAD_CHANNEL && rowHits[r.mLastRow] != CALINK_INVAL && rowHits[r.mLastRow] != CALINK_DEAD_CHANNEL) {
     const GPUglobalref() MEM_GLOBAL(GPUTPCRow) & GPUrestrict() row1 = tracker.Row(r.mFirstRow);
     const GPUglobalref() MEM_GLOBAL(GPUTPCRow) & GPUrestrict() row2 = tracker.Row(r.mLastRow);
     GPUglobalref() const cahit2* hits1 = tracker.HitData(row1);
