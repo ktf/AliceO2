@@ -45,8 +45,7 @@ concept FillValue = std::is_integral_v<T> || std::is_floating_point_v<T> || std:
 struct HistFiller {
   // fill any type of histogram (if weight was requested it must be the last argument)
   template <typename T, typename... Ts>
-  static void fillHistAny(std::shared_ptr<T> hist, Ts... positionAndWeight)
-    requires(FillValue<Ts> && ...);
+  static void fillHistAny(std::shared_ptr<T> hist, Ts... positionAndWeight) requires(FillValue<Ts>&&...);
 
   // fill any type of histogram with columns (Cs) of a filtered table (if weight is requested it must reside the last specified column)
   template <typename... Cs, typename R, typename T>
@@ -131,8 +130,7 @@ class HistogramRegistry
 
   // fill hist with values
   template <typename... Ts>
-  void fill(const HistName& histName, Ts... positionAndWeight)
-    requires(FillValue<Ts> && ...);
+  void fill(const HistName& histName, Ts... positionAndWeight) requires(FillValue<Ts>&&...);
 
   // fill hist with content of (filtered) table columns
   template <typename... Cs, typename T>
@@ -202,8 +200,7 @@ class HistogramRegistry
 //--------------------------------------------------------------------------------------------------
 
 template <typename T, typename... Ts>
-void HistFiller::fillHistAny(std::shared_ptr<T> hist, Ts... positionAndWeight)
-  requires(FillValue<Ts> && ...)
+void HistFiller::fillHistAny(std::shared_ptr<T> hist, Ts... positionAndWeight) requires(FillValue<Ts>&&...)
 {
   constexpr int nArgs = sizeof...(Ts);
 
@@ -418,8 +415,7 @@ uint32_t HistogramRegistry::getHistIndex(const T& histName)
 }
 
 template <typename... Ts>
-void HistogramRegistry::fill(const HistName& histName, Ts... positionAndWeight)
-  requires(FillValue<Ts> && ...)
+void HistogramRegistry::fill(const HistName& histName, Ts... positionAndWeight) requires(FillValue<Ts>&&...)
 {
   std::visit([positionAndWeight...](auto&& hist) { HistFiller::fillHistAny(hist, positionAndWeight...); }, mRegistryValue[getHistIndex(histName)]);
 }
