@@ -34,14 +34,14 @@ __global__ void gGPUConstantMemBuffer_dummy(int* p) { *p = *(int*)&gGPUConstantM
 #endif
 
 template <>
-void GPUReconstructionHIPBackend::runKernelBackendInternal<GPUMemClean16, 0>(krnlSetup& _xyz, void* const& ptr, unsigned long const& size)
+inline void GPUReconstructionHIPBackend::runKernelBackendInternal<GPUMemClean16, 0>(krnlSetup& _xyz, void* const& ptr, unsigned long const& size)
 {
   GPUDebugTiming timer(mProcessingSettings.debugLevel, nullptr, mInternals->Streams, _xyz, this);
   GPUFailedMsg(hipMemsetAsync(ptr, 0, size, mInternals->Streams[_xyz.x.stream]));
 }
 
 template <class T, int I, typename... Args>
-void GPUReconstructionHIPBackend::runKernelBackendInternal(krnlSetup& _xyz, const Args&... args)
+inline void GPUReconstructionHIPBackend::runKernelBackendInternal(krnlSetup& _xyz, const Args&... args)
 {
 #ifndef __HIPCC__ // HIP version
   GPUDebugTiming timer(mProcessingSettings.deviceTimers && mProcessingSettings.debugLevel > 0, (void**)mDebugEvents, mInternals->Streams, _xyz, this);
@@ -68,11 +68,6 @@ void GPUReconstructionHIPBackend::runKernelBackendInternal(krnlSetup& _xyz, cons
       GPUFailedMsg(hipModuleLaunchKernel(*mInternals->kernelFunctions[mInternals->getRTCkernelNum<true, T, I>()], x.nBlocks, 1, 1, x.nThreads, 1, 1, 0, mInternals->Streams[x.stream], (void**)pArgs, nullptr));
     }
   }
-  if (mProcessingSettings.checkKernelFailures) {
-    if (GPUDebug(GetKernelName<T, I>(), _xyz.x.stream, true)) {
-      throw std::runtime_error("Kernel Failure");
-    }
-  }
 #else // HIP version
   if (mProcessingSettings.deviceTimers && mProcessingSettings.debugLevel > 0) {
     backendInternal<T, I>::runKernelBackendMacro(_xyz, this, (hipEvent_t*)&mDebugEvents->DebugStart, (hipEvent_t*)&mDebugEvents->DebugStop, args...);
@@ -84,6 +79,11 @@ void GPUReconstructionHIPBackend::runKernelBackendInternal(krnlSetup& _xyz, cons
     backendInternal<T, I>::runKernelBackendMacro(_xyz, this, nullptr, nullptr, args...);
   }
 #endif
+  if (mProcessingSettings.checkKernelFailures) {
+    if (GPUDebug(GetKernelName<T, I>(), _xyz.x.stream, true)) {
+      throw std::runtime_error("Kernel Failure");
+    }
+  }
 }
 
 template <class T, int I, typename... Args>
@@ -144,7 +144,7 @@ int GPUReconstructionHIPBackend::runKernelBackend(krnlSetup& _xyz, Args... args)
 #endif // __HIPCC__
 #endif
 
-#include "GPUReconstructionKernels.h"
+#include "GPUReconstructionKernelList.h"
 #undef GPUCA_KRNL
 
 #ifndef GPUCA_NO_CONSTANT_MEMORY
