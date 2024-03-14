@@ -197,7 +197,7 @@ struct ServiceRegistry {
   void throwError(const char* name, int64_t hash, int64_t streamId, int64_t dataprocessorId) const;
 
  public:
-  using hash_type = decltype(TypeIdHelpers::uniqueId<void>());
+  using hash_type = decltype(TypeIdHelpers::uniqueId<std::void_t<void>>());
   ServiceRegistry();
 
   ServiceRegistry(ServiceRegistry const& other);
