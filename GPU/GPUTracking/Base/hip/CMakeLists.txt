@@ -60,6 +60,7 @@ set(SRCS ${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIP.hip ${GPUCA_HIP_SOURCE_DIR
 set(SRCS_CXX ${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIPGenRTC.cxx)
 set(HDRS ${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIP.h ${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIPInternals.h ${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIPDef.h ${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIPIncludes.h ${GPUCA_HIP_SOURCE_DIR}/HIPThrustHelpers.h)
 
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE_UPPER)
 # -------------------------------- Prepare RTC -------------------------------------------------------
 if(NOT ALIGPU_BUILD_TYPE STREQUAL "ALIROOT")
   enable_language(ASM)
@@ -77,7 +78,7 @@ if(NOT ALIGPU_BUILD_TYPE STREQUAL "ALIROOT")
     set(HIPRTC_INCLUDES ${HIPRTC_INCLUDES} "-I$<JOIN:$<FILTER:$<TARGET_PROPERTY:O2::ITStrackingHIP,INCLUDE_DIRECTORIES>,EXCLUDE,^/usr/include/?>,$<SEMICOLON>-I>")
   endif()
 
-  set(HIPRTC_FLAGS "${CMAKE_HIP_FLAGS} ${CMAKE_HIP_FLAGS_${CMAKE_BUILD_TYPE}} -std=c++${CMAKE_HIP_STANDARD}")
+  set(HIPRTC_FLAGS "${CMAKE_HIP_FLAGS} ${CMAKE_HIP_FLAGS_${BUILD_TYPE_UPPER}} -std=c++${CMAKE_HIP_STANDARD}")
   separate_arguments(HIPRTC_FLAGS)
 
   # convenience variables
