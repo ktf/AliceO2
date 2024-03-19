@@ -11,9 +11,9 @@
 
 set(MODULE GPUTracking)
 
-# set(CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE} "${CMAKE_CXX_FLAGS_${CMAKE_BUILD_TYPE}} -O0") # to uncomment if needed, tired of typing this...
+# set(CMAKE_CXX_FLAGS_$<UPPER_CASE:${CMAKE_BUILD_TYPE}> "${CMAKE_CXX_FLAGS_$<UPPER_CASE:${CMAKE_BUILD_TYPE}>} -O0") # to uncomment if needed, tired of typing this...
 
-if(NOT ${GPUCA_NO_FAST_MATH} AND NOT CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+if(NOT ${GPUCA_NO_FAST_MATH} AND NOT $<CONFIG:Debug>)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -ffast-math")
 endif()
 
