@@ -92,7 +92,7 @@ void GPUParam::SetDefaults(float solenoidBz)
 
   par.dAlpha = 0.349066f;
   bzkG = solenoidBz;
-  constBz = bzkG * GPUCA_NAMESPACE::gpu::gpu_common_constants::kCLight;
+  bzCLight = bzkG * GPUCA_NAMESPACE::gpu::gpu_common_constants::kCLight;
   qptB5Scaler = CAMath::Abs(bzkG) > 0.1f ? CAMath::Abs(bzkG) / 5.006680f : 1.f;
   par.dodEdx = 0;
 
@@ -133,8 +133,8 @@ void GPUParam::SetDefaults(float solenoidBz)
 void GPUParam::UpdateSettings(const GPUSettingsGRP* g, const GPUSettingsProcessing* p, const GPURecoStepConfiguration* w)
 {
   if (g) {
-    bzkG = g->solenoidBz;
-    constBz = bzkG * GPUCA_NAMESPACE::gpu::gpu_common_constants::kCLight;
+    bzkG = g->solenoidBzNominalGPU;
+    bzCLight = bzkG * GPUCA_NAMESPACE::gpu::gpu_common_constants::kCLight;
     par.assumeConstantBz = g->constBz;
     par.toyMCEventsFlag = g->homemadeEvents;
     par.continuousTracking = g->continuousMaxTimeBin != 0;
@@ -163,7 +163,7 @@ void GPUParam::UpdateSettings(const GPUSettingsGRP* g, const GPUSettingsProcessi
 
 void GPUParam::SetDefaults(const GPUSettingsGRP* g, const GPUSettingsRec* r, const GPUSettingsProcessing* p, const GPURecoStepConfiguration* w)
 {
-  SetDefaults(g->solenoidBz);
+  SetDefaults(g->solenoidBzNominalGPU);
   if (r) {
     rec = *r;
     if (rec.fitPropagateBzOnly == -1) {
@@ -281,23 +281,3 @@ std::string GPUParamRTC::generateRTCCode(const GPUParam& param, bool useConstexp
 }
 
 static_assert(sizeof(GPUCA_NAMESPACE::gpu::GPUParam) == sizeof(GPUCA_NAMESPACE::gpu::GPUParamRTC), "RTC param size mismatch");
-
-o2::base::Propagator* GPUParam::GetDefaultO2Propagator(bool useGPUField) const
-{
-  o2::base::Propagator* prop = nullptr;
-#ifdef GPUCA_HAVE_O2HEADERS
-#ifdef GPUCA_STANDALONE
-  if (useGPUField == false) {
-    throw std::runtime_error("o2 propagator withouzt gpu field unsupported");
-  }
-#endif
-  prop = o2::base::Propagator::Instance(useGPUField);
-  if (useGPUField) {
-    prop->setGPUField(&polynomialField);
-    prop->setBz(polynomialField.GetNominalBz());
-  }
-#else
-  throw std::runtime_error("o2 propagator unsupported");
-#endif
-  return prop;
-}

@@ -55,12 +55,12 @@
 #define GPUCA_ATTRRES2(XX, ...) GPUCA_M_EXPAND(GPUCA_M_CAT(GPUCA_ATTRRES2_, GPUCA_M_FIRST(__VA_ARGS__)))(XX, __VA_ARGS__)
 #define GPUCA_ATTRRES(XX, ...) GPUCA_M_EXPAND(GPUCA_M_CAT(GPUCA_ATTRRES_, GPUCA_M_FIRST(__VA_ARGS__)))(XX, __VA_ARGS__)
 // GPU Kernel entry point for single sector
-#define GPUCA_KRNLGPU_SINGLE_DEF(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNLGPU_SINGLE_DEF(x_class, x_attributes, x_arguments, ...) \
   GPUg() void GPUCA_ATTRRES(,GPUCA_M_SHIFT(GPUCA_M_STRIP(x_attributes))) GPUCA_M_CAT(krnl_, GPUCA_M_KRNL_NAME(x_class))(GPUCA_CONSMEM_PTR int iSlice_internal GPUCA_M_STRIP(x_arguments))
 #ifdef GPUCA_KRNL_DEFONLY
-#define GPUCA_KRNLGPU_SINGLE(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNLGPU_SINGLE_DEF(x_class, x_attributes, x_arguments, x_forward);
+#define GPUCA_KRNLGPU_SINGLE(...) GPUCA_KRNLGPU_SINGLE_DEF(__VA_ARGS__);
 #else
-#define GPUCA_KRNLGPU_SINGLE(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNLGPU_SINGLE_DEF(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNLGPU_SINGLE(x_class, x_attributes, x_arguments, x_forward, ...) GPUCA_KRNLGPU_SINGLE_DEF(x_class, x_attributes, x_arguments, x_forward, __VA_ARGS__) \
   { \
     GPUshared() typename GPUCA_M_STRIP_FIRST(x_class)::MEM_LOCAL(GPUSharedMemory) smem; \
     GPUCA_M_STRIP_FIRST(x_class)::template Thread<GPUCA_M_KRNL_NUM(x_class)>(get_num_groups(0), get_local_size(0), get_group_id(0), get_local_id(0), smem, GPUCA_M_STRIP_FIRST(x_class)::Processor(GPUCA_CONSMEM)[iSlice_internal] GPUCA_M_STRIP(x_forward)); \
@@ -68,12 +68,12 @@
 #endif
 
 // GPU Kernel entry point for multiple sector
-#define GPUCA_KRNLGPU_MULTI_DEF(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNLGPU_MULTI_DEF(x_class, x_attributes, x_arguments, ...) \
   GPUg() void GPUCA_ATTRRES(,GPUCA_M_SHIFT(GPUCA_M_STRIP(x_attributes))) GPUCA_M_CAT3(krnl_, GPUCA_M_KRNL_NAME(x_class), _multi)(GPUCA_CONSMEM_PTR int firstSlice, int nSliceCount GPUCA_M_STRIP(x_arguments))
 #ifdef GPUCA_KRNL_DEFONLY
-#define GPUCA_KRNLGPU_MULTI(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNLGPU_MULTI_DEF(x_class, x_attributes, x_arguments, x_forward);
+#define GPUCA_KRNLGPU_MULTI(...) GPUCA_KRNLGPU_MULTI_DEF(__VA_ARGS__);
 #else
-#define GPUCA_KRNLGPU_MULTI(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNLGPU_MULTI_DEF(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNLGPU_MULTI(x_class, x_attributes, x_arguments, x_forward, ...) GPUCA_KRNLGPU_MULTI_DEF(x_class, x_attributes, x_arguments, x_forward, __VA_ARGS__) \
   { \
     const int iSlice_internal = nSliceCount * (get_group_id(0) + (get_num_groups(0) % nSliceCount != 0 && nSliceCount * (get_group_id(0) + 1) % get_num_groups(0) != 0)) / get_num_groups(0); \
     const int nSliceBlockOffset = get_num_groups(0) * iSlice_internal / nSliceCount; \
@@ -85,7 +85,7 @@
 #endif
 
 // GPU Host wrapper pre- and post-parts
-#define GPUCA_KRNL_PRE(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNL_PRE(x_class, ...) \
   template <> class GPUCA_KRNL_BACKEND_CLASS::backendInternal<GPUCA_M_KRNL_TEMPLATE(x_class)> { \
    public: \
     template <typename T, typename... Args> \
@@ -99,40 +99,40 @@
   };
 
 // GPU Host wrappers for single kernel, multi-sector, or auto-detection
-#define GPUCA_KRNL_single(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNLGPU_SINGLE(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNL_PRE(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNL_single(...) \
+  GPUCA_KRNLGPU_SINGLE(__VA_ARGS__) \
+  GPUCA_KRNL_PRE(__VA_ARGS__) \
   if (y.num > 1) { \
     throw std::runtime_error("Kernel called with invalid number of sectors"); \
   } else { \
-    GPUCA_KRNL_CALL_single(x_class, x_attributes, x_arguments, x_forward) \
+    GPUCA_KRNL_CALL_single(__VA_ARGS__) \
   } \
   GPUCA_KRNL_POST()
 
-#define GPUCA_KRNL_multi(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNLGPU_MULTI(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNL_PRE(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNL_CALL_multi(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNL_multi(...) \
+  GPUCA_KRNLGPU_MULTI(__VA_ARGS__) \
+  GPUCA_KRNL_PRE(__VA_ARGS__) \
+  GPUCA_KRNL_CALL_multi(__VA_ARGS__) \
   GPUCA_KRNL_POST()
 
-#define GPUCA_KRNL_(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNL_single(x_class, x_attributes, x_arguments, x_forward)
-#define GPUCA_KRNL_simple(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNL_single(x_class, x_attributes, x_arguments, x_forward)
-#define GPUCA_KRNL_both(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNLGPU_SINGLE(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNLGPU_MULTI(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNL_PRE(x_class, x_attributes, x_arguments, x_forward) \
+#define GPUCA_KRNL_(...) GPUCA_KRNL_single(__VA_ARGS__)
+#define GPUCA_KRNL_simple(...) GPUCA_KRNL_single(__VA_ARGS__)
+#define GPUCA_KRNL_both(...) \
+  GPUCA_KRNLGPU_SINGLE(__VA_ARGS__) \
+  GPUCA_KRNLGPU_MULTI(__VA_ARGS__) \
+  GPUCA_KRNL_PRE(__VA_ARGS__) \
   if (y.num <= 1) { \
-    GPUCA_KRNL_CALL_single(x_class, x_attributes, x_arguments, x_forward) \
+    GPUCA_KRNL_CALL_single(__VA_ARGS__) \
   } else { \
-    GPUCA_KRNL_CALL_multi(x_class, x_attributes, x_arguments, x_forward) \
+    GPUCA_KRNL_CALL_multi(__VA_ARGS__) \
   } \
   GPUCA_KRNL_POST()
 
-#define GPUCA_KRNL_LOAD_(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNL_LOAD_single(x_class, x_attributes, x_arguments, x_forward)
-#define GPUCA_KRNL_LOAD_simple(x_class, x_attributes, x_arguments, x_forward) GPUCA_KRNL_LOAD_single(x_class, x_attributes, x_arguments, x_forward)
-#define GPUCA_KRNL_LOAD_both(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNL_LOAD_single(x_class, x_attributes, x_arguments, x_forward) \
-  GPUCA_KRNL_LOAD_multi(x_class, x_attributes, x_arguments, x_forward)
+#define GPUCA_KRNL_LOAD_(...) GPUCA_KRNL_LOAD_single(__VA_ARGS__)
+#define GPUCA_KRNL_LOAD_simple(...) GPUCA_KRNL_LOAD_single(__VA_ARGS__)
+#define GPUCA_KRNL_LOAD_both(...) \
+  GPUCA_KRNL_LOAD_single(__VA_ARGS__) \
+  GPUCA_KRNL_LOAD_multi(__VA_ARGS__)
 
 #define GPUCA_KRNL_PROP(x_class, x_attributes) \
   template <> GPUReconstruction::krnlProperties GPUCA_KRNL_BACKEND_CLASS::getKernelPropertiesBackend<GPUCA_M_KRNL_TEMPLATE(x_class)>() { \
@@ -141,10 +141,10 @@
   }
 
 // Generate GPU kernel and host wrapper
-#define GPUCA_KRNL_WRAP(x_func, x_class, x_attributes, x_arguments, x_forward) GPUCA_M_CAT(x_func, GPUCA_M_STRIP_FIRST(x_attributes))(x_class, x_attributes, x_arguments, x_forward)
+#define GPUCA_KRNL_WRAP(x_func, x_class, x_attributes, ...) GPUCA_M_CAT(x_func, GPUCA_M_STRIP_FIRST(x_attributes))(x_class, x_attributes, __VA_ARGS__)
 #endif // GPUCA_GPUCODE
 
-#define GPUCA_KRNL_LB(a, b, c, d) GPUCA_KRNL(a, (GPUCA_M_STRIP(b), REG, (GPUCA_M_CAT(GPUCA_LB_, GPUCA_M_KRNL_NAME(a)))), c, d)
+#define GPUCA_KRNL_LB(x_class, x_attributes, ...) GPUCA_KRNL(x_class, (GPUCA_M_STRIP(x_attributes), REG, (GPUCA_M_CAT(GPUCA_LB_, GPUCA_M_KRNL_NAME(x_class)))), __VA_ARGS__)
 
 #endif // O2_GPU_GPURECONSTRUCTIONKERNELMACROS_H
 // clang-format on
