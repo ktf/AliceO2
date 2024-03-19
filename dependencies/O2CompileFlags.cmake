@@ -104,7 +104,7 @@ IF(ENABLE_CASSERT) #For the CI, we want to have <cassert> assertions enabled
 ELSE()
     set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2 -g -DNDEBUG")
-    if (CMAKE_BUILD_TYPE STREQUAL "RELEASE" OR CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")
+    if ($<CONFIG:Release> OR $<CONFIG:RelWithDebInfo>)
       set(FAIR_MIN_SEVERITY "detail")
     endif()
 ENDIF()
