@@ -39,11 +39,11 @@ class GPUReconstructionCPUBackend : public GPUReconstruction
  protected:
   GPUReconstructionCPUBackend(const GPUSettingsDeviceBackend& cfg) : GPUReconstruction(cfg) {}
   template <class T, int I = 0, typename... Args>
-  int runKernelBackend(const krnlSetupArgs<T, I, Args...>& args);
+  int runKernelBackend(const gpu_reconstruction_kernels::krnlSetupArgs<T, I, Args...>& args);
   template <class T, int I = 0, typename... Args>
-  int runKernelBackendInternal(const krnlSetupTime& _xyz, const Args&... args);
+  int runKernelBackendInternal(const gpu_reconstruction_kernels::krnlSetupTime& _xyz, const Args&... args);
   template <class T, int I>
-  krnlProperties getKernelPropertiesBackend();
+  gpu_reconstruction_kernels::krnlProperties getKernelPropertiesBackend();
   unsigned int mNestedLoopOmpFactor = 1;
   static int getOMPThreadNum();
   static int getOMPMaxThreads();
@@ -62,9 +62,9 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
   template <class S, int I = 0, typename... Args>
   int runKernel(krnlSetup&& setup, Args&&... args);
   template <class S, int I = 0>
-  const krnlProperties getKernelProperties()
+  const gpu_reconstruction_kernels::krnlProperties getKernelProperties()
   {
-    return getKernelPropertiesImpl(GPUReconstruction::classArgument<S, I>());
+    return getKernelPropertiesImpl(gpu_reconstruction_kernels::classArgument<S, I>());
   }
 
   template <class T, int I>
@@ -95,14 +95,14 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
 
   GPUReconstructionCPU(const GPUSettingsDeviceBackend& cfg) : GPUReconstructionKernels(cfg) {}
 
-#define GPUCA_KRNL(x_class, attributes, x_arguments, x_forward, x_types)                                                                                                                              \
-  inline int runKernelImplWrapper(classArgument<GPUCA_M_KRNL_TEMPLATE(x_class)>, bool cpuFallback, double& timer, krnlSetup&& setup GPUCA_M_STRIP(x_arguments))                                       \
-  {                                                                                                                                                                                                   \
-    if (cpuFallback) {                                                                                                                                                                                \
-      return GPUReconstructionCPU::runKernelImpl(GPUReconstruction::krnlSetupArgs<GPUCA_M_KRNL_TEMPLATE(x_class) GPUCA_M_STRIP(x_types)>(setup.x, setup.y, setup.z, timer GPUCA_M_STRIP(x_forward))); \
-    } else {                                                                                                                                                                                          \
-      return runKernelImpl(GPUReconstruction::krnlSetupArgs<GPUCA_M_KRNL_TEMPLATE(x_class) GPUCA_M_STRIP(x_types)>(setup.x, setup.y, setup.z, timer GPUCA_M_STRIP(x_forward)));                       \
-    }                                                                                                                                                                                                 \
+#define GPUCA_KRNL(x_class, attributes, x_arguments, x_forward, x_types)                                                                                                                    \
+  inline int runKernelImplWrapper(gpu_reconstruction_kernels::classArgument<GPUCA_M_KRNL_TEMPLATE(x_class)>, bool cpuFallback, double& timer, krnlSetup&& setup GPUCA_M_STRIP(x_arguments)) \
+  {                                                                                                                                                                                         \
+    if (cpuFallback) {                                                                                                                                                                      \
+      return GPUReconstructionCPU::runKernelImpl(krnlSetupArgs<GPUCA_M_KRNL_TEMPLATE(x_class) GPUCA_M_STRIP(x_types)>(setup.x, setup.y, setup.z, timer GPUCA_M_STRIP(x_forward)));          \
+    } else {                                                                                                                                                                                \
+      return runKernelImpl(krnlSetupArgs<GPUCA_M_KRNL_TEMPLATE(x_class) GPUCA_M_STRIP(x_types)>(setup.x, setup.y, setup.z, timer GPUCA_M_STRIP(x_forward)));                                \
+    }                                                                                                                                                                                       \
   }
 #include "GPUReconstructionKernelList.h"
 #undef GPUCA_KRNL
@@ -125,23 +125,23 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
   virtual int HelperDone(int iThread) const { return 0; }
   virtual void ResetHelperThreads(int helpers) {}
 
-  size_t TransferMemoryResourceToGPU(GPUMemoryResource* res, int stream = -1, deviceEvent ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryInternal(res, stream, ev, evList, nEvents, true, res->Ptr(), res->PtrDevice()); }
-  size_t TransferMemoryResourceToHost(GPUMemoryResource* res, int stream = -1, deviceEvent ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryInternal(res, stream, ev, evList, nEvents, false, res->PtrDevice(), res->Ptr()); }
+  size_t TransferMemoryResourceToGPU(GPUMemoryResource* res, int stream = -1, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryInternal(res, stream, ev, evList, nEvents, true, res->Ptr(), res->PtrDevice()); }
+  size_t TransferMemoryResourceToHost(GPUMemoryResource* res, int stream = -1, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryInternal(res, stream, ev, evList, nEvents, false, res->PtrDevice(), res->Ptr()); }
   size_t TransferMemoryResourcesToGPU(GPUProcessor* proc, int stream = -1, bool all = false) { return TransferMemoryResourcesHelper(proc, stream, all, true); }
   size_t TransferMemoryResourcesToHost(GPUProcessor* proc, int stream = -1, bool all = false) { return TransferMemoryResourcesHelper(proc, stream, all, false); }
-  size_t TransferMemoryResourceLinkToGPU(short res, int stream = -1, deviceEvent ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryResourceToGPU(&mMemoryResources[res], stream, ev, evList, nEvents); }
-  size_t TransferMemoryResourceLinkToHost(short res, int stream = -1, deviceEvent ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryResourceToHost(&mMemoryResources[res], stream, ev, evList, nEvents); }
-  virtual size_t GPUMemCpy(void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
-  virtual size_t GPUMemCpyAlways(bool onGpu, void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
-  size_t WriteToConstantMemory(size_t offset, const void* src, size_t size, int stream = -1, deviceEvent ev = nullptr) override;
-  virtual size_t TransferMemoryInternal(GPUMemoryResource* res, int stream, deviceEvent ev, deviceEvent* evList, int nEvents, bool toGPU, const void* src, void* dst);
+  size_t TransferMemoryResourceLinkToGPU(short res, int stream = -1, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryResourceToGPU(&mMemoryResources[res], stream, ev, evList, nEvents); }
+  size_t TransferMemoryResourceLinkToHost(short res, int stream = -1, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1) { return TransferMemoryResourceToHost(&mMemoryResources[res], stream, ev, evList, nEvents); }
+  virtual size_t GPUMemCpy(void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
+  virtual size_t GPUMemCpyAlways(bool onGpu, void* dst, const void* src, size_t size, int stream, int toGPU, deviceEvent* ev = nullptr, deviceEvent* evList = nullptr, int nEvents = 1);
+  size_t WriteToConstantMemory(size_t offset, const void* src, size_t size, int stream = -1, deviceEvent* ev = nullptr) override;
+  virtual size_t TransferMemoryInternal(GPUMemoryResource* res, int stream, deviceEvent* ev, deviceEvent* evList, int nEvents, bool toGPU, const void* src, void* dst);
 
   int InitDevice() override;
   int ExitDevice() override;
   int GetThread();
 
   virtual int PrepareTextures() { return 0; }
-  virtual int DoStuckProtection(int stream, void* event) { return 0; }
+  virtual int DoStuckProtection(int stream, deviceEvent event) { return 0; }
 
   // Pointers to tracker classes
   GPUProcessorProcessors mProcShadow; // Host copy of tracker objects that will be used on the GPU
@@ -232,16 +232,19 @@ inline int GPUReconstructionCPU::runKernel(krnlSetup&& setup, Args&&... args)
       t->Start();
     }
   }
-  double deviceTimerTime = 0;
-  int retVal = runKernelImplWrapper(classArgument<S, I>(), cpuFallback, deviceTimerTime, std::forward<krnlSetup&&>(setup), std::forward<Args>(args)...);
+  double deviceTimerTime = 0.;
+  int retVal = runKernelImplWrapper(gpu_reconstruction_kernels::classArgument<S, I>(), cpuFallback, deviceTimerTime, std::forward<krnlSetup&&>(setup), std::forward<Args>(args)...);
   if (GPUDebug(GetKernelName<S, I>(), stream)) {
     throw std::runtime_error("kernel failure");
   }
   if (mProcessingSettings.debugLevel >= 1) {
     if (t) {
-      if (mProcessingSettings.deviceTimers && IsGPU() && !cpuFallback) {
+      if (deviceTimerTime != 0.) {
         t->AddTime(deviceTimerTime);
-      } else if (mNestedLoopOmpFactor < 2 || getOMPThreadNum() == 0) {
+        if (t->IsRunning()) {
+          t->Abort();
+        }
+      } else if (t->IsRunning()) {
         t->Stop();
       }
     }
