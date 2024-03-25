@@ -1216,22 +1216,22 @@ std::function<void(void)> getGUIDebugger(std::vector<DeviceInfo> const& infos,
 void updateMousePos(float x, float y)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.MousePos = ImVec2(x, y);
+  io.AddMousePosEvent(x, y);
 }
 
 void updateMouseButton(bool clicked)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.MouseDown[0] = clicked;
+  io.AddMouseButtonEvent(0, clicked);
 }
 
 void updateMouseWheel(int direction)
 {
   ImGuiIO& io = ImGui::GetIO();
   if (direction > 0) {
-    io.MouseWheel++;
+    io.AddMouseWheelEvent(0, 1.0);
   } else {
-    io.MouseWheel--;
+    io.AddMouseWheelEvent(0, -1.0);
   }
 }
 
@@ -1241,16 +1241,34 @@ void updateWindowSize(int x, int y)
   io.DisplaySize = ImVec2(x, y);
 }
 
-void keyDown(char key)
+void keyEvent(char key, bool down)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.KeysDown[io.KeyMap[(int)key]] = true;
-}
-
-void keyUp(char key)
-{
-  ImGuiIO& io = ImGui::GetIO();
-  io.KeysDown[io.KeyMap[(int)key]] = false;
+  switch (key) {
+    case 1:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_LeftArrow, down);
+      break;
+    case 2:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_RightArrow, down);
+      break;
+    case 3:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_UpArrow, down);
+      break;
+    case 4:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_DownArrow, down);
+      break;
+    case 10:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_Delete, down);
+      break;
+    case 11:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_Backspace, down);
+      break;
+    case 14:
+      io.AddKeyEvent((ImGuiKey)ImGuiKey_Escape, down);
+      break;
+    default:
+      io.AddKeyEvent((ImGuiKey)key, down);
+  }
 }
 
 void charIn(char key)
