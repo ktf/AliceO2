@@ -9,16 +9,21 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifdef __CLING__
+#ifndef O2_SV_STUDY_H
+#define O2_SV_STUDY_H
 
-#pragma link off all globals;
-#pragma link off all classes;
-#pragma link off all functions;
+#include "ReconstructionDataFormats/GlobalTrackID.h"
+#include "Framework/Task.h"
+#include "Framework/DataProcessorSpec.h"
+#include "ReconstructionDataFormats/Track.h"
+#include "MathUtils/detail/Bracket.h"
+#include "DataFormatsTPC/ClusterNative.h"
 
-#pragma link C++ class o2::rich::Ring + ;
-#pragma link C++ class o2::rich::BWDRich + ;
-#pragma link C++ class o2::rich::FWDRich + ;
-#pragma link C++ class o2::rich::Detector + ;
-#pragma link C++ class o2::base::DetImpl < o2::rich::Detector> + ;
+namespace o2::svstudy
+{
+/// create a processor spec
+o2::framework::DataProcessorSpec getSVStudySpec(o2::dataformats::GlobalTrackID::mask_t srcTracks, bool useMC);
+
+} // namespace o2::svstudy
 
 #endif
