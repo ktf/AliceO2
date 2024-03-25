@@ -1216,22 +1216,22 @@ std::function<void(void)> getGUIDebugger(std::vector<DeviceInfo> const& infos,
 void updateMousePos(float x, float y)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.MousePos = ImVec2(x, y);
+  io.AddMousePosEvent(x, y);
 }
 
 void updateMouseButton(bool clicked)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.MouseDown[0] = clicked;
+  io.AddMouseButtonEvent(0, clicked);
 }
 
 void updateMouseWheel(int direction)
 {
   ImGuiIO& io = ImGui::GetIO();
   if (direction > 0) {
-    io.MouseWheel++;
+    io.AddMouseWheelEvent(0, 1.0);
   } else {
-    io.MouseWheel--;
+    io.AddMouseWheelEvent(0, -1.0);
   }
 }
 
@@ -1244,13 +1244,13 @@ void updateWindowSize(int x, int y)
 void keyDown(char key)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.KeysDown[io.KeyMap[(int)key]] = true;
+  io.AddKeyEvent((ImGuiKey)key , true);
 }
 
 void keyUp(char key)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.KeysDown[io.KeyMap[(int)key]] = false;
+  io.AddKeyEvent((ImGuiKey)key , false);
 }
 
 void charIn(char key)
