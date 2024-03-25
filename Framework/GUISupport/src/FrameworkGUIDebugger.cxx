@@ -1244,13 +1244,13 @@ void updateWindowSize(int x, int y)
 void keyDown(char key)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.AddKeyEvent((ImGuiKey)key , true);
+  io.AddKeyEvent((ImGuiKey)key, true);
 }
 
 void keyUp(char key)
 {
   ImGuiIO& io = ImGui::GetIO();
-  io.AddKeyEvent((ImGuiKey)key , false);
+  io.AddKeyEvent((ImGuiKey)key, false);
 }
 
 void charIn(char key)
