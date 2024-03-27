@@ -30,6 +30,8 @@ fi
 : ${CTF_FREE_DISK_WAIT:="10"}         # if disk on EPNs is close to full, wait X seconds before retrying to write
 : ${CTF_MAX_FREE_DISK_WAIT:="600"}    # if not enough disk space after this time throw error
 
+export CALIB_RCT_UPDATER=0
+
 # entropy encoding/decoding mode, '' is equivalent to '--ans-version compat' (compatible with < 09/2023 data),
 # use '--ans-version 1.0 --ctf-dict none' for the new per-TF dictionary mode
 : ${RANS_OPT:="--ans-version 1.0 --ctf-dict none"}
@@ -345,7 +347,7 @@ fi
 [[ $RUNTYPE != "COSMICS" ]] && [[ $RUNTYPE != "TECHNICAL" ]] && has_detectors_reco ITS && has_detector_matching PRIMVTX && [[ ! -z "$VERTEXING_SOURCES" ]] && EVE_CONFIG+=" --primary-vertex-mode"
 [[ $SYNCRAWMODE == 1 ]] && [[ -z ${CONFIG_EXTRA_PROCESS_o2_trd_global_tracking:-} ]] && CONFIG_EXTRA_PROCESS_o2_trd_global_tracking='GPU_rec_trd.maxChi2=25;GPU_rec_trd.penaltyChi2=20;GPU_rec_trd.extraRoadY=4;GPU_rec_trd.extraRoadZ=10;GPU_rec_trd.applyDeflectionCut=0;GPU_rec_trd.trkltResRPhiIdeal=1'
 [[ $SYNCRAWMODE == 1 ]] && [[ -z ${ARGS_EXTRA_PROCESS_o2_phos_reco_workflow:-} ]] && ARGS_EXTRA_PROCESS_o2_phos_reco_workflow='--presamples 2 --fitmethod semigaus'
-[[ $SYNCRAWMODE == 1 ]] && [[ $BEAMTYPE == "PbPb" ]] && $CONFIG_EXTRA_PROCESS_o2_calibration_emcal_channel_calib_workflow='EMCALCalibParams.selectedClassMasks=C0TVX-NONE-NOPF-EMC:c0tvxtsc-b-nopf-emc:C0TVXTCE-B-NOPF-EMC;EMCALCalibParams.fractionEvents_bc=0.3'
+[[ $SYNCRAWMODE == 1 ]] && [[ $BEAMTYPE == "PbPb" ]] && [[ -z ${CONFIG_EXTRA_PROCESS_o2_calibration_emcal_channel_calib_workflow:-} ]] && CONFIG_EXTRA_PROCESS_o2_calibration_emcal_channel_calib_workflow='EMCALCalibParams.selectedClassMasks=C0TVX-NONE-NOPF-EMC:c0tvxtsc-b-nopf-emc:C0TVXTCE-B-NOPF-EMC;EMCALCalibParams.fractionEvents_bc=0.3'
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Start of workflow command generation
@@ -601,6 +603,7 @@ if has_processing_step ENTROPY_ENCODER && [[ ! -z "$WORKFLOW_DETECTORS_CTF" ]] &
   if [[ $CREATECTFDICT == 1 ]] && [[ $EXTINPUT == 1 ]]; then CONFIG_CTF+=" --save-dict-after $SAVE_CTFDICT_NTIMEFRAMES"; fi
   [[ $EPNSYNCMODE == 1 ]] && CONFIG_CTF+=" --require-free-disk 53687091200 --wait-for-free-disk $CTF_FREE_DISK_WAIT --max-wait-for-free-disk $CTF_MAX_FREE_DISK_WAIT"
   add_W o2-ctf-writer-workflow "$CONFIG_CTF"
+  [[ $SYNCMODE == 1 ]] && export CALIB_RCT_UPDATER=1
 fi
 
 # ---------------------------------------------------------------------------------------------------------------------
