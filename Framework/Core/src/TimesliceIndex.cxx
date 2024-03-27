@@ -9,7 +9,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 #include "Framework/TimesliceIndex.h"
-#include "Framework/Logger.h"
+#include "Framework/Signpost.h"
+
+O2_DECLARE_DYNAMIC_LOG(timeslice_index);
 
 namespace o2::framework
 {
@@ -124,9 +126,12 @@ bool TimesliceIndex::didReceiveData() const
 
 TimesliceIndex::OldestInputInfo TimesliceIndex::setOldestPossibleInput(TimesliceId timestamp, ChannelIndex channel)
 {
+  O2_SIGNPOST_ID_GENERATE(tid, timeslice_index);
   // Each channel oldest possible input must be monotoically increasing.
   if (timestamp.value < mChannels[channel.value].oldestForChannel.value) {
-    LOG(error) << "Received bogus oldest possible timeslice " << timestamp.value << " for channel " << channel.value << ". Expected >= " << mChannels[channel.value].oldestForChannel.value;
+    O2_SIGNPOST_EVENT_EMIT_ERROR(timeslice_index, tid, "setOldestPossibleInput",
+                                 "Received bogus oldest possible timeslice %zu for channel %d. Expected >= %zu.",
+                                 timestamp.value, channel.value, mChannels[channel.value].oldestForChannel.value);
   }
   mChannels[channel.value].oldestForChannel = timestamp;
   OldestInputInfo result{timestamp, channel};
@@ -144,11 +149,13 @@ TimesliceIndex::OldestInputInfo TimesliceIndex::setOldestPossibleInput(Timeslice
     }
   }
   if (changed && mOldestPossibleInput.timeslice.value != result.timeslice.value) {
-    LOG(debug) << "Success: Oldest possible input is " << result.timeslice.value << " due to channel " << result.channel.value;
+    O2_SIGNPOST_EVENT_EMIT(timeslice_index, tid, "setOldestPossibleInput", "Success: Oldest possible input is %zu due to channel %d",
+                           result.timeslice.value, result.channel.value);
   } else if (mOldestPossibleInput.timeslice.value != result.timeslice.value) {
-    LOG(debug) << "Oldest possible input updated from timestamp: " << mOldestPossibleInput.timeslice.value << " --> " << result.timeslice.value;
+    O2_SIGNPOST_EVENT_EMIT(timeslice_index, tid, "setOldestPossibleInput", "Oldest possible input updated from timestamp: %zu --> %zu",
+                           mOldestPossibleInput.timeslice.value, result.timeslice.value);
   } else {
-    LOG(debug) << "No change in oldest possible input";
+    O2_SIGNPOST_EVENT_EMIT(timeslice_index, tid, "setOldestPossibleInput", "No change in oldest possible input");
   }
   mOldestPossibleInput = result;
   return mOldestPossibleInput;
@@ -187,13 +194,15 @@ TimesliceIndex::OldestOutputInfo TimesliceIndex::updateOldestPossibleOutput()
       result.channel = {(int)-1};
     }
   }
+  O2_SIGNPOST_ID_GENERATE(tid, timeslice_index);
   if (changed && mOldestPossibleOutput.timeslice.value != result.timeslice.value) {
-    LOGP(debug, "Oldest possible output {} due to {} {}",
-         result.timeslice.value,
-         result.channel.value == -1 ? "slot" : "channel",
-         result.channel.value == -1 ? mOldestPossibleOutput.slot.index : mOldestPossibleOutput.channel.value);
+    O2_SIGNPOST_EVENT_EMIT(timeslice_index, tid, "updateOldestPossibleOutput", "Oldest possible output %zu due to %{public}s %zu",
+                           result.timeslice.value,
+                           result.channel.value == -1 ? "slot" : "channel",
+                           result.channel.value == -1 ? mOldestPossibleOutput.slot.index : mOldestPossibleOutput.channel.value);
   } else if (mOldestPossibleOutput.timeslice.value != result.timeslice.value) {
-    LOG(debug) << "Oldest possible output updated from oldest Input : " << mOldestPossibleOutput.timeslice.value << " --> " << result.timeslice.value;
+    O2_SIGNPOST_EVENT_EMIT(timeslice_index, tid, "updateOldestPossibleOutput", "Oldest possible output updated from oldest Input : %zu --> %zu",
+                           mOldestPossibleOutput.timeslice.value, result.timeslice.value);
   }
   mOldestPossibleOutput = result;
 
