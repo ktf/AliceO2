@@ -9,6 +9,7 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
+#include <cuda_runtime.h>
 #include "ITStrackingGPU/Utils.h"
 #include "ITStrackingGPU/Context.h"
 #include "ITStracking/Constants.h"
@@ -19,6 +20,7 @@
 #include <iomanip>
 #include <numeric>
 #include <iostream>
+#include <cstdint>
 
 namespace
 {

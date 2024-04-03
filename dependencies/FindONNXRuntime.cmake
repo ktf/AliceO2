@@ -9,16 +9,11 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-#  @author SwirtaB
-
-
-o2_add_library(FASTSimulation
-        SOURCES src/FastSimulations.cxx src/Processors.cxx src/Utils.cxx
-        PUBLIC_LINK_LIBRARIES onnxruntime::onnxruntime)
-
-o2_data_file(COPY scales DESTINATION Detectors/ZDC/fastsimulation)
-
-o2_add_executable(fastsim-example
-        SOURCES tests/run-example.cxx
-        PUBLIC_LINK_LIBRARIES O2::FASTSimulation
-        COMPONENT_NAME zdc)
+find_package(onnxruntime CONFIG)
+if (NOT onnxruntime_FOUND)
+  find_package(ONNXRuntime::ONNXRuntime CONFIG)
+  if (ONNXRuntime::ONNXRuntime_FOUND)
+    set(onnxruntime_FOUND 1)
+    add_library(onnxruntime::onnxruntime ALIAS ONNXRuntime::ONNXRuntime)
+  endif()
+endif()

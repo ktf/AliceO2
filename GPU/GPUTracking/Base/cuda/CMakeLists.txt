@@ -99,7 +99,6 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
     TARGETVARNAME targetName)
 
   target_compile_definitions(${targetName} PUBLIC $<TARGET_PROPERTY:O2::GPUTracking,COMPILE_DEFINITIONS>)
-  set_target_properties(${targetName} PROPERTIES LINKER_LANGUAGE CXX)
 
   install(FILES ${HDRS} DESTINATION include/GPU)
 endif()
@@ -117,9 +116,6 @@ if(ALIGPU_BUILD_TYPE STREQUAL "ALIROOT")
   # Add a library to the project using the specified source files
   add_library_tested(${targetName} SHARED ${SRCS} G__${targetName}.cxx)
   target_link_libraries(${targetName} PUBLIC ${TMP_BASELIB})
-
-  # Additional compilation flags
-  set_target_properties(${targetName} PROPERTIES COMPILE_FLAGS "")
 
   # Installation
   install(TARGETS ${targetName} ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
@@ -197,10 +193,13 @@ else()
 endif()
 if(NOT GPUCA_CUDA_COMPILE_MODE STREQUAL "rdc")
   set_property(TARGET ${targetName} PROPERTY CUDA_SEPARABLE_COMPILATION OFF)
+  set_target_properties(${targetName} PROPERTIES LINKER_LANGUAGE CXX)
 endif()
 
-add_library(GPUTrackingCUDAExternalProvider OBJECT GPUReconstructionCUDAExternalProvider.cu)
-add_library(O2::GPUTrackingCUDAExternalProvider ALIAS GPUTrackingCUDAExternalProvider)
-set_property(TARGET GPUTrackingCUDAExternalProvider PROPERTY CUDA_SEPARABLE_COMPILATION ON)
-target_compile_definitions(GPUTrackingCUDAExternalProvider PRIVATE $<TARGET_PROPERTY:${targetName},COMPILE_DEFINITIONS>)
-target_include_directories(GPUTrackingCUDAExternalProvider PRIVATE $<TARGET_PROPERTY:${targetName},INCLUDE_DIRECTORIES>)
+if(NOT ALIGPU_BUILD_TYPE STREQUAL "ALIROOT")
+  add_library(GPUTrackingCUDAExternalProvider OBJECT GPUReconstructionCUDAExternalProvider.cu)
+  add_library(O2::GPUTrackingCUDAExternalProvider ALIAS GPUTrackingCUDAExternalProvider)
+  set_property(TARGET GPUTrackingCUDAExternalProvider PROPERTY CUDA_SEPARABLE_COMPILATION ON)
+  target_compile_definitions(GPUTrackingCUDAExternalProvider PRIVATE $<TARGET_PROPERTY:${targetName},COMPILE_DEFINITIONS>)
+  target_include_directories(GPUTrackingCUDAExternalProvider PRIVATE $<TARGET_PROPERTY:${targetName},INCLUDE_DIRECTORIES>)
+endif()

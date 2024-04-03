@@ -43,6 +43,7 @@
 #include "Framework/DeviceState.h"
 #include "Framework/DeviceConfig.h"
 #include "Framework/DefaultsHelpers.h"
+#include "Framework/Signpost.h"
 
 #include "TextDriverClient.h"
 #include "WSDriverClient.h"
@@ -83,6 +84,7 @@ using Value = o2::monitoring::tags::Value;
 O2_DECLARE_DYNAMIC_LOG(data_processor_context);
 O2_DECLARE_DYNAMIC_LOG(stream_context);
 O2_DECLARE_DYNAMIC_LOG(async_queue);
+O2_DECLARE_DYNAMIC_LOG(policies);
 
 namespace o2::framework
 {
@@ -845,6 +847,15 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStats()
       if (deploymentMode != DeploymentMode::OnlineDDS && deploymentMode != DeploymentMode::OnlineECS && deploymentMode != DeploymentMode::OnlineAUX && deploymentMode != DeploymentMode::FST) {
         arrowAndResourceLimitingMetrics = true;
       }
+      // Input proxies should not report cpu_usage_fraction,
+      // because of the rate limiting which biases the measurement.
+      auto& spec = services.get<DeviceSpec const>();
+      bool enableCPUUsageFraction = true;
+      if (spec.name.find("proxy") == std::string::npos) {
+        O2_SIGNPOST_ID_GENERATE(mid, policies);
+        O2_SIGNPOST_EVENT_EMIT(policies, mid, "metrics", "Disabling cpu_usage_fraction metric for proxy %{public}s", spec.name.c_str());
+        enableCPUUsageFraction = false;
+      }
 
       std::vector<DataProcessingStats::MetricSpec> metrics = {
         MetricSpec{.name = "errors",
@@ -928,6 +939,7 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStats()
                    .maxRefreshLatency = onlineRefreshLatency,
                    .sendInitialValue = true},
         MetricSpec{.name = "cpu_usage_fraction",
+                   .enabled = enableCPUUsageFraction,
                    .metricId = (int)ProcessingStatsId::CPU_USAGE_FRACTION,
                    .kind = Kind::Rate,
                    .scope = Scope::Online,
