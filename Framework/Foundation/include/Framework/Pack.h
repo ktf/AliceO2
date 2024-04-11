@@ -200,9 +200,11 @@ inline constexpr bool has_type_conditional_v = has_type_conditional<Condition, T
 template <typename T, typename... Ts>
 consteval std::size_t has_type_at(pack<Ts...> const&)
 {
-  constexpr std::size_t count = []<std::size_t... Is>(std::index_sequence<Is...>) {
+  constexpr std::size_t count = []<std::size_t... Is>(std::index_sequence<Is...>)
+  {
     return ((std::is_same_v<T, Ts> ? Is + 1 : 0) + ...);
-  }(std::make_index_sequence<sizeof...(Ts)>());
+  }
+  (std::make_index_sequence<sizeof...(Ts)>());
   if constexpr (count == 0) {
     return sizeof...(Ts) + 1;
   } else {
