@@ -26,7 +26,13 @@
 
 // inclusions and forward decl for fast sim
 #ifdef ZDC_FASTSIM_ONNX
+
+#if __has_include(<onnxruntime/core/session/onnxruntime_cxx_api.h>)
 #include <onnxruntime/core/session/onnxruntime_cxx_api.h>
+#else
+#include <onnxruntime_cxx_api.h>
+#endif
+
 namespace o2::zdc
 {
 namespace fastsim
@@ -42,9 +48,7 @@ class StandardScaler;
 
 class FairVolume;
 
-namespace o2
-{
-namespace zdc
+namespace o2::zdc
 {
 
 class Detector : public o2::base::DetImpl<Detector>
@@ -273,7 +277,6 @@ class Detector : public o2::base::DetImpl<Detector>
   friend class o2::base::DetImpl;
   ClassDefOverride(Detector, 1);
 };
-} // namespace zdc
 } // namespace o2
 
 #ifdef USESHM
