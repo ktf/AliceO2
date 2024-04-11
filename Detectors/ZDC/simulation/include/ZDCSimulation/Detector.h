@@ -42,9 +42,7 @@ class StandardScaler;
 
 class FairVolume;
 
-namespace o2
-{
-namespace zdc
+namespace o2::zdc
 {
 
 class Detector : public o2::base::DetImpl<Detector>
@@ -273,7 +271,6 @@ class Detector : public o2::base::DetImpl<Detector>
   friend class o2::base::DetImpl;
   ClassDefOverride(Detector, 1);
 };
-} // namespace zdc
 } // namespace o2
 
 #ifdef USESHM
