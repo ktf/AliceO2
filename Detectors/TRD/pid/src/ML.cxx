@@ -28,7 +28,7 @@
 #include "DetectorsBase/Propagator.h"
 
 #include <fmt/format.h>
-#if __has_include (<onnxruntime/core/session/experimental_onnxruntime_cxx_api.h>)
+#if __has_include(<onnxruntime/core/session/experimental_onnxruntime_cxx_api.h>)
 #include <onnxruntime/core/session/experimental_onnxruntime_cxx_api.h>
 #else
 #include <onnxruntime_cxx_api.h>
