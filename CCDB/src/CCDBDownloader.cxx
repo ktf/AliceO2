@@ -537,6 +537,7 @@ void CCDBDownloader::transferFinished(CURL* easy_handle, CURLcode curlCode)
         --(*performData->requestsLeft);
         delete requestData;
         delete performData->codeDestination;
+        curl_easy_cleanup(easy_handle);
       }
     } break;
   }
