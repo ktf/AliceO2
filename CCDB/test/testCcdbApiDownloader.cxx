@@ -172,7 +172,9 @@ BOOST_AUTO_TEST_CASE(asynch_schedule_test)
     curl_easy_getinfo(handles[i], CURLINFO_HTTP_CODE, &httpCode);
     BOOST_CHECK(httpCode == 200);
     BOOST_CHECK(dests[i]->size() != 0);
-    curl_easy_cleanup(handles[i]);
+    // I suspect the following was needed simply because the rest of the
+    // code was leaking.
+    //    curl_easy_cleanup(handles[i]);
     delete dests[i];
   }
   curl_global_cleanup();
