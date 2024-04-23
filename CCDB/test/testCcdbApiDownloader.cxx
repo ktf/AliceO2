@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE(asynch_schedule_test)
   for (int i = 0; i < TRANSFERS; i++) {
     long httpCode;
     curl_easy_getinfo(handles[i], CURLINFO_HTTP_CODE, &httpCode);
-    BOOST_CHECK_EQUAL(httpCode,  200);
+    BOOST_CHECK_EQUAL(httpCode, 200);
     BOOST_CHECK_NE(dests[i]->size(), 0);
     // I suspect the following was needed simply because the rest of the
     // code was leaking.
