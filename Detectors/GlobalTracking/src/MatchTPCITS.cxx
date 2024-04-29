@@ -577,6 +577,7 @@ bool MatchTPCITS::prepareTPCData()
   }
 */
   mTPCRefitter = std::make_unique<o2::gpu::GPUO2InterfaceRefit>(mTPCClusterIdxStruct, mTPCCorrMapsHelper, mBz, mTPCTrackClusIdx.data(), 0, mTPCRefitterShMap.data(), mTPCRefitterOccMap.data(), mTPCRefitterOccMap.size(), nullptr, o2::base::Propagator::Instance());
+  mTPCRefitter->setTrackReferenceX(900); // disable propagation after refit by setting reference to value > 500
   mNTPCOccBinLength = mTPCRefitter->getParam()->rec.tpc.occupancyMapTimeBins;
   mTBinClOcc.clear();
   if (mNTPCOccBinLength > 1 && mTPCRefitterOccMap.size()) {
@@ -584,17 +585,18 @@ bool MatchTPCITS::prepareTPCData()
     int nTPCBins = mNHBPerTF * o2::constants::lhc::LHCMaxBunches / 8, ninteg = 0;
     int nTPCOccBins = nTPCBins * mNTPCOccBinLengthInv, sumBins = std::max(1, int(o2::constants::lhc::LHCMaxBunches / 8 * mNTPCOccBinLengthInv));
     mTBinClOcc.resize(nTPCOccBins);
-    float sm = 0., tb = (nTPCOccBins - 0.5) * mNTPCOccBinLength, mltPrev = 0.;
+    std::vector<float> mltHistTB(nTPCOccBins);
+    float sm = 0., tb = 0.5 * mNTPCOccBinLength;
+    for (int i = 0; i < nTPCOccBins; i++) {
+      mltHistTB[i] = mTPCRefitter->getParam()->GetUnscaledMult(tb);
+      tb += mNTPCOccBinLength;
+    }
     for (int i = nTPCOccBins; i--;) {
-      float mlt = mTPCRefitter->getParam()->GetUnscaledMult(tb);
-      sm += mlt;
-      mTBinClOcc[i] = sm;
-      if (ninteg++ > mNTPCOccBinLength) {
-        sm -= mltPrev;
+      sm += mltHistTB[i];
+      if (i + sumBins < nTPCOccBins) {
+        sm -= mltHistTB[i + sumBins];
       }
-      //      LOGP(info, "BIN {} of {} -> {} with inst val {} (prev = {}) BL={} nInt={} tb={}", i, nTPCOccBins, sm, mlt, mltPrev, mNTPCOccBinLength, ninteg, tb);
-      mltPrev = mlt;
-      tb -= mNTPCOccBinLength;
+      mTBinClOcc[i] = sm;
     }
   } else {
     mTBinClOcc.resize(1);
