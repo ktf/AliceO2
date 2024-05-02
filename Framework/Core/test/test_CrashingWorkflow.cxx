@@ -85,4 +85,3 @@ WorkflowSpec defineDataProcessing(ConfigContext const& config)
 
   return workflow::concat(WorkflowSpec{a, b});
 }
-
