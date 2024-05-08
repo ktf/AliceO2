@@ -26,8 +26,9 @@
 
 using namespace o2::framework;
 
-namespace o2::framework {
-  struct ProcessingContext;
+namespace o2::framework
+{
+struct ProcessingContext;
 }
 
 namespace o2::phos
