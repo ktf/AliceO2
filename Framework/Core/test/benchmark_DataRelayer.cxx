@@ -87,7 +87,7 @@ static void BM_RelaySingleSlot(benchmark::State& state)
   memcpy(inflightMessages[0]->GetData(), stack.data(), stack.size());
 
   for (auto _ : state) {
-    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), inflightMessages.size());
+    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), "test-channel", inflightMessages.size());
     std::vector<RecordAction> ready;
     relayer.getReadyToProcess(ready);
     assert(ready.size() == 1);
@@ -144,7 +144,7 @@ static void BM_RelayMultipleSlots(benchmark::State& state)
     Stack stack{dh, DataProcessingHeader{timeslice++, 1}};
     memcpy(inflightMessages[0]->GetData(), stack.data(), stack.size());
 
-    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), inflightMessages.size());
+    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), "test-channel", inflightMessages.size());
     std::vector<RecordAction> ready;
     relayer.getReadyToProcess(ready);
     assert(ready.size() == 1);
@@ -211,13 +211,13 @@ static void BM_RelayMultipleRoutes(benchmark::State& state)
   memcpy(inflightMessages[2]->GetData(), stack2.data(), stack2.size());
 
   for (auto _ : state) {
-    relayer.relay(inflightMessages[0]->GetData(), &inflightMessages[0], 2);
+    relayer.relay(inflightMessages[0]->GetData(), &inflightMessages[0], "test-channel", 2);
     std::vector<RecordAction> ready;
     relayer.getReadyToProcess(ready);
     assert(ready.size() == 1);
     assert(ready[0].op == CompletionPolicy::CompletionOp::Consume);
 
-    relayer.relay(inflightMessages[2]->GetData(), &inflightMessages[2], 2);
+    relayer.relay(inflightMessages[2]->GetData(), &inflightMessages[2], "test-channel", 2);
     ready.clear();
     relayer.getReadyToProcess(ready);
     assert(ready.size() == 1);
@@ -283,7 +283,7 @@ static void BM_RelaySplitParts(benchmark::State& state)
   }
 
   for (auto _ : state) {
-    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), inflightMessages.size());
+    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), "test-channel", inflightMessages.size());
     std::vector<RecordAction> ready;
     relayer.getReadyToProcess(ready);
     assert(ready.size() == 1);
@@ -337,7 +337,7 @@ static void BM_RelayMultiplePayloads(benchmark::State& state)
   }
 
   for (auto _ : state) {
-    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), inflightMessages.size(), nPayloads);
+    relayer.relay(inflightMessages[0]->GetData(), inflightMessages.data(), "test-channel", inflightMessages.size(), nPayloads);
     std::vector<RecordAction> ready;
     relayer.getReadyToProcess(ready);
     assert(ready.size() == 1);
