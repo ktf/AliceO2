@@ -132,7 +132,7 @@ class DataRelayer
   /// Notice that we expect that the header is an O2 Header Stack
   RelayChoice relay(void const* rawHeader,
                     std::unique_ptr<fair::mq::Message>* messages,
-                    InputInfo const&info,
+                    InputInfo const& info,
                     size_t nMessages,
                     size_t nPayloads = 1,
                     OnDropCallback onDrop = nullptr);
