@@ -81,6 +81,24 @@ class DataRelayer
     CompletionPolicy::CompletionOp op;
   };
 
+  enum struct InputType : int {
+    Invalid = 0,
+    Data = 1,
+    SourceInfo = 2,
+    DomainInfo = 3
+  };
+
+  struct InputInfo {
+    InputInfo(size_t p, size_t s, InputType t, char const* cn)
+      : position(p), size(s), type(t), channelName(cn)
+    {
+    }
+    size_t position;
+    size_t size;
+    InputType type;
+    char const* channelName = nullptr;
+  };
+
   DataRelayer(CompletionPolicy const&,
               std::vector<InputRoute> const& routes,
               TimesliceIndex&,
@@ -114,6 +132,7 @@ class DataRelayer
   /// Notice that we expect that the header is an O2 Header Stack
   RelayChoice relay(void const* rawHeader,
                     std::unique_ptr<fair::mq::Message>* messages,
+                    char const* channelName,
                     size_t nMessages,
                     size_t nPayloads = 1,
                     OnDropCallback onDrop = nullptr);
