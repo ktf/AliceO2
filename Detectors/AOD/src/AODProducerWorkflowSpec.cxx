@@ -1923,7 +1923,7 @@ void AODProducerWorkflowDPL::run(ProcessingContext& pc)
     mcCollisionsCursor.reserve(totalNParts);
 
     for (int iCol = 0; iCol < nMCCollisions; iCol++) {
-      auto time = mcRecords[iCol].getTimeNS();
+      const auto time = mcRecords[iCol].getTimeOffsetWrtBC();
       auto globalBC = mcRecords[iCol].toLong();
       auto item = bcsMap.find(globalBC);
       int bcID = -1;
