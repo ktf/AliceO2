@@ -67,6 +67,25 @@ struct DiscoverMetadataInCommandLineCapability : o2::framework::CapabilityPlugin
   }
 };
 
+std::vector<std::string> getListOfTables(TFile* f)
+{
+  std::vector<std::string> r;
+  TList* keyList = f->GetListOfKeys();
+
+  for (auto key : *keyList) {
+    if (!std::string_view(key->GetName()).starts_with("DF_")) {
+      continue;
+    }
+    auto* d = (TDirectory*)f->Get(key->GetName());
+    TList* branchList = d->GetListOfKeys();
+    for (auto b : *branchList) {
+      r.emplace_back(b->GetName());
+    }
+    break;
+  }
+  return r;
+}
+
 struct DiscoverMetadataInCommandLine : o2::framework::ConfigDiscoveryPlugin {
   ConfigDiscovery* create() override
   {
@@ -86,7 +105,11 @@ struct DiscoverMetadataInCommandLine : o2::framework::ConfigDiscoveryPlugin {
           std::string value = argv[i + 1];
           O2_SIGNPOST_EVENT_EMIT(capabilities, sid, "DiscoverMetadataInCommandLine",
                                  "Found %{public}s with value %{public}s.", key.c_str(), value.c_str());
-          results.push_back(ConfigParamSpec{key, VariantType::String, value, {"Metadata in command line"}});
+          if (key == "aod-metadata-tables") {
+            results.push_back(ConfigParamSpec{key, VariantType::ArrayString, getListOfTables(value), {"Metadata in command line"}});
+          } else {
+            results.push_back(ConfigParamSpec{key, VariantType::String, value, {"Metadata in command line"}});
+          }
         }
         return results;
       }};
