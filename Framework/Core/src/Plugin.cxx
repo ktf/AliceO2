@@ -86,7 +86,11 @@ struct DiscoverMetadataInCommandLine : o2::framework::ConfigDiscoveryPlugin {
           std::string value = argv[i + 1];
           O2_SIGNPOST_EVENT_EMIT(capabilities, sid, "DiscoverMetadataInCommandLine",
                                  "Found %{public}s with value %{public}s.", key.c_str(), value.c_str());
-          results.push_back(ConfigParamSpec{key, VariantType::String, value, {"Metadata in command line"}});
+          if (key == "aod-metadata-tables") {
+            results.push_back(ConfigParamSpec{key, VariantType::ArrayString, value, {"Metadata in command line"}});
+          } else {
+            results.push_back(ConfigParamSpec{key, VariantType::String, value, {"Metadata in command line"}});
+          }
         }
         return results;
       }};
