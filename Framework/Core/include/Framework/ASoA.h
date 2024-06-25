@@ -559,6 +559,9 @@ template <typename T>
 constexpr auto is_persistent_v = is_persistent_t<T>::value;
 
 template <typename T>
+constexpr auto is_dynamic_v = is_dynamic_t<T>::value;
+
+template <typename T>
 using is_external_index_t = typename std::conditional<is_index_column_v<T>, std::true_type, std::false_type>::type;
 
 template <typename T>
@@ -784,7 +787,6 @@ struct RowViewCore : public IP, C... {
   using table_t = o2::soa::Table<C...>;
   using all_columns = framework::pack<C...>;
   using persistent_columns_t = framework::selected_pack<is_persistent_t, C...>;
-  using dynamic_columns_t = framework::selected_pack<is_dynamic_t, C...>;
   using index_columns_t = framework::selected_pack<is_index_t, C...>;
   constexpr inline static bool has_index_v = framework::pack_size(index_columns_t{}) > 0;
   using external_index_columns_t = framework::selected_pack<is_external_index_t, C...>;
@@ -794,8 +796,7 @@ struct RowViewCore : public IP, C... {
     : IP{policy},
       C(columnData[framework::has_type_at_v<C>(all_columns{})])...
   {
-    bindIterators(persistent_columns_t{});
-    bindAllDynamicColumns(dynamic_columns_t{});
+    bind();
     // In case we have an index column might need to constrain the actual
     // number of rows in the view to the range provided by the index.
     // FIXME: we should really understand what happens to an index when we
@@ -810,16 +811,14 @@ struct RowViewCore : public IP, C... {
     : IP{static_cast<IP const&>(other)},
       C(static_cast<C const&>(other))...
   {
-    bindIterators(persistent_columns_t{});
-    bindAllDynamicColumns(dynamic_columns_t{});
+    bind();
   }
 
   RowViewCore& operator=(RowViewCore other)
   {
     IP::operator=(static_cast<IP const&>(other));
     (void(static_cast<C&>(*this) = static_cast<C>(other)), ...);
-    bindIterators(persistent_columns_t{});
-    bindAllDynamicColumns(dynamic_columns_t{});
+    bind();
     return *this;
   }
 
@@ -827,8 +826,7 @@ struct RowViewCore : public IP, C... {
     : IP{static_cast<IP const&>(other)},
       C(static_cast<C const&>(other))...
   {
-    bindIterators(persistent_columns_t{});
-    bindAllDynamicColumns(dynamic_columns_t{});
+    bind();
   }
 
   RowViewCore& operator++()
@@ -930,6 +928,9 @@ struct RowViewCore : public IP, C... {
   }
 
  private:
+  template <class... Ts> struct overload : Ts... { using Ts::operator()...; };
+  template <class... Ts> overload(Ts...) -> overload<Ts...>; // clang needs this deduction guide,
+                                                           // even in C++20 for some reasons ...
   /// Helper to move to the correct chunk, if needed.
   /// FIXME: not needed?
   template <typename... PC>
@@ -947,18 +948,15 @@ struct RowViewCore : public IP, C... {
 
   /// Helper which binds all the ColumnIterators to the
   /// index of a the associated RowView
-  template <typename... PC>
-  auto bindIterators(framework::pack<PC...>)
+  void bind()
   {
     using namespace o2::soa;
-    (void(PC::mColumnIterator.mCurrentPos = &this->mRowIndex), ...);
-  }
-
-  template <typename... DC>
-  auto bindAllDynamicColumns(framework::pack<DC...>)
-  {
-    using namespace o2::soa;
-    (bindDynamicColumn<DC>(typename DC::bindings_t{}), ...);
+    auto f = overload  {
+      [this]<typename T>(T&&) -> void requires is_persistent_v<T> { T::mColumnIterator.mCurrentPos = &this->mRowIndex; },
+      [this]<typename T>(T&&) -> void requires is_dynamic_v<T> { bindDynamicColumn<T>(typename T::bindings_t{});},
+      [this]<typename T>(T&&) -> void {},
+    };
+    (f(C{}), ...);
     if constexpr (has_index_v) {
       this->setIndices(this->getIndices());
       this->setOffsets(this->getOffsets());
