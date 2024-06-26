@@ -374,15 +374,13 @@ class Variant
   }
 
   template <typename T>
-  void set(std::vector<T>& values)
-    requires(std::is_pod_v<T>)
+  void set(std::vector<T>& values) requires(std::is_pod_v<T>)
   {
     return variant_helper<T*>::set(&mStore, values.data(), values.size());
   }
 
   template <typename T>
-  void set(std::vector<T>& values)
-    requires(std::is_same_v<T, std::string>)
+  void set(std::vector<T>& values) requires(std::is_same_v<T, std::string>)
   {
     return variant_helper<T*>::set(&mStore, values);
   }
