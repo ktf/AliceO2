@@ -175,8 +175,9 @@ void print_pack()
 template <template <typename> typename Condition, typename... Types>
 using filtered_pack = std::decay_t<decltype(filter_pack<Condition>(pack<>{}, pack<Types...>{}))>;
 
-template <typename T, typename...Us>
-bool consteval has_type(framework::pack<Us...>) {
+template <typename T, typename... Us>
+bool consteval has_type(framework::pack<Us...>)
+{
   return (std::is_same_v<T, Us> || ...);
 }
 
