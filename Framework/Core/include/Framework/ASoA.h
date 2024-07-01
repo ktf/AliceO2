@@ -782,8 +782,9 @@ struct ColumnDataHolder {
 };
 
 template <typename T, typename B>
-concept CanBind = requires(T&& t) {
-  { t.B::mColumnIterator };
+concept CanBind = requires(T&& t)
+{
+  {t.B::mColumnIterator};
 };
 
 template <typename IP, typename... C>
@@ -978,12 +979,11 @@ struct RowViewCore : public IP, C... {
   // error if constructor for the table or any other thing involving a missing
   // binding is preinstanciated.
   template <typename B>
-    requires(CanBind<typename table_t::iterator, B>)
-  decltype(auto) getDynamicBinding()
+  requires(CanBind<typename table_t::iterator, B>) decltype(auto) getDynamicBinding()
   {
     static_assert(std::is_same_v<decltype(&(static_cast<B*>(this)->mColumnIterator)), std::decay_t<decltype(B::mColumnIterator)>*>, "foo");
     return &(static_cast<B*>(this)->mColumnIterator);
-    //return static_cast<std::decay_t<decltype(B::mColumnIterator)>*>(nullptr);
+    // return static_cast<std::decay_t<decltype(B::mColumnIterator)>*>(nullptr);
   }
 
   template <typename B>
