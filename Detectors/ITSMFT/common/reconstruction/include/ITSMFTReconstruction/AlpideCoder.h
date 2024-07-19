@@ -160,7 +160,6 @@ class AlpideCoder
     uint32_t expectInp = ExpectNextChip; // data must always start with chip header or chip empty flag
 
     chipData.clear();
-    bool dataSeen = false;
     LOG(debug) << "NewEntry";
     while (buffer.next(dataC)) {
       //
@@ -223,7 +222,6 @@ class AlpideCoder
           return unexpectedEOF("CHIP_HEADER"); // abandon cable data
         }
         expectInp = ExpectRegion; // now expect region info
-        dataSeen = false;
         continue;
       }
 
@@ -250,19 +248,11 @@ class AlpideCoder
             addHit(chipData, rightColHits[ihr], colDPrev);
           }
         }
-
-        if (!dataSeen && !chipData.isErrorSet()) {
-#ifdef ALPIDE_DECODING_STAT
-          chipData.setError(ChipStat::TrailerAfterHeader);
-#endif
-          return unexpectedEOF("Trailer after header"); // abandon cable data
-        }
         break;
       }
 
       // hit info ?
       if ((expectInp & ExpectData)) {
-        dataSeen = true;
         if (isData(dataC)) { // region header was seen, expect data
                              // note that here we are checking on the byte rather than the short, need complete to ushort
           dataS = dataC << 8;
@@ -392,12 +382,19 @@ class AlpideCoder
         return unexpectedEOF("Abandon on 0-padding"); // abandon cable data
       }
 
-      // in case of BUSY VIOLATION the Trailer may come directly after the Header
-      if ((expectInp & ExpectRegion) && isChipTrailer(dataC) && (dataC & MaskROFlags)) {
-        expectInp = ExpectNextChip;
-        chipData.setROFlags(dataC & MaskROFlags);
-        roErrHandler(dataC & MaskROFlags);
-        break;
+      if ((expectInp & ExpectRegion) && isChipTrailer(dataC)) {
+        if (dataC & MaskROFlags) {
+          // in case of BUSY VIOLATION the Trailer may come directly after the Header
+          expectInp = ExpectNextChip;
+          chipData.setROFlags(dataC & MaskROFlags);
+          roErrHandler(dataC & MaskROFlags);
+          break;
+        } else {
+#ifdef ALPIDE_DECODING_STAT
+          chipData.setError(ChipStat::TrailerAfterHeader);
+#endif
+          return unexpectedEOF("Trailer after header"); // abandon cable data
+        }
       }
 
       // check for APE errors, see https://alice.its.cern.ch/jira/browse/O2-1717?focusedCommentId=274714&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-274714
@@ -631,13 +628,33 @@ class AlpideCoder
         case ChipStat::BusyViolation:
         case ChipStat::DataOverrun:
         case ChipStat::Fatal:
+          break;
         case ChipStat::BusyOn:
         case ChipStat::BusyOff:
+          // We don't need to do anything with these errors.
+          break;
         case ChipStat::TruncatedChipEmpty:
+          // This error cannot cause mismatch since it can be reconstructed
+          // via the encoder.
+          break;
         case ChipStat::TruncatedChipHeader:
         case ChipStat::TruncatedRegion:
+          if (isChipHeader(dataRaw) && isChipEmpty(dataRec)) {
+            // In case of TruncatedChipHeader, the raw data must have a chip
+            // header while the reconstructed chip is empty. The verifier
+            // cannot continue the verification further.
+            res = VerifierMismatchResult::EXPECTED_MISMATCH;
+          }
+          break;
         case ChipStat::TruncatedLondData:
         case ChipStat::WrongDataLongPattern:
+          if (isData(dataRaw) && isChipTrailer(dataRec)) {
+            // If the decoder encountered an issue with DATALONG, the verifier
+            // must have a mismatch between data on the raw stream and trailer
+            // on the reconstructed stream
+            res = VerifierMismatchResult::EXPECTED_MISMATCH;
+          }
+          break;
         case ChipStat::NoDataFound:
         case ChipStat::UnknownWord:
         case ChipStat::RepeatingPixel:
@@ -658,10 +675,24 @@ class AlpideCoder
         case ChipStat::WrongDColOrder:
         case ChipStat::InterleavedChipData:
         case ChipStat::TruncatedBuffer:
+          break;
         case ChipStat::TrailerAfterHeader:
+          if (isChipHeader(dataRaw) && isChipEmpty(dataRec)) {
+            // This error can be verified by skipping a bunch counter byte and
+            // checking that the following byte corresponds to the chip trailer
+            buffer.next(dataRaw);
+            buffer.next(dataRaw);
+            if (isChipTrailer(dataRaw)) {
+              res = VerifierMismatchResult::EXPECTED_MISMATCH;
+            }
+          }
+          break;
         case ChipStat::FlushedIncomplete:
         case ChipStat::StrobeExtended:
+          break;
         case ChipStat::WrongAlpideChipID:
+          // If the chip doesn't have a valid ID, we must stop the verification
+          res = VerifierMismatchResult::EXPECTED_MISMATCH;
           break;
         default:
           LOG(error) << "Unknown error set by chip during verifier mismatch";
