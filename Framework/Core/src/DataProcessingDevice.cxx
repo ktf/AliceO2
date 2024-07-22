@@ -1298,6 +1298,7 @@ void DataProcessingDevice::Run()
         state.loopReason |= DeviceState::LoopReason::NEW_STATE_PENDING;
       }
       if (state.transitionHandling == TransitionHandlingState::NoTransition && NewStatePending()) {
+        O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "A new state is pending so we requested a new transition.");
         state.transitionHandling = TransitionHandlingState::Requested;
         auto& deviceContext = ref.get<DeviceContext>();
         auto timeout = deviceContext.exitTransitionTimeout;
@@ -1697,7 +1698,7 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
   }
 
   if (state.streaming == StreamingState::EndOfStreaming) {
-    O2_SIGNPOST_EVENT_EMIT(device, dpid, "state", "We are in EndOfStreaming. Flushing queues.");
+    O2_SIGNPOST_EVENT_EMIT(device, dpid, "state", "Flushing queues.");
     // We keep processing data until we are Idle.
     // FIXME: not sure this is the correct way to drain the queues, but
     // I guess we will see.
@@ -1710,6 +1711,12 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
     while (DataProcessingDevice::tryDispatchComputation(ref, context.completed) && shouldProcess) {
       relayer.processDanglingInputs(context.expirationHandlers, *context.registry, false);
     }
+
+    auto& timingInfo = ref.get<TimingInfo>();
+    // We should keep the data generated at end of stream only for those
+    // which are not sources.
+    timingInfo.keepAtEndOfStream = shouldProcess;
+
     EndOfStreamContext eosContext{*context.registry, ref.get<DataAllocator>()};
 
     context.preEOSCallbacks(eosContext);
