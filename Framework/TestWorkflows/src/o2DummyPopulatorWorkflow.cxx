@@ -57,27 +57,29 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
           outputs.snapshot(Output{"TS2", "A2", i}, i);
         }
       })},
-    .options = {ConfigParamSpec{"some-device-param", VariantType::Int, 1, {"Some device parameter"}},
-                }};
+    .options = {
+      ConfigParamSpec{"some-device-param", VariantType::Int, 1, {"Some device parameter"}},
+    }};
 
   a.outputs.emplace_back(ConcreteDataTypeMatcher{"TS1", "A1"}, Lifetime::Sporadic);
   a.outputs.emplace_back(ConcreteDataTypeMatcher{"TS2", "A2"}, Lifetime::Sporadic);
 
-  DataProcessorSpec d{.name = "D",
-                      .inputs = {InputSpec{"a", "TS1", Lifetime::Sporadic}, InputSpec{"b", "TS2", Lifetime::Sporadic}},
-                      .algorithm = AlgorithmSpec{adaptStateless(
-                        [](InputRecord& inputs) {
-                          auto ref = inputs.get("b");
-                          if (!ref.header) {
-                            LOG(info) << "Header is not there";
-                            return;
-                          }
-                          auto dph = o2::header::get<const DataProcessingHeader*>(ref.header);
-                          auto dh = o2::header::get<const o2::header::DataHeader*>(ref.header);
-                          LOG(info) << "Start time: " << dph->startTime;
-                          LOG(info) << "Subspec: " << dh->subSpecification;
-                        })},
-                      };
+  DataProcessorSpec d{
+    .name = "D",
+    .inputs = {InputSpec{"a", "TS1", Lifetime::Sporadic}, InputSpec{"b", "TS2", Lifetime::Sporadic}},
+    .algorithm = AlgorithmSpec{adaptStateless(
+      [](InputRecord& inputs) {
+        auto ref = inputs.get("b");
+        if (!ref.header) {
+          LOG(info) << "Header is not there";
+          return;
+        }
+        auto dph = o2::header::get<const DataProcessingHeader*>(ref.header);
+        auto dh = o2::header::get<const o2::header::DataHeader*>(ref.header);
+        LOG(info) << "Start time: " << dph->startTime;
+        LOG(info) << "Subspec: " << dh->subSpecification;
+      })},
+  };
 
   return workflow::concat(WorkflowSpec{a}, WorkflowSpec{d});
 }
