@@ -37,8 +37,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
         static int counter = 0;
         auto& aData = outputs.make<int>(OutputRef{"counter"});
         aData = counter++;
-        if (counter == 10) {
-          pcx.services().get<ControlService>().endOfStream();
+        sleep(1);
+        if (counter == 5) {
+          pcx.services().get<ControlService>().readyToQuit(QuitRequest::All);
         }
       })},
   };
@@ -57,6 +58,7 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
         callbacks.set<CallbackService::Id::EndOfStream>(eosCallback);
         return adaptStateless([](Input<"x", int> const& x)
           {
+            sleep(1);
             sum += x;
             std::cout << "Sum: " << sum << std::endl;
         }); })};

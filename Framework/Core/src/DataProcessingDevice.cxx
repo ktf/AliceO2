@@ -92,6 +92,8 @@ struct formatter<o2::framework::CompletionPolicy::CompletionOp> : ostream_format
 O2_DECLARE_DYNAMIC_LOG(device);
 // Special log to keep track of the lifetime of the parts
 O2_DECLARE_DYNAMIC_LOG(parts);
+// Stream which keeps track of the calibration lifetime logic
+O2_DECLARE_DYNAMIC_LOG(calibration);
 // Special log to track the async queue behavior
 O2_DECLARE_DYNAMIC_LOG(async_queue);
 // Special log to track the forwarding requests
@@ -131,11 +133,28 @@ bool hasOnlyGenerated(DeviceSpec const& spec)
 
 void on_transition_requested_expired(uv_timer_t* handle)
 {
-  auto* state = (DeviceState*)handle->data;
-  state->loopReason |= DeviceState::TIMER_EXPIRED;
+  auto* ref = (ServiceRegistryRef*)handle->data;
+  auto& state = ref->get<DeviceState>();
+  state.loopReason |= DeviceState::TIMER_EXPIRED;
+  // Check if this is a source device
   O2_SIGNPOST_ID_FROM_POINTER(cid, device, handle);
-  O2_SIGNPOST_EVENT_EMIT_WARN(device, cid, "callback", "Exit transition timer expired. Exiting.");
-  state->transitionHandling = TransitionHandlingState::Expired;
+  auto& spec = ref->get<DeviceSpec const>();
+  if (hasOnlyGenerated(spec)) {
+    O2_SIGNPOST_EVENT_EMIT_INFO(calibration, cid, "callback", "Grace period for source expired. Exiting.");
+  } else {
+    O2_SIGNPOST_EVENT_EMIT_ERROR(calibration, cid, "callback", "Grace period for calibration expired. Exiting.");
+  }
+  state.transitionHandling = TransitionHandlingState::Expired;
+}
+
+void on_data_processing_grace_expired(uv_timer_t* handle)
+{
+  auto* ref = (ServiceRegistryRef*)handle->data;
+  auto& state = ref->get<DeviceState>();
+  state.loopReason |= DeviceState::TIMER_EXPIRED;
+  O2_SIGNPOST_ID_FROM_POINTER(cid, device, handle);
+  O2_SIGNPOST_EVENT_EMIT_INFO(calibration, cid, "callback", "Grace period for Data Processing expired. Waiting for calibration");
+  state.transitionHandling = TransitionHandlingState::DataProcessingExpired;
 }
 
 void on_communication_requested(uv_async_t* s)
@@ -928,8 +947,13 @@ void DataProcessingDevice::startPollers()
   }
 
   deviceContext.gracePeriodTimer = (uv_timer_t*)malloc(sizeof(uv_timer_t));
-  deviceContext.gracePeriodTimer->data = &state;
+  deviceContext.gracePeriodTimer->data = new ServiceRegistryRef(mServiceRegistry);
   uv_timer_init(state.loop, deviceContext.gracePeriodTimer);
+
+  // Prepare the timers if needed
+  deviceContext.dataProcessingGracePeriodTimer = (uv_timer_t*)malloc(sizeof(uv_timer_t));
+  deviceContext.dataProcessingGracePeriodTimer->data = new ServiceRegistryRef(mServiceRegistry);
+  uv_timer_init(state.loop, deviceContext.dataProcessingGracePeriodTimer);
 }
 
 void DataProcessingDevice::stopPollers()
@@ -960,6 +984,10 @@ void DataProcessingDevice::stopPollers()
   uv_timer_stop(deviceContext.gracePeriodTimer);
   free(deviceContext.gracePeriodTimer);
   deviceContext.gracePeriodTimer = nullptr;
+
+  uv_timer_stop(deviceContext.dataProcessingGracePeriodTimer);
+  free(deviceContext.dataProcessingGracePeriodTimer);
+  deviceContext.dataProcessingGracePeriodTimer = nullptr;
 }
 
 void DataProcessingDevice::InitTask()
@@ -994,6 +1022,7 @@ void DataProcessingDevice::InitTask()
   }
 
   deviceContext.expectedRegionCallbacks = std::stoi(fConfig->GetValue<std::string>("expected-region-callbacks"));
+  deviceContext.dataProcessingTimeout = std::stoi(fConfig->GetValue<std::string>("data-processing-timeout"));
   deviceContext.exitTransitionTimeout = std::stoi(fConfig->GetValue<std::string>("exit-transition-timeout"));
 
   for (auto& channel : GetChannels()) {
@@ -1306,17 +1335,28 @@ void DataProcessingDevice::Run()
       if (state.transitionHandling == TransitionHandlingState::NoTransition && NewStatePending()) {
         state.transitionHandling = TransitionHandlingState::Requested;
         auto& deviceContext = ref.get<DeviceContext>();
-        auto timeout = deviceContext.exitTransitionTimeout;
         // Check if we only have timers
         auto& spec = ref.get<DeviceSpec const>();
         if (hasOnlyTimers(spec)) {
           state.streaming = StreamingState::EndOfStreaming;
         }
-        if (timeout != 0 && state.streaming != StreamingState::Idle) {
+
+        if (deviceContext.exitTransitionTimeout != 0 && state.streaming != StreamingState::Idle) {
           state.transitionHandling = TransitionHandlingState::Requested;
           ref.get<CallbackService>().call<CallbackService::Id::ExitRequested>(ServiceRegistryRef{ref});
           uv_update_time(state.loop);
-          uv_timer_start(deviceContext.gracePeriodTimer, on_transition_requested_expired, timeout * 1000, 0);
+          O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "Starting %d s timer for exitTransitionTimeout.", deviceContext.exitTransitionTimeout);
+          uv_timer_start(deviceContext.gracePeriodTimer, on_transition_requested_expired, deviceContext.exitTransitionTimeout * 1000, 0);
+          // In case we have a calibration grace period it will always be longer than the data processing timeout
+          if (hasOnlyGenerated(spec)) {
+            O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "Source devices should never start calibration timer.");
+          } else if (deviceContext.dataProcessingTimeout != deviceContext.exitTransitionTimeout) {
+            O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "Starting %d s timer for dataProcessingTimeout.", deviceContext.dataProcessingTimeout);
+            uv_timer_start(deviceContext.dataProcessingGracePeriodTimer, on_data_processing_grace_expired, deviceContext.dataProcessingTimeout * 1000, 0);
+          } else {
+            O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "No special timer requested for calibration.");
+          }
+
           if (mProcessingPolicies.termination == TerminationPolicy::QUIT) {
             O2_SIGNPOST_EVENT_EMIT_INFO(device, lid, "run_loop", "New state requested. Waiting for %d seconds before quitting.", (int)deviceContext.exitTransitionTimeout);
           } else {
@@ -1331,12 +1371,12 @@ void DataProcessingDevice::Run()
           } else if (mProcessingPolicies.termination == TerminationPolicy::QUIT) {
             O2_SIGNPOST_EVENT_EMIT_INFO(device, lid, "run_loop", "New state pending and we are already idle, quitting immediately as per --completion-policy");
           } else {
-            O2_SIGNPOST_EVENT_EMIT_INFO(device, lid, "runb_loop", "New state pending and we are already idle, switching to READY immediately.");
+            O2_SIGNPOST_EVENT_EMIT_INFO(device, lid, "run_loop", "New state pending and we are already idle, switching to READY immediately.");
           }
         }
       }
-      // If we are Idle, we can then consider the transition to be expired.
-      if (state.transitionHandling == TransitionHandlingState::Requested && state.streaming == StreamingState::Idle) {
+      // If we are Idle, we can then consider the transition to be expired when it was requested or when the data processing timeout expired.
+      if ((state.transitionHandling == TransitionHandlingState::Requested || state.transitionHandling == TransitionHandlingState::DataProcessingExpired) && state.streaming == StreamingState::Idle) {
         O2_SIGNPOST_EVENT_EMIT(device, lid, "run_loop", "State transition requested and we are now in Idle. We can consider it to be completed.");
         state.transitionHandling = TransitionHandlingState::Expired;
       }
@@ -1702,8 +1742,13 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
     *context.wasActive = true;
   }
 
+  auto& deviceContext = ref.get<DeviceContext>();
+
   if (state.streaming == StreamingState::EndOfStreaming) {
-    O2_SIGNPOST_EVENT_EMIT(device, dpid, "state", "We are in EndOfStreaming. Flushing queues.");
+    O2_SIGNPOST_EVENT_EMIT(device, dpid, "state", "Flushing queues.");
+    O2_SIGNPOST_EVENT_EMIT(calibration, dpid, "state", "EndOfStreaming reached. %{public}s %{public}s",
+                           uv_timer_get_due_in(deviceContext.gracePeriodTimer) ? fmt::format("grace timer still running for {}", uv_timer_get_due_in(deviceContext.gracePeriodTimer)).c_str() : "Grace timer expired",
+                           uv_timer_get_due_in(deviceContext.dataProcessingGracePeriodTimer) ? fmt::format("data processing timer still running for {}", uv_timer_get_due_in(deviceContext.dataProcessingGracePeriodTimer)).c_str() : "DataProcessingTimer timer expired");
     // We keep processing data until we are Idle.
     // FIXME: not sure this is the correct way to drain the queues, but
     // I guess we will see.
@@ -1721,6 +1766,7 @@ void DataProcessingDevice::doRun(ServiceRegistryRef ref)
     // We should keep the data generated at end of stream only for those
     // which are not sources.
     timingInfo.keepAtEndOfStream = shouldProcess;
+    O2_SIGNPOST_EVENT_EMIT(calibration, dpid, "calibration", "TimingInfo.keepAtEndOfStream %d", timingInfo.keepAtEndOfStream);
 
     EndOfStreamContext eosContext{*context.registry, ref.get<DataAllocator>()};
 
@@ -2348,7 +2394,6 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
                        *context.registry};
     ProcessingContext processContext{record, ref, ref.get<DataAllocator>()};
     {
-      O2_SIGNPOST_EVENT_EMIT(device, aid, "device", "Invoking preProcessingCallbacks");
       // Notice this should be thread safe and reentrant
       // as it is called from many threads.
       streamContext.preProcessingCallbacks(processContext);
