@@ -56,11 +56,10 @@ WorkflowSpec defineDataProcessing(ConfigContext const& specs)
           ctx.services().get<ControlService>().endOfStream();
         };
         callbacks.set<CallbackService::Id::EndOfStream>(eosCallback);
-        return adaptStateless([](Input<"x", int> const& x)
-          {
-            sleep(1);
-            sum += x;
-            std::cout << "Sum: " << sum << std::endl;
+        return adaptStateless([](Input<"x", int> const& x) {
+          sleep(1);
+          sum += x;
+          std::cout << "Sum: " << sum << std::endl;
         }); })};
 
   DataProcessorSpec c{.name = "publisher",
