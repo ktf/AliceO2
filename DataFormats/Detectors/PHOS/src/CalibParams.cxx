@@ -69,7 +69,7 @@ bool CalibParams::setGain(TH2* h, int8_t module)
 bool CalibParams::setHGLGRatio(TH2* h, int8_t module)
 {
   const int8_t MAXX = 64,
-             MAXZ = 56;
+               MAXZ = 56;
   if (module < 1 || module > 4) {
     LOG(error) << "module " << module << "does not exist";
     return false;
@@ -105,7 +105,7 @@ bool CalibParams::setHGLGRatio(TH2* h, int8_t module)
 bool CalibParams::setHGTimeCalib(TH2* h, int8_t module)
 {
   const int8_t MAXX = 64,
-             MAXZ = 56;
+               MAXZ = 56;
   if (module < 1 || module > 4) {
     LOG(error) << "module " << module << "does not exist";
     return false;
