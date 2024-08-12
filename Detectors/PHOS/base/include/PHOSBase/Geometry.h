@@ -100,7 +100,7 @@ class Geometry
   //  relid[0] = PHOS Module number 1:module
   //  relid[1] = Row number inside a PHOS module (Phi coordinate)
   //  relid[2] = Column number inside a PHOS module (Z coordinate)
-  static bool absToRelNumbering(short absId, int8_t * relid);
+  static bool absToRelNumbering(short absId, int8_t* relid);
   static int8_t absIdToModule(short absId);
   static void absIdToRelPosInModule(short absId, float& x, float& z);
   static void relPosToRelId(short module, float x, float z, int8_t* relId);
