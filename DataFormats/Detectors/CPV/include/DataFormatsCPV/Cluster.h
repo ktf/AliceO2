@@ -66,13 +66,13 @@ class Cluster
     posZ = mLocalPosZ;
   }
   [[nodiscard]] uint8_t getMultiplicity() const { return mMulDigit; } // gets the number of digits making this recpoint
-                                                              // 0: was no unfolging, -1: unfolding failed
-  [[nodiscard]] int8_t getModule() const { return mModule; }                  // CPV module of a current cluster
+                                                                      // 0: was no unfolging, -1: unfolding failed
+  [[nodiscard]] int8_t getModule() const { return mModule; }          // CPV module of a current cluster
 
   // 0: was no unfolging, -1: unfolding failed
   void setNExMax(int8_t nmax = 1) { mNExMax = nmax; }
   [[nodiscard]] int8_t getNExMax() const { return mNExMax; } // Number of maxima found in cluster in unfolding:
-                                             // 0: was no unfolging, -1: unfolding failed
+                                                             // 0: was no unfolging, -1: unfolding failed
 
   // raw access for CTF encoding
   [[nodiscard]] uint16_t getPackedPosX() const { return uint16_t((mLocalPosX - kMinX) / kStepX); }
@@ -110,8 +110,8 @@ class Cluster
 
  protected:
   unsigned char mMulDigit = 0; ///< Digit nultiplicity
-  int8_t mModule = 0;            ///< Module number
-  int8_t mNExMax = -1;           ///< number of (Ex-)maxima before unfolding
+  int8_t mModule = 0;          ///< Module number
+  int8_t mNExMax = -1;         ///< number of (Ex-)maxima before unfolding
   float mLocalPosX = 0.;       ///< Center of gravity position in local module coordunates (phi direction)
   float mLocalPosZ = 0.;       ///< Center of gravity position in local module coordunates (z direction)
   float mEnergy = 0.;          ///< full energy of a cluster
