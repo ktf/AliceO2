@@ -668,8 +668,8 @@ char Clusterer::getNumberOfLocalMax(Cluster& clu, std::vector<CluElement>& cluel
           }
         }
       } // if areneighbours
-    } // digit j
-  } // digit i
+    }   // digit j
+  }     // digit i
 
   int iDigitN = 0;
   for (std::size_t i = 0; i < mIsLocalMax.size(); i++) {
