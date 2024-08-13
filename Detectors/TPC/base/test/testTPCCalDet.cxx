@@ -54,8 +54,7 @@ bool isEqualAbs(T x, T y, int n = 1)
 }
 
 template <typename T>
-  requires(std::integral<T>)
-bool isEqualAbs(T val1, T val2)
+requires(std::integral<T>) bool isEqualAbs(T val1, T val2)
 {
   return val1 == val2;
 }
