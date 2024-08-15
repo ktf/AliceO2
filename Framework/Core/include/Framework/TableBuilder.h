@@ -28,12 +28,12 @@
 #include <arrow/table.h>
 #include <arrow/builder.h>
 
-#include <vector>
-#include <string>
+#include <concepts>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <type_traits>
-#include <concepts>
+#include <vector>
 
 namespace arrow
 {
@@ -568,10 +568,8 @@ concept BulkInsertable = (std::integral<std::decay<T>> && !std::same_as<bool, st
 
 template <typename T>
 struct InsertionTrait {
-  static consteval DirectInsertion<T> policy()
-    requires(!BulkInsertable<T>);
-  static consteval CachedInsertion<T> policy()
-    requires(BulkInsertable<T>);
+  static consteval DirectInsertion<T> policy() requires(!BulkInsertable<T>);
+  static consteval CachedInsertion<T> policy() requires(BulkInsertable<T>);
   using Policy = decltype(policy());
 };
 
