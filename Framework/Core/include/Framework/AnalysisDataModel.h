@@ -40,6 +40,7 @@ DECLARE_SOA_COLUMN(RunNumber, runNumber, int);          //! Run number
 DECLARE_SOA_COLUMN(GlobalBC, globalBC, uint64_t);       //! Bunch crossing number (globally unique in this run)
 DECLARE_SOA_COLUMN(TriggerMask, triggerMask, uint64_t); //! CTP trigger mask
 DECLARE_SOA_COLUMN(InputMask, inputMask, uint64_t);     //! CTP input mask
+DECLARE_SOA_COLUMN(Flags, flags, uint8_t);              //! BC flags (e.g. tagging of UPC tracking settings, etc)
 } // namespace bc
 
 DECLARE_SOA_TABLE(BCs_000, "AOD", "BC", //! Root of data model for tables pointing to a bunch crossing
@@ -50,6 +51,8 @@ DECLARE_SOA_TABLE_VERSIONED(BCs_001, "AOD", "BC", 1, //! Root of data model for 
                             o2::soa::Index<>,
                             bc::RunNumber, bc::GlobalBC,
                             bc::TriggerMask, bc::InputMask);
+DECLARE_SOA_TABLE(BCFlags, "AOD", "BCFLAG", //! flag for tagging UPCs, joinable with BCs
+                  bc::Flags);
 
 using BCs = BCs_001; // current version
 using BC = BCs::iterator;
@@ -562,9 +565,9 @@ DECLARE_SOA_COLUMN(TPCdEdxTot3R, tpcdEdxTot3R, uint8_t);             //! TPC dEd
 
 DECLARE_SOA_TABLE(TracksQA, "AOD", "TRACKQA", //! trackQA information - sampled QA information currently for the TPC
                   o2::soa::Index<>, trackqa::TrackId, trackqa::TPCTime0, trackqa::TPCDCAR, trackqa::TPCDCAZ, trackqa::TPCClusterByteMask,
-                  //                  o2::soa::Index<>, trackqa::TrackId, trackqa::TPCDCAR, trackqa::TPCDCAZ, trackqa::TPCClusterByteMask,
                   trackqa::TPCdEdxMax0R, trackqa::TPCdEdxMax1R, trackqa::TPCdEdxMax2R, trackqa::TPCdEdxMax3R,
                   trackqa::TPCdEdxTot0R, trackqa::TPCdEdxTot1R, trackqa::TPCdEdxTot2R, trackqa::TPCdEdxTot3R);
+//                  o2::soa::Index<>, trackqa::TrackId, trackqa::TPCDCAR, trackqa::TPCDCAZ, trackqa::TPCClusterByteMask,
 
 using TrackQA = TracksQA::iterator;
 

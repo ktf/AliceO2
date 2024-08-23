@@ -39,7 +39,7 @@ QGET_LD_BINARY_SYMBOLS(GPUReconstructionCUDArtc_command_arch);
 int GPUReconstructionCUDA::genRTC(std::string& filename, unsigned int& nCompile)
 {
 #ifndef GPUCA_ALIROOT_LIB
-  std::string rtcparam = GPUParamRTC::generateRTCCode(param(), mProcessingSettings.rtc.optConstexpr);
+  std::string rtcparam = std::string(mProcessingSettings.rtc.optSpecialCode ? "#define GPUCA_RTC_SPECIAL_CODE(...) __VA_ARGS__\n" : "#define GPUCA_RTC_SPECIAL_CODE(...)\n") + GPUParamRTC::generateRTCCode(param(), mProcessingSettings.rtc.optConstexpr);
   if (filename == "") {
     filename = "/tmp/o2cagpu_rtc_";
   }
@@ -128,7 +128,7 @@ int GPUReconstructionCUDA::genRTC(std::string& filename, unsigned int& nCompile)
         if (fread(&cachedSettings, sizeof(cachedSettings), 1, fp) != 1) {
           throw std::runtime_error("Cache file corrupt");
         }
-        if (!mProcessingSettings.rtc.ignoreCacheValid && memcmp(&cachedSettings, &mProcessingSettings.rtc, sizeof(cachedSettings))) {
+        if (!mProcessingSettings.rtc.ignoreCacheValid && !(cachedSettings == mProcessingSettings.rtc)) {
           GPUInfo("Cache file content outdated (rtc parameters)");
           break;
         }

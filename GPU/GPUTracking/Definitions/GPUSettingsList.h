@@ -198,6 +198,7 @@ EndConfig()
 BeginSubConfig(GPUSettingsProcessingRTC, rtc, configStandalone.proc, "RTC", 0, "Processing settings", proc_rtc)
 AddOption(cacheOutput, bool, false, "", 0, "Cache RTC compilation results")
 AddOption(optConstexpr, bool, true, "", 0, "Replace constant variables by static constexpr expressions")
+AddOption(optSpecialCode, signed char, -1, "", 0, "Insert GPUCA_RTC_SPECIAL_CODE special code during RTC")
 AddOption(compilePerKernel, bool, true, "", 0, "Run one RTC compilation per kernel")
 AddOption(enable, bool, false, "", 0, "Use RTC to optimize GPU code")
 AddOption(runTest, int, 0, "", 0, "Do not run the actual benchmark, but just test RTC compilation (1 full test, 2 test only compilation)")
@@ -564,7 +565,6 @@ AddVariableRTC(dAlpha, float, 0.f)           // angular size
 AddVariableRTC(assumeConstantBz, signed char, 0)    // Assume a constant magnetic field
 AddVariableRTC(toyMCEventsFlag, signed char, 0)     // events were build with home-made event generator
 AddVariableRTC(continuousTracking, signed char, 0)  // Continuous tracking, estimate bz and errors for abs(z) = 125cm during seeding
-AddVariableRTC(resetTimers, signed char, 0)         // Reset benchmark timers before event processing
 AddVariableRTC(dodEdx, signed char, 0)              // Do dEdx computation
 AddVariableRTC(earlyTpcTransform, signed char, 0)   // do Early TPC transformation
 AddVariableRTC(debugLevel, signed char, 0)          // Debug level
