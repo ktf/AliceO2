@@ -9,30 +9,26 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifdef __HIPCC__
-#include "hip/hip_runtime.h"
-#else
-#include <cuda.h>
-#endif
+/// \file GPUDisplayGUI.cxx
+/// \author David Rohr
 
-#include "GPUCommonDef.h"
-#include "DCAFitter/DCAFitterN.h"
+#include "GPUDisplayGUI.h"
+#include "GPUDisplayGUIWrapper.h"
+#include "./ui_GPUDisplayGUI.h"
 
-namespace o2
+using namespace o2::gpu;
+
+GPUDisplayGUI::GPUDisplayGUI(QWidget* parent) : QMainWindow(parent), ui(new Ui::GPUDisplayGUI)
 {
-namespace vertexing
-{
-GPUg() void __dummy_instance__()
-{
-#ifdef GPUCA_GPUCODE_DEVICE
-#pragma message "Compiling device code"
-#endif
-  DCAFitter2 ft2;
-  DCAFitter3 ft3;
-  o2::track::TrackParCov tr;
-  ft2.process(tr, tr);
-  ft3.process(tr, tr, tr);
+  ui->setupUi(this);
 }
 
-} // namespace vertexing
-} // namespace o2
+GPUDisplayGUI::~GPUDisplayGUI()
+{
+  delete ui;
+}
+
+void GPUDisplayGUI::UpdateTimer()
+{
+  mWrapper->UpdateTimer();
+}

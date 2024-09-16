@@ -8,30 +8,13 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
-//
-/// \author matteo.concas@cern.ch
-#define BOOST_TEST_MODULE Test DCAFitterN class on GPU
 
-#ifdef __HIPCC__
-#define GPUPLATFORM "HIP"
-#include "hip/hip_runtime.h"
-#else
-#define GPUPLATFORM "CUDA"
-#include <cuda.h>
-#endif
+/// \file GPUTRDTrackO2.h
+/// \author David Rohr
 
-#include "DCAFitter/DCAFitterN.h"
-#include "GPUCommonDef.h"
-#include <boost/test/unit_test.hpp>
+#ifndef GPUTRDTRACKO2_H
+#define GPUTRDTRACKO2_H
 
-namespace gpu
-{
-GPUg() void testDCAFitterInstanceKernel()
-{
-  o2::vertexing::DCAFitterN<2> ft; // 2 prong fitter
-  ft.setBz(0.f);
-}
-} // namespace gpu
-BOOST_AUTO_TEST_CASE(DCAFitterNProngs)
-{
-}
+#include "GPUTRDTrack.h"
+
+#endif // GPUTRDTRACKO2_H

@@ -9,27 +9,6 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file GPUDisplayGUI.cxx
-/// \author David Rohr
+#include "GlobalTrackingStudy/TrackMCStudyConfig.h"
 
-#include "GPUDisplayGUI.h"
-#include "GPUDisplayGUIWrapper.h"
-#include "./ui_GPUDisplayGUI.h"
-
-using namespace o2::gpu;
-
-GPUDisplayGUI::GPUDisplayGUI(QWidget* parent)
-  : QMainWindow(parent), ui(new Ui::GPUDisplayGUI)
-{
-  ui->setupUi(this);
-}
-
-GPUDisplayGUI::~GPUDisplayGUI()
-{
-  delete ui;
-}
-
-void GPUDisplayGUI::UpdateTimer()
-{
-  mWrapper->UpdateTimer();
-}
+O2ParamImpl(o2::trackstudy::TrackMCStudyConfig);
