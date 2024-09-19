@@ -53,7 +53,7 @@
 
 typedef struct {
   x9_node* node;
-  char*    inbox_to_consume_from;
+  char* inbox_to_consume_from;
 } th_struct;
 
 typedef struct {
@@ -62,17 +62,20 @@ typedef struct {
   int sum;
 } msg;
 
-static inline int random_int(int const min, int const max) {
+static inline int random_int(int const min, int const max)
+{
   return min + rand() / (RAND_MAX / (max - min + 1) + 1);
 }
 
-static inline void fill_msg_type(msg* const m) {
-  m->a   = random_int(0, 10);
-  m->b   = random_int(0, 10);
+static inline void fill_msg_type(msg* const m)
+{
+  m->a = random_int(0, 10);
+  m->b = random_int(0, 10);
   m->sum = m->a + m->b;
 }
 
-static void* producer_fn(void* args) {
+static void* producer_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   msg m = {0};
@@ -83,11 +86,12 @@ static void* producer_fn(void* args) {
   return 0;
 }
 
-static void* consumer_fn(void* args) {
+static void* consumer_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   x9_inbox* const inbox =
-      x9_select_inbox_from_node(data->node, data->inbox_to_consume_from);
+    x9_select_inbox_from_node(data->node, data->inbox_to_consume_from);
   assert(x9_inbox_is_valid(inbox));
 
   msg m = {0};
@@ -99,7 +103,8 @@ static void* consumer_fn(void* args) {
   return 0;
 }
 
-int main(void) {
+int main(void)
+{
   /* Seed random generator */
   srand((uint32_t)time(0));
 
@@ -121,21 +126,21 @@ int main(void) {
   assert(x9_node_is_valid(node));
 
   /* Producer */
-  pthread_t producer_th     = {0};
+  pthread_t producer_th = {0};
   th_struct producer_struct = {.node = node};
 
   /* Consumer 1 */
-  pthread_t consumer_1_th     = {0};
-  th_struct consumer_1_struct = {.node                  = node,
+  pthread_t consumer_1_th = {0};
+  th_struct consumer_1_struct = {.node = node,
                                  .inbox_to_consume_from = "ibx_1"};
   /* Consumer 2 */
-  pthread_t consumer_2_th     = {0};
-  th_struct consumer_2_struct = {.node                  = node,
+  pthread_t consumer_2_th = {0};
+  th_struct consumer_2_struct = {.node = node,
                                  .inbox_to_consume_from = "ibx_2"};
 
   /* Consumer 3 */
-  pthread_t consumer_3_th     = {0};
-  th_struct consumer_3_struct = {.node                  = node,
+  pthread_t consumer_3_th = {0};
+  th_struct consumer_3_struct = {.node = node,
                                  .inbox_to_consume_from = "ibx_3"};
 
   /* Launch threads */
