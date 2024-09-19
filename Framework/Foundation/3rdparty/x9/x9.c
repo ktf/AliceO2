@@ -34,7 +34,7 @@
 
 #include "x9.h"
 
-#include <assert.h>    /* assert */
+#include <assert.h> /* assert */
 #if defined(__x86_64__) || defined(__i386__)
 #include <immintrin.h> /* _mm_pause */
 #elif defined(__aarch64__)
@@ -50,11 +50,12 @@
 #include <string.h>    /* memcpy */
 
 /* CPU cache line size */
-#define X9_CL_SIZE       64
+#define X9_CL_SIZE 64
 #define X9_ALIGN_TO_CL() __attribute__((__aligned__(X9_CL_SIZE)))
 
 #ifdef X9_DEBUG
-static void x9_print_error_msg(char const* const error_msg) {
+static void x9_print_error_msg(char const* const error_msg)
+{
   printf("X9_ERROR: %s\n", error_msg);
   fflush(stdout);
   return;
@@ -67,52 +68,55 @@ typedef struct {
   _Atomic(bool) slot_has_data;
   _Atomic(bool) msg_written;
   _Atomic(bool) shared;
-  char const    pad[5];
+  char const pad[5];
 } x9_msg_header;
 
 typedef struct x9_inbox_internal {
-  _Atomic(uint64_t) read_idx  X9_ALIGN_TO_CL();
+  _Atomic(uint64_t) read_idx X9_ALIGN_TO_CL();
   _Atomic(uint64_t) write_idx X9_ALIGN_TO_CL();
-  uint64_t sz                 X9_ALIGN_TO_CL();
-  uint64_t                    msg_sz;
-  uint64_t                    constant;
-  void*                       msgs;
-  char*                       name;
-  char                        pad[24];
+  uint64_t sz X9_ALIGN_TO_CL();
+  uint64_t msg_sz;
+  uint64_t constant;
+  void* msgs;
+  char* name;
+  char pad[24];
 } x9_inbox;
 
 typedef struct x9_node_internal {
   x9_inbox** inboxes;
-  uint64_t   n_inboxes;
-  char*      name;
+  uint64_t n_inboxes;
+  char* name;
 } x9_node;
 
 /* --- Internal functions --- */
 
 static inline uint64_t x9_load_idx(x9_inbox* const inbox,
-                                   bool const      read_idx) {
+                                   bool const read_idx)
+{
   /* From paper: Faster Remainder by Direct Computation, Lemire et al */
   register uint64_t const low_bits =
-      inbox->constant *
-      (read_idx ? atomic_load_explicit(&inbox->read_idx, __ATOMIC_RELAXED)
-                : atomic_load_explicit(&inbox->write_idx, __ATOMIC_RELAXED));
+    inbox->constant *
+    (read_idx ? atomic_load_explicit(&inbox->read_idx, __ATOMIC_RELAXED)
+              : atomic_load_explicit(&inbox->write_idx, __ATOMIC_RELAXED));
   return ((__uint128_t)low_bits * inbox->sz) >> 64;
 }
 
 static inline uint64_t x9_increment_idx(x9_inbox* const inbox,
-                                        bool const      read_idx) {
+                                        bool const read_idx)
+{
   /* From paper: Faster Remainder by Direct Computation, Lemire et al */
   register uint64_t const low_bits =
-      inbox->constant *
-      (read_idx
-           ? atomic_fetch_add_explicit(&inbox->read_idx, 1, __ATOMIC_RELAXED)
-           : atomic_fetch_add_explicit(&inbox->write_idx, 1,
-                                       __ATOMIC_RELAXED));
+    inbox->constant *
+    (read_idx
+       ? atomic_fetch_add_explicit(&inbox->read_idx, 1, __ATOMIC_RELAXED)
+       : atomic_fetch_add_explicit(&inbox->write_idx, 1,
+                                   __ATOMIC_RELAXED));
   return ((__uint128_t)low_bits * inbox->sz) >> 64;
 }
 
 static inline void* x9_header_ptr(x9_inbox const* const inbox,
-                                  uint64_t const        idx) {
+                                  uint64_t const idx)
+{
   return &((char*)inbox->msgs)[idx * (inbox->msg_sz + sizeof(x9_msg_header))];
 }
 
@@ -120,26 +124,35 @@ static inline void* x9_header_ptr(x9_inbox const* const inbox,
 
 x9_inbox* x9_create_inbox(uint64_t const sz,
                           char const* restrict const name,
-                          uint64_t const msg_sz) {
-  if (!((sz > 0) && !(sz % 2))) { goto inbox_incorrect_size; }
+                          uint64_t const msg_sz)
+{
+  if (!((sz > 0) && !(sz % 2))) {
+    goto inbox_incorrect_size;
+  }
 
   x9_inbox* inbox = aligned_alloc(X9_CL_SIZE, sizeof(x9_inbox));
-  if (NULL == inbox) { goto inbox_allocation_failed; }
+  if (NULL == inbox) {
+    goto inbox_allocation_failed;
+  }
   memset(inbox, 0, sizeof(x9_inbox));
 
   uint64_t const name_len = strlen(name);
-  char*          ibx_name = calloc(name_len + 1, sizeof(char));
-  if (NULL == ibx_name) { goto inbox_name_allocation_failed; }
+  char* ibx_name = calloc(name_len + 1, sizeof(char));
+  if (NULL == ibx_name) {
+    goto inbox_name_allocation_failed;
+  }
   memcpy(ibx_name, name, name_len);
 
   void* msgs = calloc(sz, msg_sz + sizeof(x9_msg_header));
-  if (NULL == msgs) { goto inbox_msgs_allocation_failed; }
+  if (NULL == msgs) {
+    goto inbox_msgs_allocation_failed;
+  }
 
   inbox->constant = UINT64_C(0xFFFFFFFFFFFFFFFF) / sz + 1;
-  inbox->name     = ibx_name;
-  inbox->msgs     = msgs;
-  inbox->sz       = sz;
-  inbox->msg_sz   = msg_sz;
+  inbox->name = ibx_name;
+  inbox->msgs = msgs;
+  inbox->sz = sz;
+  inbox->msg_sz = msg_sz;
   return inbox;
 
 inbox_incorrect_size:
@@ -170,25 +183,31 @@ inbox_msgs_allocation_failed:
   return NULL;
 }
 
-bool x9_inbox_is_valid(x9_inbox const* const inbox) {
+bool x9_inbox_is_valid(x9_inbox const* const inbox)
+{
   return !(NULL == inbox);
 }
 
 bool x9_inbox_name_is(x9_inbox const* const inbox,
-                      char const* restrict const cmp) {
+                      char const* restrict const cmp)
+{
   return !strcmp(inbox->name, cmp) ? true : false;
 }
 
-void x9_free_inbox(x9_inbox* const inbox) {
+void x9_free_inbox(x9_inbox* const inbox)
+{
   free(inbox->msgs);
   free(inbox->name);
   free(inbox);
 }
 
 x9_inbox* x9_select_inbox_from_node(x9_node const* const node,
-                                    char const* restrict const name) {
+                                    char const* restrict const name)
+{
   for (uint64_t k = 0; k != node->n_inboxes; ++k) {
-    if (x9_inbox_name_is(node->inboxes[k], name)) { return node->inboxes[k]; }
+    if (x9_inbox_name_is(node->inboxes[k], name)) {
+      return node->inboxes[k];
+    }
   }
 #ifdef X9_DEBUG
   x9_print_error_msg("NODE_DOES_NOT_CONTAIN_INBOX");
@@ -198,15 +217,22 @@ x9_inbox* x9_select_inbox_from_node(x9_node const* const node,
 
 x9_node* x9_create_node(char* restrict const name,
                         uint64_t const n_inboxes,
-                        ...) {
-  if (!(n_inboxes > 0)) { goto node_incorrect_definition; }
+                        ...)
+{
+  if (!(n_inboxes > 0)) {
+    goto node_incorrect_definition;
+  }
 
   x9_node* node = calloc(1, sizeof(x9_node));
-  if (NULL == node) { goto node_allocation_failed; }
+  if (NULL == node) {
+    goto node_allocation_failed;
+  }
 
-  uint64_t const name_len  = strlen(name);
-  char*          node_name = calloc(name_len + 1, sizeof(char));
-  if (NULL == node_name) { goto node_name_allocation_failed; }
+  uint64_t const name_len = strlen(name);
+  char* node_name = calloc(name_len + 1, sizeof(char));
+  if (NULL == node_name) {
+    goto node_name_allocation_failed;
+  }
   memcpy(node_name, name, name_len);
   node->name = node_name;
 
@@ -214,8 +240,10 @@ x9_node* x9_create_node(char* restrict const name,
   va_start(argp, n_inboxes);
 
   x9_inbox** inboxes = calloc(n_inboxes, sizeof(x9_inbox));
-  if (NULL == inboxes) { goto node_inboxes_allocation_failed; }
-  node->inboxes   = inboxes;
+  if (NULL == inboxes) {
+    goto node_inboxes_allocation_failed;
+  }
+  node->inboxes = inboxes;
   node->n_inboxes = n_inboxes;
 
   for (uint64_t k = 0; k != n_inboxes; ++k) {
@@ -278,17 +306,20 @@ node_multiple_equal_inboxes:
 bool x9_node_is_valid(x9_node const* const node) { return !(NULL == node); }
 
 bool x9_node_name_is(x9_node const* const node,
-                     char const* restrict const cmp) {
+                     char const* restrict const cmp)
+{
   return !strcmp(node->name, cmp) ? true : false;
 }
 
-void x9_free_node(x9_node* const node) {
+void x9_free_node(x9_node* const node)
+{
   free(node->name);
   free(node->inboxes);
   free(node);
 }
 
-void x9_free_node_and_attached_inboxes(x9_node* const node) {
+void x9_free_node_and_attached_inboxes(x9_node* const node)
+{
   for (uint64_t k = 0; k != node->n_inboxes; ++k) {
     if (NULL != node->inboxes[k]) {
       x9_free_inbox(node->inboxes[k]);
@@ -299,10 +330,11 @@ void x9_free_node_and_attached_inboxes(x9_node* const node) {
 }
 
 bool x9_write_to_inbox(x9_inbox* const inbox,
-                       uint64_t const  msg_sz,
-                       void const* restrict const msg) {
-  bool                          f      = false;
-  register uint64_t const       idx    = x9_load_idx(inbox, false);
+                       uint64_t const msg_sz,
+                       void const* restrict const msg)
+{
+  bool f = false;
+  register uint64_t const idx = x9_load_idx(inbox, false);
   register x9_msg_header* const header = x9_header_ptr(inbox, idx);
 
   if (atomic_compare_exchange_strong_explicit(&header->slot_has_data, &f, true,
@@ -317,11 +349,12 @@ bool x9_write_to_inbox(x9_inbox* const inbox,
 }
 
 void x9_write_to_inbox_spin(x9_inbox* const inbox,
-                            uint64_t const  msg_sz,
-                            void const* restrict const msg) {
+                            uint64_t const msg_sz,
+                            void const* restrict const msg)
+{
   for (;;) {
-    bool                          f      = false;
-    register uint64_t const       idx    = x9_increment_idx(inbox, false);
+    bool f = false;
+    register uint64_t const idx = x9_increment_idx(inbox, false);
     register x9_msg_header* const header = x9_header_ptr(inbox, idx);
     if (atomic_compare_exchange_weak_explicit(&header->slot_has_data, &f, true,
                                               __ATOMIC_ACQUIRE,
@@ -334,17 +367,19 @@ void x9_write_to_inbox_spin(x9_inbox* const inbox,
 }
 
 void x9_broadcast_msg_to_all_node_inboxes(x9_node const* const node,
-                                          uint64_t const       msg_sz,
-                                          void const* restrict const msg) {
+                                          uint64_t const msg_sz,
+                                          void const* restrict const msg)
+{
   for (uint64_t k = 0; k != node->n_inboxes; ++k) {
     x9_write_to_inbox_spin(node->inboxes[k], msg_sz, msg);
   }
 }
 
 bool x9_read_from_inbox(x9_inbox* const inbox,
-                        uint64_t const  msg_sz,
-                        void* restrict const outparam) {
-  register uint64_t const       idx    = x9_load_idx(inbox, true);
+                        uint64_t const msg_sz,
+                        void* restrict const outparam)
+{
+  register uint64_t const idx = x9_load_idx(inbox, true);
   register x9_msg_header* const header = x9_header_ptr(inbox, idx);
 
   if (atomic_load_explicit(&header->slot_has_data, __ATOMIC_RELAXED)) {
@@ -360,16 +395,17 @@ bool x9_read_from_inbox(x9_inbox* const inbox,
 }
 
 void x9_read_from_inbox_spin(x9_inbox* const inbox,
-                             uint64_t const  msg_sz,
-                             void* restrict const outparam) {
-  register uint64_t const       idx    = x9_increment_idx(inbox, true);
+                             uint64_t const msg_sz,
+                             void* restrict const outparam)
+{
+  register uint64_t const idx = x9_increment_idx(inbox, true);
   register x9_msg_header* const header = x9_header_ptr(inbox, idx);
 
   for (;;) {
 #if defined(__x86_64__) || defined(__i386__)
     _mm_pause();
 #elif defined(__aarch64__)
-    __asm__ __volatile__ ("yield");
+    __asm__ __volatile__("yield");
 #else
 #error Not supported architecture
 #endif
@@ -385,14 +421,15 @@ void x9_read_from_inbox_spin(x9_inbox* const inbox,
 }
 
 bool x9_read_from_shared_inbox(x9_inbox* const inbox,
-                               uint64_t const  msg_sz,
-                               void* restrict const outparam) {
-  bool                          f      = false;
-  register uint64_t const       idx    = x9_load_idx(inbox, true);
+                               uint64_t const msg_sz,
+                               void* restrict const outparam)
+{
+  bool f = false;
+  register uint64_t const idx = x9_load_idx(inbox, true);
   register x9_msg_header* const header = x9_header_ptr(inbox, idx);
 
   if (atomic_compare_exchange_strong_explicit(
-          &header->shared, &f, true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+        &header->shared, &f, true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
     if (atomic_load_explicit(&header->slot_has_data, __ATOMIC_RELAXED)) {
       if (atomic_load_explicit(&header->msg_written, __ATOMIC_ACQUIRE)) {
         memcpy(outparam, (char*)header + sizeof(x9_msg_header), msg_sz);
@@ -409,15 +446,16 @@ bool x9_read_from_shared_inbox(x9_inbox* const inbox,
 }
 
 void x9_read_from_shared_inbox_spin(x9_inbox* const inbox,
-                                    uint64_t const  msg_sz,
-                                    void* restrict const outparam) {
+                                    uint64_t const msg_sz,
+                                    void* restrict const outparam)
+{
   for (;;) {
-    bool                          f      = false;
-    register uint64_t const       idx    = x9_increment_idx(inbox, true);
+    bool f = false;
+    register uint64_t const idx = x9_increment_idx(inbox, true);
     register x9_msg_header* const header = x9_header_ptr(inbox, idx);
 
     if (atomic_compare_exchange_strong_explicit(
-            &header->shared, &f, true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
+          &header->shared, &f, true, __ATOMIC_ACQUIRE, __ATOMIC_RELAXED)) {
       if (atomic_load_explicit(&header->slot_has_data, __ATOMIC_RELAXED)) {
         if (atomic_load_explicit(&header->msg_written, __ATOMIC_ACQUIRE)) {
           memcpy(outparam, (char*)header + sizeof(x9_msg_header), msg_sz);
@@ -432,4 +470,3 @@ void x9_read_from_shared_inbox_spin(x9_inbox* const inbox,
     }
   }
 }
-

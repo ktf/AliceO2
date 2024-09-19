@@ -62,27 +62,32 @@ typedef struct {
   double product;
 } msg_type_2;
 
-static inline int random_int(int const min, int const max) {
+static inline int random_int(int const min, int const max)
+{
   return min + rand() / (RAND_MAX / (max - min + 1) + 1);
 }
 
-static inline double random_double(int const min, int const max) {
+static inline double random_double(int const min, int const max)
+{
   return ((double)(random_int(min, max) * 1.0));
 }
 
-static inline void fill_msg_type_1(msg_type_1* const msg) {
-  msg->a   = random_int(0, 10);
-  msg->b   = random_int(0, 10);
+static inline void fill_msg_type_1(msg_type_1* const msg)
+{
+  msg->a = random_int(0, 10);
+  msg->b = random_int(0, 10);
   msg->sum = msg->a + msg->b;
 }
 
-static inline void fill_msg_type_2(msg_type_2* const msg) {
-  msg->x       = random_double(0, 10);
-  msg->y       = random_double(0, 10);
+static inline void fill_msg_type_2(msg_type_2* const msg)
+{
+  msg->x = random_double(0, 10);
+  msg->y = random_double(0, 10);
   msg->product = msg->x * msg->y;
 }
 
-static void* producer_1_fn(void* args) {
+static void* producer_1_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   x9_inbox* const write_inbox = x9_select_inbox_from_node(data->node, "ibx_1");
@@ -122,7 +127,8 @@ static void* producer_1_fn(void* args) {
   return 0;
 }
 
-static void* producer_2_fn(void* args) {
+static void* producer_2_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   x9_inbox* const write_inbox = x9_select_inbox_from_node(data->node, "ibx_2");
@@ -161,16 +167,17 @@ static void* producer_2_fn(void* args) {
   return 0;
 }
 
-int main(void) {
+int main(void)
+{
   /* Seed random generator */
   srand((uint32_t)time(0));
 
   /* Create inboxes */
   x9_inbox* const inbox_msg_type_1 =
-      x9_create_inbox(4, "ibx_1", sizeof(msg_type_1));
+    x9_create_inbox(4, "ibx_1", sizeof(msg_type_1));
 
   x9_inbox* const inbox_msg_type_2 =
-      x9_create_inbox(4, "ibx_2", sizeof(msg_type_2));
+    x9_create_inbox(4, "ibx_2", sizeof(msg_type_2));
 
   /* Using asserts to simplify code for presentation purpose. */
   assert(x9_inbox_is_valid(inbox_msg_type_1));
@@ -178,17 +185,17 @@ int main(void) {
 
   /* Create node */
   x9_node* const node =
-      x9_create_node("my_node", 2, inbox_msg_type_1, inbox_msg_type_2);
+    x9_create_node("my_node", 2, inbox_msg_type_1, inbox_msg_type_2);
 
   /* Asserts - Same reason as above.*/
   assert(x9_node_is_valid(node));
 
   /* Producer 1 (left on diagram) */
-  pthread_t producer_1_th     = {0};
+  pthread_t producer_1_th = {0};
   th_struct producer_1_struct = {.node = node};
 
   /* Producer 2 (right on diagram) */
-  pthread_t producer_2_th     = {0};
+  pthread_t producer_2_th = {0};
   th_struct producer_2_struct = {.node = node};
 
   /* Launch threads */

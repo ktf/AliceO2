@@ -47,42 +47,48 @@
 
 typedef struct {
   x9_inbox* inbox;
-  uint64_t  msgs_read;
+  uint64_t msgs_read;
 } th_struct;
 
 typedef struct {
-  int  a;
-  int  b;
-  int  sum;
+  int a;
+  int b;
+  int sum;
   bool last_message;
   char pad[3];
 } msg;
 
-static inline int random_int(int const min, int const max) {
+static inline int random_int(int const min, int const max)
+{
   return min + rand() / (RAND_MAX / (max - min + 1) + 1);
 }
 
-static inline void fill_msg_type(msg* const m) {
-  m->a   = random_int(0, 10);
-  m->b   = random_int(0, 10);
+static inline void fill_msg_type(msg* const m)
+{
+  m->a = random_int(0, 10);
+  m->b = random_int(0, 10);
   m->sum = m->a + m->b;
 }
 
-static void* producer_fn(void* args) {
+static void* producer_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   msg m = {0};
   for (uint_fast64_t k = 0; k != (NUMBER_OF_MESSAGES); ++k) {
     fill_msg_type(&m);
-    if (k == (NUMBER_OF_MESSAGES - 1)) { m.last_message = true; }
+    if (k == (NUMBER_OF_MESSAGES - 1)) {
+      m.last_message = true;
+    }
     x9_write_to_inbox_spin(data->inbox, sizeof(msg), &m);
   }
   return 0;
 }
 
-static void* consumer_fn(void* args) {
+static void* consumer_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
-  msg        m    = {0};
+  msg m = {0};
   for (;;) {
     x9_read_from_shared_inbox_spin(data->inbox, sizeof(msg), &m);
     assert(m.sum == (m.a + m.b));
@@ -107,7 +113,8 @@ static void* consumer_fn(void* args) {
   }
 }
 
-int main(void) {
+int main(void)
+{
   /* Seed random generator */
   srand((uint32_t)time(0));
 
@@ -118,14 +125,14 @@ int main(void) {
   assert(x9_inbox_is_valid(inbox));
 
   /* Producer */
-  pthread_t producer_th     = {0};
+  pthread_t producer_th = {0};
   th_struct producer_struct = {.inbox = inbox};
 
   /* Consumers */
-  pthread_t consumer_1_th     = {0};
+  pthread_t consumer_1_th = {0};
   th_struct consumer_1_struct = {.inbox = inbox};
 
-  pthread_t consumer_2_th     = {0};
+  pthread_t consumer_2_th = {0};
   th_struct consumer_2_struct = {.inbox = inbox};
 
   /* Launch threads */
@@ -145,9 +152,9 @@ int main(void) {
   /* Assert that the total number of messages read == NUMBER_OF_MESSAGES or
    * NUMBER_OF_MESSAGES + 1 */
   assert((NUMBER_OF_MESSAGES + 1) ==
-             (consumer_1_struct.msgs_read + consumer_2_struct.msgs_read) ||
+           (consumer_1_struct.msgs_read + consumer_2_struct.msgs_read) ||
          (NUMBER_OF_MESSAGES) ==
-             (consumer_1_struct.msgs_read + consumer_2_struct.msgs_read)
+           (consumer_1_struct.msgs_read + consumer_2_struct.msgs_read)
 
   );
 

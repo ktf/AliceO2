@@ -47,17 +47,20 @@ typedef struct {
   int sum;
 } msg;
 
-static int random_int(int const min, int const max) {
+static int random_int(int const min, int const max)
+{
   return min + rand() / (RAND_MAX / (max - min + 1) + 1);
 }
 
-static inline void fill_msg_1(msg* const msg) {
-  msg->a   = random_int(0, 10);
-  msg->b   = random_int(0, 10);
+static inline void fill_msg_1(msg* const msg)
+{
+  msg->a = random_int(0, 10);
+  msg->b = random_int(0, 10);
   msg->sum = msg->a + msg->b;
 }
 
-static void* producer_fn(void* args) {
+static void* producer_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   msg m = {0};
@@ -68,7 +71,8 @@ static void* producer_fn(void* args) {
   return 0;
 }
 
-static void* consumer_fn(void* args) {
+static void* consumer_fn(void* args)
+{
   th_struct* data = (th_struct*)args;
 
   msg m = {0};
@@ -79,7 +83,8 @@ static void* consumer_fn(void* args) {
   return 0;
 }
 
-int main(void) {
+int main(void)
+{
   /* Seed random generator */
   srand((uint32_t)time(0));
 
@@ -90,11 +95,11 @@ int main(void) {
   assert(x9_inbox_is_valid(inbox));
 
   /* Producer */
-  pthread_t producer_th     = {0};
+  pthread_t producer_th = {0};
   th_struct producer_struct = {.inbox = inbox};
 
   /* Consumer */
-  pthread_t consumer_th     = {0};
+  pthread_t consumer_th = {0};
   th_struct consumer_struct = {.inbox = inbox};
 
   /* Launch threads */

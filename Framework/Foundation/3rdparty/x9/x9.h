@@ -42,7 +42,7 @@ extern "C" {
 
 /* --- Opaque types --- */
 
-typedef struct x9_node_internal  x9_node;
+typedef struct x9_node_internal x9_node;
 typedef struct x9_inbox_internal x9_inbox;
 
 /* --- Public API --- */
@@ -56,7 +56,7 @@ typedef struct x9_inbox_internal x9_inbox;
  * Example:
  *   x9_inbox* inbox = x9_create_inbox(512, "ibx", sizeof(<some struct>));*/
 __attribute__((nonnull)) x9_inbox* x9_create_inbox(
-    uint64_t const sz, char const* restrict const name, uint64_t const msg_sz);
+  uint64_t const sz, char const* restrict const name, uint64_t const msg_sz);
 
 /* Variadic function that creates a 'x9_node', which is an abstraction that
  * unifies x9_inbox(es).
@@ -88,7 +88,7 @@ bool x9_node_is_valid(x9_node const* const node);
 /* Selects a x9_inbox from a 'node' by its 'name'.
  * Returns NULL if the 'node' does not contain an x9_inbox with such 'name'.*/
 __attribute__((nonnull)) x9_inbox* x9_select_inbox_from_node(
-    x9_node const* const node, char const* restrict const name);
+  x9_node const* const node, char const* restrict const name);
 
 /* Returns 'true' if the 'inbox' name == 'cmp', 'false' otherwise.*/
 __attribute__((nonnull)) bool x9_inbox_name_is(x9_inbox const* const inbox,
@@ -108,66 +108,66 @@ __attribute__((nonnull)) void x9_free_node(x9_node* const node);
  * IMPORTANT: should only be used when the attached x9_inbox(es) are not shared
  * with other nodes.*/
 __attribute__((nonnull)) void x9_free_node_and_attached_inboxes(
-    x9_node* const node);
+  x9_node* const node);
 
 /* Returns 'true' if a message was read, 'false' otherwise.
  * If 'true', the message will be written to 'outparam'.
  * IMPORTANT: Can only be used to read from inboxes where the thread calling
  * this function is the only thread reading from said 'inbox'.*/
 __attribute__((nonnull)) bool x9_read_from_inbox(
-    x9_inbox* const inbox,
-    uint64_t const  msg_sz,
-    void* restrict const outparam);
+  x9_inbox* const inbox,
+  uint64_t const msg_sz,
+  void* restrict const outparam);
 
 /* Reads the next unread message in the 'inbox' to 'outparam'.
  * Uses spinning, that is, it wil not return until it has read a message, and
  * it will keep checking if a message was written and try to read it. */
 __attribute__((nonnull)) void x9_read_from_inbox_spin(
-    x9_inbox* const inbox,
-    uint64_t const  msg_sz,
-    void* restrict const outparam);
+  x9_inbox* const inbox,
+  uint64_t const msg_sz,
+  void* restrict const outparam);
 
 /* Returns 'true' if a message was read, 'false' otherwise.
  * If 'true', the msg contents will be written to the 'outparam'.
  * Use this function when multiple threads read from the same inbox. */
 __attribute__((nonnull)) bool x9_read_from_shared_inbox(
-    x9_inbox* const inbox,
-    uint64_t const  msg_sz,
-    void* restrict const outparam);
+  x9_inbox* const inbox,
+  uint64_t const msg_sz,
+  void* restrict const outparam);
 
 /* Reads the next unread message in the 'inbox' to 'outparam'.
  * Use this function when multiple threads read from the same inbox.
  * Uses spinning, that is, it wil not return until it has read a message, and
  * it will keep checking if a message was written and try to read it. */
 __attribute__((nonnull)) void x9_read_from_shared_inbox_spin(
-    x9_inbox* const inbox,
-    uint64_t const  msg_sz,
-    void* restrict const outparam);
+  x9_inbox* const inbox,
+  uint64_t const msg_sz,
+  void* restrict const outparam);
 
 /* Returns 'true' if the message was written to the 'inbox', 'false'
  * otherwise. */
 __attribute__((nonnull)) bool x9_write_to_inbox(
-    x9_inbox* const inbox,
-    uint64_t const  msg_sz,
-    void const* restrict const msg);
+  x9_inbox* const inbox,
+  uint64_t const msg_sz,
+  void const* restrict const msg);
 
 /* Writes the 'msg' to the 'inbox'.
  * Uses spinning, that is, it wil not not return until it has written the
  * 'msg', and it will keep checking if the destination inbox has a free
  * slot that it can write the 'msg' to. */
 __attribute__((nonnull)) void x9_write_to_inbox_spin(
-    x9_inbox* const inbox,
-    uint64_t const  msg_sz,
-    void const* restrict const msg);
+  x9_inbox* const inbox,
+  uint64_t const msg_sz,
+  void const* restrict const msg);
 
 /* Writes the same 'msg' to all 'node' inboxes.
  * Calls 'x9_write_to_inbox_spin' in the background.
  * Users must guarantee that all 'node' inboxes accept messages of the
  * same type (or at least of the same 'msg_sz') */
 __attribute__((nonnull)) void x9_broadcast_msg_to_all_node_inboxes(
-    x9_node const* const node,
-    uint64_t const       msg_sz,
-    void const* restrict const msg);
+  x9_node const* const node,
+  uint64_t const msg_sz,
+  void const* restrict const msg);
 
 #ifdef __cplusplus
 }
