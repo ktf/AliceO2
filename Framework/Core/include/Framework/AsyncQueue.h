@@ -14,6 +14,10 @@
 #include "Framework/TimesliceSlot.h"
 #include <string>
 #include <vector>
+#include <atomic>
+
+typedef struct x9_inbox_internal x9_inbox;
+typedef struct x9_node_internal x9_node;
 
 typedef struct x9_inbox_internal x9_inbox;
 typedef struct x9_node_internal x9_node;
