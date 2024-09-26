@@ -9,22 +9,23 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifndef O2_TPC_DATA_FILTER_H
-#define O2_TPC_DATA_FILTER_H
+#ifndef O2_TRACK_EXTENSION_STUDY_H
+#define O2_TRACK_EXTENSION_STUDY_H
 
-#include "ReconstructionDataFormats/GlobalTrackID.h"
 #include "Framework/DataProcessorSpec.h"
+#include "ReconstructionDataFormats/GlobalTrackID.h"
 
-namespace o2::tpc
+namespace o2
 {
-struct CorrectionMapsLoaderGloOpts;
+namespace steer
+{
+class MCKinematicsReader;
 }
-
-namespace o2::trackstudy
+namespace its::study
 {
-/// create a processor spec
-o2::framework::DataProcessorSpec getTPCRefitterSpec(o2::dataformats::GlobalTrackID::mask_t srcTracks, o2::dataformats::GlobalTrackID::mask_t srcClus, bool useMC, const o2::tpc::CorrectionMapsLoaderGloOpts& sclOpts, bool requestCosmics = false);
+using mask_t = o2::dataformats::GlobalTrackID::mask_t;
+o2::framework::DataProcessorSpec getTrackExtensionStudy(mask_t srcTracksMask, mask_t srcClustersMask, bool useMC, std::shared_ptr<o2::steer::MCKinematicsReader> kineReader);
+} // namespace its::study
 
-} // namespace o2::trackstudy
-
+} // namespace o2
 #endif
