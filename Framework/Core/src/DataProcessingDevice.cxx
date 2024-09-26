@@ -961,6 +961,10 @@ void DataProcessingDevice::startPollers()
   deviceContext.gracePeriodTimer = (uv_timer_t*)malloc(sizeof(uv_timer_t));
   deviceContext.gracePeriodTimer->data = new ServiceRegistryRef(mServiceRegistry);
   uv_timer_init(state.loop, deviceContext.gracePeriodTimer);
+
+  deviceContext.dataProcessingGracePeriodTimer = (uv_timer_t*)malloc(sizeof(uv_timer_t));
+  deviceContext.dataProcessingGracePeriodTimer->data = new ServiceRegistryRef(mServiceRegistry);
+  uv_timer_init(state.loop, deviceContext.dataProcessingGracePeriodTimer);
 }
 
 void DataProcessingDevice::stopPollers()
@@ -992,6 +996,11 @@ void DataProcessingDevice::stopPollers()
   delete (ServiceRegistryRef*)deviceContext.gracePeriodTimer->data;
   free(deviceContext.gracePeriodTimer);
   deviceContext.gracePeriodTimer = nullptr;
+
+  uv_timer_stop(deviceContext.dataProcessingGracePeriodTimer);
+  delete (ServiceRegistryRef*)deviceContext.dataProcessingGracePeriodTimer->data;
+  free(deviceContext.dataProcessingGracePeriodTimer);
+  deviceContext.dataProcessingGracePeriodTimer = nullptr;
 }
 
 void DataProcessingDevice::InitTask()
