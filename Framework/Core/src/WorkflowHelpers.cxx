@@ -34,7 +34,6 @@
 #include <utility>
 #include <vector>
 #include <climits>
-#include <thread>
 
 O2_DECLARE_DYNAMIC_LOG(workflow_helpers);
 
