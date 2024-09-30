@@ -68,6 +68,7 @@ std::vector<ConfigParamSpec> WorkflowCustomizationHelpers::requiredWorkflowOptio
            {"aod-writer-keep", VariantType::String, "", {"Comma separated list of ORIGIN/DESCRIPTION/SUBSPECIFICATION:treename:col1/col2/..:filename"}},
 
            {"fairmq-rate-logging", VariantType::Int, 0, {"Rate logging for FairMQ channels"}},
+           {"aod-max-io-rate", VariantType::Float, 0.0f, {"Maximum I/O throughput in MB/s"}},
            {"fairmq-recv-buffer-size", VariantType::Int, 4, {"recvBufferSize option for FairMQ channels"}},
            {"fairmq-send-buffer-size", VariantType::Int, 4, {"sendBufferSize option for FairMQ channels"}},
            /// Find out a place where we can write the sockets
