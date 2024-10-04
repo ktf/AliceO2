@@ -552,7 +552,11 @@ void TreeToTable::addAllColumns(TTree* tree, std::vector<std::string>&& names)
   tree->SetCacheSize(25000000);
   tree->SetClusterPrefetch(true);
   for (auto& reader : mBranchReaders) {
-    tree->AddBranchToCache(reader->branch());
+    // Unfortunately ROOT 6-32-06 is still buggy. Adding a branch to
+    // the cache only if the number of baskets allows it.
+    if (reader->branch()->GetListOfBaskets()->GetEntriesFast() == 1) {
+      tree->AddBranchToCache(reader->branch());
+    }
   }
   tree->StopCacheLearningPhase();
 }
