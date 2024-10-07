@@ -41,7 +41,8 @@ namespace o2::framework
 {
 
 // Wrapper class to get CCDB metadata
-struct CCDBMetadataExtractor{};
+struct CCDBMetadataExtractor {
+};
 
 struct InputSpec;
 class InputSpan;
@@ -213,19 +214,22 @@ class InputRecord
 
   template <typename R>
     requires std::is_convertible_v<R, char const*>
-  DataRef getRef(R binding, int part = 0) const {
+  DataRef getRef(R binding, int part = 0) const
+  {
     return getDataRefByString(binding, part);
   }
 
   template <typename R>
-    requires requires (R r) {r.c_str();}
-  DataRef getRef(R binding, int part = 0) const {
+    requires requires(R r) { r.c_str(); }
+  DataRef getRef(R binding, int part = 0) const
+  {
     return getDataRefByString(binding.c_str(), part);
   }
 
   template <typename R>
     requires std::is_convertible_v<R, DataRef>
-  DataRef getRef(R ref, int part = 0) const {
+  DataRef getRef(R ref, int part = 0) const
+  {
     return ref;
   }
 
@@ -465,7 +469,7 @@ class InputRecord
   }
 
   template <typename T = DataRef, typename R>
-  std::map<std::string, std::string> &get(R binding, int part = 0) const
+  std::map<std::string, std::string>& get(R binding, int part = 0) const
     requires std::same_as<T, CCDBMetadataExtractor>
   {
     // FIXME: needs proper implementation by Ruben
