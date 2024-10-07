@@ -40,6 +40,9 @@
 namespace o2::framework
 {
 
+// Wrapper class to get CCDB metadata
+struct CCDBMetadataExtractor{};
+
 struct InputSpec;
 class InputSpan;
 class CallbackService;
@@ -459,6 +462,14 @@ class InputRecord
         throw runtime_error("Attempt to extract object from message with unsupported serialization type");
       }
     }
+  }
+
+  template <typename T = DataRef, typename R>
+  std::map<std::string, std::string> &get(R binding, int part = 0) const
+    requires std::same_as<T, CCDBMetadataExtractor>
+  {
+    // FIXME: needs proper implementation by Ruben
+    return getRef(binding, part);
   }
 
   /// Helper method to be used to check if a given part of the InputRecord is present.
