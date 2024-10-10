@@ -867,8 +867,11 @@ o2::framework::ServiceSpec CommonServices::dataProcessingStats()
       clock_gettime(CLOCK_REALTIME, &now);
       uv_update_time(state.loop);
       uint64_t offset = now.tv_sec * 1000 - uv_now(state.loop);
+      DataProcessingStats::DefaultConfig config = {
+        .minOnlinePublishInterval = std::stoi(options.GetProperty<std::string>("dpl-stats-min-online-publishing-interval").c_str())};
       auto* stats = new DataProcessingStats(TimingHelpers::defaultRealtimeBaseConfigurator(offset, state.loop),
-                                            TimingHelpers::defaultCPUTimeConfigurator(state.loop));
+                                            TimingHelpers::defaultCPUTimeConfigurator(state.loop),
+                                            config);
       auto& runningWorkflow = services.get<RunningWorkflowInfo const>();
 
       // It makes no sense to update the stats more often than every 5s
