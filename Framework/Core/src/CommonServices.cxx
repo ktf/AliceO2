@@ -715,14 +715,14 @@ o2::framework::ServiceSpec
       O2_SIGNPOST_EVENT_EMIT(data_processor_context, cid, "oldest_possible_timeslice", "Queueing oldest possible timeslice %" PRIu64 " propagation for execution.",
                              (uint64_t)oldestPossibleOutput.timeslice.value);
       AsyncQueueHelpers::post(
-        queue, AsyncTask{ .timeslice = TimesliceId{oldestPossibleTimeslice}, 
-                .id = decongestion.oldestPossibleTimesliceTask, 
+        queue, AsyncTask{ .timeslice = TimesliceId{oldestPossibleTimeslice},
+                .id = decongestion.oldestPossibleTimesliceTask,
                 .debounce = -1, .callback = decongestionCallback}
             .user<DecongestionContext>(DecongestionContext{.ref = services, .oldestPossibleOutput = oldestPossibleOutput}));
 
       if (decongestion.orderedCompletionPolicyActive) {
         AsyncQueueHelpers::post(
-          queue, AsyncTask{.timeslice = TimesliceId{oldestPossibleOutput.timeslice.value},.id = decongestion.oldestPossibleTimesliceTask,  .debounce = -1, 
+          queue, AsyncTask{.timeslice = TimesliceId{oldestPossibleOutput.timeslice.value},.id = decongestion.oldestPossibleTimesliceTask,  .debounce = -1,
           .callback = decongestionCallbackOrdered}
           .user<DecongestionContext>({.ref = services, .oldestPossibleOutput = oldestPossibleOutput}));
       } },
