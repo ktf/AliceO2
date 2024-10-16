@@ -9,19 +9,5 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#include "ITStracking/TrackingConfigParam.h"
-#include "ITStracking/Configuration.h"
-
-namespace o2
-{
-namespace its
-{
-static auto& sVertexerParamITS = o2::its::VertexerParamConfig::Instance();
-static auto& sCATrackerParamITS = o2::its::TrackerParamConfig::Instance();
-static auto& sGpuRecoParamITS = o2::its::ITSGpuTrackingParamConfig::Instance();
-
-O2ParamImpl(o2::its::VertexerParamConfig);
-O2ParamImpl(o2::its::TrackerParamConfig);
-O2ParamImpl(o2::its::ITSGpuTrackingParamConfig);
-} // namespace its
-} // namespace o2
+#include "ITSSimulation/ITSSimParam.h"
+O2ParamImpl(o2::its::ITSSimParam);

@@ -9,19 +9,23 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#include "ITStracking/TrackingConfigParam.h"
-#include "ITStracking/Configuration.h"
+#ifndef DETECTORS_BASE_INCLUDE_GEOMETRYMANAGERPARAM_H_
+#define DETECTORS_BASE_INCLUDE_GEOMETRYMANAGERPARAM_H_
+
+#include "CommonUtils/ConfigurableParam.h"
+#include "CommonUtils/ConfigurableParamHelper.h"
 
 namespace o2
 {
-namespace its
-{
-static auto& sVertexerParamITS = o2::its::VertexerParamConfig::Instance();
-static auto& sCATrackerParamITS = o2::its::TrackerParamConfig::Instance();
-static auto& sGpuRecoParamITS = o2::its::ITSGpuTrackingParamConfig::Instance();
 
-O2ParamImpl(o2::its::VertexerParamConfig);
-O2ParamImpl(o2::its::TrackerParamConfig);
-O2ParamImpl(o2::its::ITSGpuTrackingParamConfig);
-} // namespace its
+struct GeometryManagerParam : public o2::conf::ConfigurableParamHelper<GeometryManagerParam> {
+  bool useParallelWorld = false;
+  bool usePwGeoBVH = false;
+  bool usePwCaching = false;
+
+  O2ParamDef(GeometryManagerParam, "GeometryManagerParam");
+};
+
 } // namespace o2
+
+#endif /* DETECTORS_BASE_INCLUDE_GEOMETRYMANAGERPARAM_H_ */

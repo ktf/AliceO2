@@ -163,13 +163,19 @@ consteval auto brace_constructible_size(auto... Members)
     return std::array<decltype(l(p0)), d##0>{DPL_FENUM_##d##0(l, p, )}; \
   }
 
-template <bool B = false, typename L, class T>
-auto homogeneous_apply_refs(L l, T&& object)
+template <bool B, typename T>
+consteval int nested_brace_constructible_size()
 {
   using type = std::decay_t<T>;
   constexpr int nesting = B ? 1 : 0;
-  constexpr unsigned long numElements = brace_constructible_size<type>() - nesting;
-  static_assert(numElements < 99, "Too many elements in the struct");
+  return brace_constructible_size<type>() - nesting;
+}
+
+template <bool B = false, typename L, class T>
+  requires(nested_brace_constructible_size<B, T>() < 99 && nested_brace_constructible_size<B, T>() >= 20)
+auto homogeneous_apply_refs(L l, T&& object)
+{
+  constexpr unsigned long numElements = nested_brace_constructible_size<B, T>();
   // clang-format off
   if DPL_HOMOGENEOUS_APPLY_ENTRY (9, 9)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY (9, 8)
@@ -251,7 +257,17 @@ auto homogeneous_apply_refs(L l, T&& object)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY (2, 2)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY (2, 1)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY_TENS (2)
-  else if DPL_HOMOGENEOUS_APPLY_ENTRY (1, 9)
+  else { return std::array<bool,0>(); }
+  // clang-format on
+}
+
+template <bool B = false, typename L, class T>
+  requires(nested_brace_constructible_size<B, T>() < 20 && nested_brace_constructible_size<B, T>() >= 0)
+auto homogeneous_apply_refs(L l, T&& object)
+{
+  constexpr unsigned long numElements = nested_brace_constructible_size<B, T>();
+  // clang-format off
+  if DPL_HOMOGENEOUS_APPLY_ENTRY (1, 9)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY (1, 8)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY (1, 7)
   else if DPL_HOMOGENEOUS_APPLY_ENTRY (1, 6)
