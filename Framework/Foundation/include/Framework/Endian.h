@@ -33,7 +33,6 @@
 #define O2_BIG_ENDIAN __BIG_ENDIAN
 #define O2_LITTLE_ENDIAN __LITTLE_ENDIAN
 
-
 template <typename T>
   requires std::same_as<T, uint16_t>
 inline uint16_t doSwap(uint16_t x)
