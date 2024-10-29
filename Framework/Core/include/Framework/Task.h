@@ -60,19 +60,19 @@ AlgorithmSpec adaptFromTask(Args&&... args)
 {
   return AlgorithmSpec::InitCallback{[=](InitContext& ic) {
     auto task = std::make_shared<T>(args...);
-    if constexpr (requires (T&) { &T::endOfStream; }) {
+    if constexpr (requires(T&) { &T::endOfStream; }) {
       auto& callbacks = ic.services().get<CallbackService>();
       callbacks.set<CallbackService::Id::EndOfStream>([task](EndOfStreamContext& eosContext) {
         task->endOfStream(eosContext);
       });
     }
-    if constexpr (requires (T&) { &T::finaliseCCDB; }) {
+    if constexpr (requires(T&) { &T::finaliseCCDB; }) {
       auto& callbacks = ic.services().get<CallbackService>();
       callbacks.set<CallbackService::Id::CCDBDeserialised>([task](ConcreteDataMatcher& matcher, void* obj) {
         task->finaliseCCDB(matcher, obj);
       });
     }
-    if constexpr (requires (T&) { &T::stop; }) {
+    if constexpr (requires(T&) { &T::stop; }) {
       auto& callbacks = ic.services().get<CallbackService>();
       callbacks.set<CallbackService::Id::Stop>([task]() {
         task->stop();
@@ -89,19 +89,19 @@ template <typename T>
 AlgorithmSpec adoptTask(std::shared_ptr<T> task)
 {
   return AlgorithmSpec::InitCallback{[task](InitContext& ic) {
-    if constexpr (requires (T&) { &T::endOfStream; }) {
+    if constexpr (requires(T&) { &T::endOfStream; }) {
       auto& callbacks = ic.services().get<CallbackService>();
       callbacks.set<CallbackService::Id::EndOfStream>([task](EndOfStreamContext& eosContext) {
         task->endOfStream(eosContext);
       });
     }
-    if constexpr (requires (T&) { &T::finaliseCCDB; }) {
+    if constexpr (requires(T&) { &T::finaliseCCDB; }) {
       auto& callbacks = ic.services().get<CallbackService>();
       callbacks.set<CallbackService::Id::CCDBDeserialised>([task](ConcreteDataMatcher& matcher, void* obj) {
         task->finaliseCCDB(matcher, obj);
       });
     }
-    if constexpr (requires (T&) { &T::stop; }) {
+    if constexpr (requires(T&) { &T::stop; }) {
       auto& callbacks = ic.services().get<CallbackService>();
       callbacks.set<CallbackService::Id::Stop>([task]() {
         task->stop();
