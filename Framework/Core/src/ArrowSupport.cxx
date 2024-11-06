@@ -537,7 +537,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
         // add TFNumber and TFFilename as input to the writer
         outputsInputsAOD.emplace_back("tfn", "TFN", "TFNumber");
         outputsInputsAOD.emplace_back("tff", "TFF", "TFFilename");
-        int compression = 505; 
+        int compression = 505;
         if (ctx.options().hasOption("aod-writer-compression")) {
           compression = ctx.options().get<int>("aod-writer-compression");
         }
