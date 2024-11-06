@@ -91,7 +91,6 @@ std::shared_ptr<VirtualRootFileSystemBase> TFileFileSystem::GetSubFilesystem(arr
     return std::shared_ptr<VirtualRootFileSystemBase>(new SingleTreeFileSystem(tree));
   }
 
-
   auto directory = (TDirectoryFile*)mFile->GetObjectChecked(source.path().c_str(), TClass::GetClass<TDirectory>());
   if (directory) {
     return std::shared_ptr<VirtualRootFileSystemBase>(new TFileFileSystem(directory, 50 * 1024 * 1024));
@@ -482,7 +481,6 @@ TBufferFileFS::TBufferFileFS(TBufferFile* f)
 }
 
 TTreeFileSystem::~TTreeFileSystem() = default;
-
 
 arrow::Result<arrow::fs::FileInfo> TBufferFileFS::GetFileInfo(const std::string& path)
 {
