@@ -159,7 +159,7 @@ struct DataRefUtils {
           throw runtime_error_f("Unable to extract class %s", cl == nullptr ? "<name not available>" : cl->GetName());
         }
         // workaround for ROOT feature, see above
-        if constexpr (has_root_setowner<T>::value) {
+        if constexpr (requires(T t) { t.SetOwner(true); }) {
           result->SetOwner(true);
         }
       });
