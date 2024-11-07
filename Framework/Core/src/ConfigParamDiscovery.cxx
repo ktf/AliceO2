@@ -25,9 +25,9 @@ namespace o2::framework
 std::vector<ConfigParamSpec> ConfigParamDiscovery::discover(ConfigParamRegistry& registry, int argc, char** argv)
 {
   std::vector<char const*> capabilitiesSpecs = {
+    "O2Framework:DiscoverAODOptionsInCommandLineCapability",
     "O2Framework:DiscoverMetadataInAODCapability",
     "O2Framework:DiscoverMetadataInCommandLineCapability",
-    "O2Framework:DiscoverAODOptionsInCommandLineCapability",
   };
 
   // Load all the requested plugins and discover what we can do.
@@ -75,6 +75,7 @@ std::vector<ConfigParamSpec> ConfigParamDiscovery::discover(ConfigParamRegistry&
     for (auto& extra : extras) {
       result.push_back(extra);
     }
+    registry.loadExtra(extras);
   }
   return result;
 }
