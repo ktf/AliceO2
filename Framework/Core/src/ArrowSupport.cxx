@@ -523,22 +523,22 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
       // select outputs of type AOD which need to be saved
       // ATTENTION: if there are dangling outputs the getGlobalAODSink
       // has to be created in any case!
-      std::vector<InputSpec> outputsInputsAOD;
+      ac.outputsInputsAOD.clear();
 
       for (auto ii = 0u; ii < outputsInputs.size(); ii++) {
         if (DataSpecUtils::partialMatch(outputsInputs[ii], extendedAODOrigins)) {
           auto ds = dod->getDataOutputDescriptors(outputsInputs[ii]);
           if (!ds.empty() || isDangling[ii]) {
-            outputsInputsAOD.emplace_back(outputsInputs[ii]);
+            ac.outputsInputsAOD.emplace_back(outputsInputs[ii]);
           }
         }
       }
 
       // file sink for any AOD output
-      if (!outputsInputsAOD.empty()) {
+      if (!ac.outputsInputsAOD.empty()) {
         // add TFNumber and TFFilename as input to the writer
-        outputsInputsAOD.emplace_back("tfn", "TFN", "TFNumber");
-        outputsInputsAOD.emplace_back("tff", "TFF", "TFFilename");
+        ac.outputsInputsAOD.emplace_back("tfn", "TFN", "TFNumber");
+        ac.outputsInputsAOD.emplace_back("tff", "TFF", "TFFilename");
         workflow.push_back(AnalysisSupportHelpers::getGlobalAODSink(ctx));
       }
       // Move the dummy sink at the end, if needed
