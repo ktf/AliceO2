@@ -420,11 +420,10 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
       auto builder = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec const& spec) { return spec.name == "internal-dpl-aod-index-builder"; });
       auto reader = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec const& spec) { return spec.name == "internal-dpl-aod-reader"; });
       auto writer = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec const& spec) { return spec.name == "internal-dpl-aod-writer"; });
-      auto &ac = ctx.services().get<AnalysisContext>();
+      auto& ac = ctx.services().get<AnalysisContext>();
       ac.requestedAODs.clear();
       ac.requestedDYNs.clear();
       ac.providedDYNs.clear();
-
 
       auto inputSpecLessThan = [](InputSpec const& lhs, InputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
       auto outputSpecLessThan = [](OutputSpec const& lhs, OutputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
