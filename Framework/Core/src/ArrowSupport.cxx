@@ -420,16 +420,18 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
       auto builder = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec const& spec) { return spec.name == "internal-dpl-aod-index-builder"; });
       auto reader = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec const& spec) { return spec.name == "internal-dpl-aod-reader"; });
       auto writer = std::find_if(workflow.begin(), workflow.end(), [](DataProcessorSpec const& spec) { return spec.name == "internal-dpl-aod-writer"; });
-      std::vector<InputSpec> requestedAODs;
-      std::vector<InputSpec> requestedDYNs;
-      std::vector<OutputSpec> providedDYNs;
+      auto &ac = ctx.services().get<AnalysisContext>();
+      ac.requestedAODs.clear();
+      ac.requestedDYNs.clear();
+      ac.providedDYNs.clear();
+
 
       auto inputSpecLessThan = [](InputSpec const& lhs, InputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
       auto outputSpecLessThan = [](OutputSpec const& lhs, OutputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
 
       if (builder != workflow.end()) {
         // collect currently requested IDXs
-        std::vector<InputSpec> requestedIDXs;
+        ac.requestedIDXs.clear();
         for (auto& d : workflow) {
           if (d.name == builder->name) {
             continue;
@@ -437,7 +439,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
           for (auto& i : d.inputs) {
             if (DataSpecUtils::partialMatch(i, header::DataOrigin{"IDX"})) {
               auto copy = i;
-              DataSpecUtils::updateInputList(requestedIDXs, std::move(copy));
+              DataSpecUtils::updateInputList(ac.requestedIDXs, std::move(copy));
             }
           }
         }
@@ -446,8 +448,8 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
         builder->outputs.clear();
         // replace AlgorithmSpec
         //  FIXME: it should be made more generic, so it does not need replacement...
-        builder->algorithm = readers::AODReaderHelpers::indexBuilderCallback(requestedIDXs);
-        AnalysisSupportHelpers::addMissingOutputsToBuilder(requestedIDXs, requestedAODs, requestedDYNs, *builder);
+        builder->algorithm = readers::AODReaderHelpers::indexBuilderCallback(ac.requestedIDXs);
+        AnalysisSupportHelpers::addMissingOutputsToBuilder(ac.requestedIDXs, ac.requestedAODs, ac.requestedDYNs, *builder);
       }
 
       if (spawner != workflow.end()) {
@@ -459,20 +461,20 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
           for (auto const& i : d.inputs) {
             if (DataSpecUtils::partialMatch(i, header::DataOrigin{"DYN"})) {
               auto copy = i;
-              DataSpecUtils::updateInputList(requestedDYNs, std::move(copy));
+              DataSpecUtils::updateInputList(ac.requestedDYNs, std::move(copy));
             }
           }
           for (auto const& o : d.outputs) {
             if (DataSpecUtils::partialMatch(o, header::DataOrigin{"DYN"})) {
-              providedDYNs.emplace_back(o);
+              ac.providedDYNs.emplace_back(o);
             }
           }
         }
-        std::sort(requestedDYNs.begin(), requestedDYNs.end(), inputSpecLessThan);
-        std::sort(providedDYNs.begin(), providedDYNs.end(), outputSpecLessThan);
+        std::sort(ac.requestedDYNs.begin(), ac.requestedDYNs.end(), inputSpecLessThan);
+        std::sort(ac.providedDYNs.begin(), ac.providedDYNs.end(), outputSpecLessThan);
         std::vector<InputSpec> spawnerInputs;
-        for (auto& input : requestedDYNs) {
-          if (std::none_of(providedDYNs.begin(), providedDYNs.end(), [&input](auto const& x) { return DataSpecUtils::match(input, x); })) {
+        for (auto& input : ac.requestedDYNs) {
+          if (std::none_of(ac.providedDYNs.begin(), ac.providedDYNs.end(), [&input](auto const& x) { return DataSpecUtils::match(input, x); })) {
             spawnerInputs.emplace_back(input);
           }
         }
@@ -482,7 +484,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
         // replace AlgorithmSpec
         // FIXME: it should be made more generic, so it does not need replacement...
         spawner->algorithm = readers::AODReaderHelpers::aodSpawnerCallback(spawnerInputs);
-        AnalysisSupportHelpers::addMissingOutputsToSpawner({}, spawnerInputs, requestedAODs, *spawner);
+        AnalysisSupportHelpers::addMissingOutputsToSpawner({}, spawnerInputs, ac.requestedAODs, *spawner);
       }
 
       if (writer != workflow.end()) {
@@ -496,14 +498,14 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
           for (auto const& i : d.inputs) {
             if (DataSpecUtils::partialMatch(i, AODOrigins)) {
               auto copy = i;
-              DataSpecUtils::updateInputList(requestedAODs, std::move(copy));
+              DataSpecUtils::updateInputList(ac.requestedAODs, std::move(copy));
             }
           }
         }
 
         // remove unmatched outputs
         auto o_end = std::remove_if(reader->outputs.begin(), reader->outputs.end(), [&](OutputSpec const& o) {
-          return !DataSpecUtils::partialMatch(o, o2::header::DataDescription{"TFNumber"}) && !DataSpecUtils::partialMatch(o, o2::header::DataDescription{"TFFilename"}) && std::none_of(requestedAODs.begin(), requestedAODs.end(), [&](InputSpec const& i) { return DataSpecUtils::match(i, o); });
+          return !DataSpecUtils::partialMatch(o, o2::header::DataDescription{"TFNumber"}) && !DataSpecUtils::partialMatch(o, o2::header::DataDescription{"TFFilename"}) && std::none_of(ac.requestedAODs.begin(), ac.requestedAODs.end(), [&](InputSpec const& i) { return DataSpecUtils::match(i, o); });
         });
         reader->outputs.erase(o_end, reader->outputs.end());
         if (reader->outputs.empty()) {
