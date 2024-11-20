@@ -30,7 +30,6 @@
 #include <arrow/status.h>
 #include <fmt/format.h>
 
-
 O2_DECLARE_DYNAMIC_LOG(root_arrow_fs);
 
 namespace
@@ -763,7 +762,6 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
   };
   return generator;
 }
-
 
 arrow::Result<std::shared_ptr<arrow::io::OutputStream>> TTreeFileSystem::OpenOutputStream(
   const std::string& path,
