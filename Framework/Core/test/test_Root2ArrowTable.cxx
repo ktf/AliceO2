@@ -522,7 +522,6 @@ TEST_CASE("RootTree2Dataset")
   REQUIRE((*resultWritten)->num_rows() == 100);
   validateContents(*resultWritten);
 
-
   {
   }
 }

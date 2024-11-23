@@ -294,7 +294,6 @@ arrow::Result<std::shared_ptr<arrow::dataset::FileFragment>> TTreeFileFormat::Ma
   return std::dynamic_pointer_cast<arrow::dataset::FileFragment>(fragment);
 }
 
-
 // An arrow outputstream which allows to write to a ttree
 TDirectoryFileOutputStream::TDirectoryFileOutputStream(TDirectoryFile* f)
   : mDirectory(f)
