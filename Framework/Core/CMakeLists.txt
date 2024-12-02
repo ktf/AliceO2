@@ -159,6 +159,8 @@ o2_add_library(Framework
                                      FairMQ::FairMQ
                                      ROOT::Tree
                                      ROOT::Hist
+                                     ROOT::ROOTNTuple
+                                     ROOT::ROOTNTupleUtil
                                      O2::FrameworkFoundation
                                      O2::CommonConstants
                                      O2::Headers
@@ -298,6 +300,7 @@ add_executable(o2-test-framework-root
 target_link_libraries(o2-test-framework-root PRIVATE O2::Framework)
 target_link_libraries(o2-test-framework-root PRIVATE O2::Catch2)
 target_link_libraries(o2-test-framework-root PRIVATE ROOT::ROOTDataFrame)
+target_link_libraries(o2-test-framework-root PRIVATE ROOT::ROOTNTuple)
 set_property(TARGET o2-test-framework-root PROPERTY RUNTIME_OUTPUT_DIRECTORY ${outdir})
 add_test(NAME framework:root COMMAND o2-test-framework-root --skip-benchmarks)
 add_test(NAME framework:crash COMMAND  sh -e -c "PATH=${CMAKE_RUNTIME_OUTPUT_DIRECTORY}:$PATH ${CMAKE_CURRENT_LIST_DIR}/test/test_AllCrashTypes.sh")

@@ -23,6 +23,11 @@ class TTree;
 class TBufferFile;
 class TDirectoryFile;
 
+namespace ROOT::Experimental
+{
+class RNTuple;
+} // namespace ROOT::Experimental
+
 namespace o2::framework
 {
 
@@ -30,6 +35,15 @@ class TTreeFileWriteOptions : public arrow::dataset::FileWriteOptions
 {
  public:
   TTreeFileWriteOptions(std::shared_ptr<arrow::dataset::FileFormat> format)
+    : FileWriteOptions(format)
+  {
+  }
+};
+
+class RNTupleFileWriteOptions : public arrow::dataset::FileWriteOptions
+{
+ public:
+  RNTupleFileWriteOptions(std::shared_ptr<arrow::dataset::FileFormat> format)
     : FileWriteOptions(format)
   {
   }
@@ -97,6 +111,19 @@ class TTreeFileSystem : public VirtualRootFileSystemBase
   virtual TTree* GetTree(arrow::dataset::FileSource source) = 0;
 };
 
+// A filesystem which allows me to get a RNTuple
+class RNTupleFileSystem : public VirtualRootFileSystemBase
+{
+ public:
+  ~RNTupleFileSystem() override;
+
+  std::shared_ptr<VirtualRootFileSystemBase> GetSubFilesystem(arrow::dataset::FileSource source) override
+  {
+    return std::dynamic_pointer_cast<VirtualRootFileSystemBase>(shared_from_this());
+  };
+  virtual ROOT::Experimental::RNTuple* GetRNTuple(arrow::dataset::FileSource source) = 0;
+};
+
 class SingleTreeFileSystem : public TTreeFileSystem
 {
  public:
@@ -119,6 +146,30 @@ class SingleTreeFileSystem : public TTreeFileSystem
 
  private:
   TTree* mTree;
+};
+
+class SingleRNTupleFileSystem : public RNTupleFileSystem
+{
+ public:
+  SingleRNTupleFileSystem(ROOT::Experimental::RNTuple* tuple)
+    : RNTupleFileSystem(),
+      mTuple(tuple)
+  {
+  }
+
+  std::string type_name() const override
+  {
+    return "rntuple";
+  }
+
+  ROOT::Experimental::RNTuple* GetRNTuple(arrow::dataset::FileSource) override
+  {
+    // Simply return the only TTree we have
+    return mTuple;
+  }
+
+ private:
+  ROOT::Experimental::RNTuple* mTuple;
 };
 
 class TFileFileSystem : public VirtualRootFileSystemBase
@@ -177,6 +228,70 @@ class TTreeFileFragment : public arrow::dataset::FileFragment
     : FileFragment(std::move(source), std::move(format), std::move(partition_expression), std::move(physical_schema))
   {
   }
+};
+
+class RNTupleFileFragment : public arrow::dataset::FileFragment
+{
+ public:
+  RNTupleFileFragment(arrow::dataset::FileSource source,
+                      std::shared_ptr<arrow::dataset::FileFormat> format,
+                      arrow::compute::Expression partition_expression,
+                      std::shared_ptr<arrow::Schema> physical_schema)
+    : FileFragment(std::move(source), std::move(format), std::move(partition_expression), std::move(physical_schema))
+  {
+  }
+};
+
+class RNTupleFileFormat : public arrow::dataset::FileFormat
+{
+  size_t& mTotCompressedSize;
+  size_t& mTotUncompressedSize;
+
+ public:
+  RNTupleFileFormat(size_t& totalCompressedSize, size_t& totalUncompressedSize)
+    : FileFormat({}),
+      mTotCompressedSize(totalCompressedSize),
+      mTotUncompressedSize(totalUncompressedSize)
+  {
+  }
+
+  ~RNTupleFileFormat() override = default;
+
+  std::string type_name() const override
+  {
+    return "rntuple";
+  }
+
+  bool Equals(const FileFormat& other) const override
+  {
+    return other.type_name() == this->type_name();
+  }
+
+  arrow::Result<bool> IsSupported(const arrow::dataset::FileSource& source) const override
+  {
+    auto fs = std::dynamic_pointer_cast<VirtualRootFileSystemBase>(source.filesystem());
+    auto subFs = fs->GetSubFilesystem(source);
+    if (std::dynamic_pointer_cast<RNTupleFileSystem>(subFs)) {
+      return true;
+    }
+    return false;
+  }
+
+  arrow::Result<std::shared_ptr<arrow::Schema>> Inspect(const arrow::dataset::FileSource& source) const override;
+
+  arrow::Result<arrow::RecordBatchGenerator> ScanBatchesAsync(
+    const std::shared_ptr<arrow::dataset::ScanOptions>& options,
+    const std::shared_ptr<arrow::dataset::FileFragment>& fragment) const override;
+
+  std::shared_ptr<arrow::dataset::FileWriteOptions> DefaultWriteOptions() override;
+
+  arrow::Result<std::shared_ptr<arrow::dataset::FileWriter>> MakeWriter(std::shared_ptr<arrow::io::OutputStream> destination,
+                                                                        std::shared_ptr<arrow::Schema> schema,
+                                                                        std::shared_ptr<arrow::dataset::FileWriteOptions> options,
+                                                                        arrow::fs::FileLocator destination_locator) const override;
+  arrow::Result<std::shared_ptr<arrow::dataset::FileFragment>> MakeFragment(
+    arrow::dataset::FileSource source, arrow::compute::Expression partition_expression,
+    std::shared_ptr<arrow::Schema> physical_schema) override;
 };
 
 class TTreeFileFormat : public arrow::dataset::FileFormat

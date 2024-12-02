@@ -26,6 +26,13 @@
 #include <TTree.h>
 #include <TRandom.h>
 #include <TFile.h>
+#include <ROOT/RField.hxx>
+#include <ROOT/RNTuple.hxx>
+#include <ROOT/RNTupleDescriptor.hxx>
+#include <ROOT/RNTupleModel.hxx>
+#include <ROOT/RNTupleReader.hxx>
+#include <ROOT/RNTupleUtil.hxx>
+#include <ROOT/RNTupleWriter.hxx>
 #include <memory>
 
 #include <arrow/array/array_primitive.h>
@@ -504,4 +511,40 @@ TEST_CASE("RootTree2Dataset")
     REQUIRE((*resultWritten)->num_rows() == 100);
     validateContents(*resultWritten);
   }
+  // Let's write back an RNTuple
+  auto rNtupleFormat = std::make_shared<RNTupleFileFormat>(totalSizeCompressed, totalSizeUncompressed);
+  arrow::fs::FileLocator rnTupleLocator{outFs, "/rntuple"};
+  // We write an RNTuple in the same TMemFile, using /rntuple as a location
+  auto rntupleDestination = std::dynamic_pointer_cast<TDirectoryFileOutputStream>(*destination);
+
+  {
+    auto rNtupleWriter = rNtupleFormat->MakeWriter(*destination, schema, {}, rnTupleLocator);
+    auto rNtupleSuccess = rNtupleWriter->get()->Write(*result);
+    REQUIRE(rNtupleSuccess.ok());
+  }
+
+  // And now we can read back the RNTuple into a RecordBatch
+  arrow::dataset::FileSource writtenRntupleSource("/rntuple", outFs);
+  auto newRNTupleFS = outFs->GetSubFilesystem(writtenRntupleSource);
+
+  REQUIRE(rNtupleFormat->IsSupported(writtenRntupleSource) == true);
+
+  auto rntupleSchemaOpt = rNtupleFormat->Inspect(writtenRntupleSource);
+  REQUIRE(rntupleSchemaOpt.ok());
+  auto rntupleSchemaWritten = *rntupleSchemaOpt;
+  REQUIRE(validateSchema(rntupleSchemaWritten));
+
+  auto rntupleFragmentWritten = rNtupleFormat->MakeFragment(writtenRntupleSource, {}, rntupleSchemaWritten);
+  REQUIRE(rntupleFragmentWritten.ok());
+  auto rntupleOptionsWritten = std::make_shared<arrow::dataset::ScanOptions>();
+  rntupleOptionsWritten->dataset_schema = rntupleSchemaWritten;
+  auto rntupleScannerWritten = rNtupleFormat->ScanBatchesAsync(rntupleOptionsWritten, *rntupleFragmentWritten);
+  REQUIRE(rntupleScannerWritten.ok());
+  auto rntupleBatchesWritten = (*rntupleScannerWritten)();
+  auto rntupleResultWritten = rntupleBatchesWritten.result();
+  REQUIRE(rntupleResultWritten.ok());
+  REQUIRE((*rntupleResultWritten)->columns().size() == 10);
+  REQUIRE(validateSchema((*rntupleResultWritten)->schema()));
+  REQUIRE((*rntupleResultWritten)->num_rows() == 100);
+  REQUIRE(validateContents(*rntupleResultWritten));
 }
