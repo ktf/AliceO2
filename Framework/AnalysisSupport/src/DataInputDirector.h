@@ -16,6 +16,9 @@
 #include "Framework/DataDescriptorMatcher.h"
 #include "Framework/DataAllocator.h"
 
+#include <arrow/filesystem/filesystem.h>
+#include <arrow/dataset/dataset.h>
+
 #include <regex>
 #include "rapidjson/fwd.h"
 
@@ -35,11 +38,6 @@ struct FileNameHolder {
   std::vector<bool> alreadyRead;
 };
 FileNameHolder* makeFileNameHolder(std::string fileName);
-
-struct FileAndFolder {
-  TFile* file = nullptr;
-  std::string folderName = "";
-};
 
 class DataInputDescriptor
 {
@@ -78,7 +76,7 @@ class DataInputDescriptor
   int findDFNumber(int file, std::string dfName);
 
   uint64_t getTimeFrameNumber(int counter, int numTF);
-  FileAndFolder getFileFolder(int counter, int numTF);
+  arrow::dataset::FileSource getFileFolder(int counter, int numTF);
   DataInputDescriptor* getParentFile(int counter, int numTF, std::string treename);
   int getTimeFramesInFile(int counter);
   int getReadTimeFramesInFile(int counter);
@@ -98,7 +96,7 @@ class DataInputDescriptor
   std::string mParentFileReplacement;
   std::vector<FileNameHolder*> mfilenames;
   std::vector<FileNameHolder*>* mdefaultFilenamesPtr = nullptr;
-  TFile* mcurrentFile = nullptr;
+  std::shared_ptr<arrow::fs::FileSystem> mCurrentFilesystem;
   int mCurrentFileID = -1;
   bool mAlienSupport = false;
 
@@ -143,7 +141,7 @@ class DataInputDirector
 
   bool readTree(DataAllocator& outputs, header::DataHeader dh, int counter, int numTF, size_t& totalSizeCompressed, size_t& totalSizeUncompressed);
   uint64_t getTimeFrameNumber(header::DataHeader dh, int counter, int numTF);
-  FileAndFolder getFileFolder(header::DataHeader dh, int counter, int numTF);
+  arrow::dataset::FileSource getFileFolder(header::DataHeader dh, int counter, int numTF);
   int getTimeFramesInFile(header::DataHeader dh, int counter);
 
   uint64_t getTotalSizeCompressed();
