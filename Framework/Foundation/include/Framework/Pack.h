@@ -114,12 +114,11 @@ consteval auto prune_voids_pack(Result result, pack<>)
   return result;
 }
 
-template<typename T>
+template <typename T>
 concept void_pack_element = std::is_void_v<T>;
 
-template<typename T>
+template <typename T>
 concept nonvoid_pack_element = !void_pack_element<T>;
-
 
 // The first one is non void, but one of the others is void
 template <typename... Rs, nonvoid_pack_element T, typename... Ts>
