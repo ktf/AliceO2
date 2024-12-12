@@ -251,7 +251,7 @@ class AODProducerWorkflowDPL : public Task
   std::unordered_set<GIndex> mGIDUsedBySVtx;
   std::unordered_set<GIndex> mGIDUsedByStr;
 
-  AODProducerStreamerMask mStreamerMask;
+  AODProducerStreamerMask mStreamerMask{0};
   std::shared_ptr<o2::utils::TreeStreamRedirector> mStreamer;
 
   int mNThreads = 1;
@@ -433,6 +433,8 @@ class AODProducerWorkflowDPL : public Task
     int8_t dRefGloSnp{std::numeric_limits<int8_t>::min()};
     int8_t dRefGloTgl{std::numeric_limits<int8_t>::min()};
     int8_t dRefGloQ2Pt{std::numeric_limits<int8_t>::min()};
+    int8_t dTofdX{std::numeric_limits<int8_t>::min()};
+    int8_t dTofdZ{std::numeric_limits<int8_t>::min()};
   };
 
   // helper struct for addToFwdTracksTable()
