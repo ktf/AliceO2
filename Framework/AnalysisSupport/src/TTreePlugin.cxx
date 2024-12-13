@@ -158,9 +158,9 @@ class TTreeFileFormat : public arrow::dataset::FileFormat
 class TTreeOutputStream : public arrow::io::OutputStream
 {
  public:
-  // Using a pointer means that the tree itself is owned by another 
+  // Using a pointer means that the tree itself is owned by another
   // class
-  TTreeOutputStream(TTree *, std::string branchPrefix);
+  TTreeOutputStream(TTree*, std::string branchPrefix);
 
   arrow::Status Close() override;
 
