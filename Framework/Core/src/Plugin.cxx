@@ -179,9 +179,7 @@ struct ImplementationContext {
 
 std::function<void*(TDirectoryFile*, std::string const&)> getHandleByClass(char const* classname)
 {
-  return [c = TClass::GetClass(classname)](TDirectoryFile* file, std::string const& path) { 
-
-    return file->GetObjectChecked(path.c_str(), c); };
+  return [c = TClass::GetClass(classname)](TDirectoryFile* file, std::string const& path) { return file->GetObjectChecked(path.c_str(), c); };
 }
 
 std::function<void*(TBufferFile*, std::string const&)> getBufferHandleByClass(char const* classname)
