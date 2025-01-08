@@ -17,7 +17,6 @@
 #include <vector>
 #include <memory>
 
-
 namespace o2::framework
 {
 
