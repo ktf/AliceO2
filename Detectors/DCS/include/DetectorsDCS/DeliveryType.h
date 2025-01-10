@@ -400,6 +400,4 @@ inline size_t dim_buffer_size(const DeliveryType type)
 }
 } // namespace o2::dcs
 
-
-
 #endif /* O2_DCS_DELIVERY_TYPE */
