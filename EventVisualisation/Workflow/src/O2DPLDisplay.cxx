@@ -230,7 +230,7 @@ void O2DPLDisplaySpec::run(ProcessingContext& pc)
   }
 
   // FIXME: find out why this does not work with 11.1.1
-//  LOGP(info, "Tracks: {}", fmt::join(sourceStats, ", "));
+  //  LOGP(info, "Tracks: {}", fmt::join(sourceStats, ", "));
 }
 
 void O2DPLDisplaySpec::endOfStream(EndOfStreamContext& ec)
