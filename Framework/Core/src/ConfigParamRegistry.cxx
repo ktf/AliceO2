@@ -142,16 +142,16 @@ template void ConfigParamRegistry::override(const char* key, double const&) cons
 template void ConfigParamRegistry::override(const char* key, std::string const&) const;
 template void ConfigParamRegistry::override(const char* key, bool const&) const;
 
-//template void ConfigParamRegistry::override(char const* key, LabeledArray<std::string> const&) const;
-//template void ConfigParamRegistry::override(char const* key, LabeledArray<double> const&) const;
-//template void ConfigParamRegistry::override(char const* key, LabeledArray<float> const&) const;
-//template void ConfigParamRegistry::override(char const* key, LabeledArray<int> const&) const;
-//template void ConfigParamRegistry::override(char const* key, Array2D<std::string> const&) const;
-//template void ConfigParamRegistry::override(char const* key, Array2D<double> const&) const;
-//template void ConfigParamRegistry::override(char const* key, Array2D<float> const&) const;
-//template void ConfigParamRegistry::override(char const* key, Array2D<int> const&) const;
-//template void ConfigParamRegistry::override(char const* key, std::vector<std::string> const&) const;
-//template void ConfigParamRegistry::override(char const* key, std::vector<double> const&) const;
-//template void ConfigParamRegistry::override(char const* key, std::vector<float> const&) const;
-//template void ConfigParamRegistry::override(char const* key, std::vector<int> const&) const;
+// template void ConfigParamRegistry::override(char const* key, LabeledArray<std::string> const&) const;
+// template void ConfigParamRegistry::override(char const* key, LabeledArray<double> const&) const;
+// template void ConfigParamRegistry::override(char const* key, LabeledArray<float> const&) const;
+// template void ConfigParamRegistry::override(char const* key, LabeledArray<int> const&) const;
+// template void ConfigParamRegistry::override(char const* key, Array2D<std::string> const&) const;
+// template void ConfigParamRegistry::override(char const* key, Array2D<double> const&) const;
+// template void ConfigParamRegistry::override(char const* key, Array2D<float> const&) const;
+// template void ConfigParamRegistry::override(char const* key, Array2D<int> const&) const;
+// template void ConfigParamRegistry::override(char const* key, std::vector<std::string> const&) const;
+// template void ConfigParamRegistry::override(char const* key, std::vector<double> const&) const;
+// template void ConfigParamRegistry::override(char const* key, std::vector<float> const&) const;
+// template void ConfigParamRegistry::override(char const* key, std::vector<int> const&) const;
 } // namespace o2::framework
