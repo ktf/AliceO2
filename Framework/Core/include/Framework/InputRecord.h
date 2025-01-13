@@ -40,7 +40,7 @@ namespace o2::framework
 {
 
 template <typename A>
-concept TableConsumerLike = requires (A a) { a. asArrowTable(); };
+concept TableConsumerLike = requires(A a) { a.asArrowTable(); };
 
 // Wrapper class to get CCDB metadata
 struct CCDBMetadataExtractor {
