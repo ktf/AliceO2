@@ -47,8 +47,6 @@
 #include <boost/program_options/variables_map.hpp>
 #include <csignal>
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
 namespace o2::framework
 {
 
@@ -597,4 +595,3 @@ o2::framework::ServiceSpec ArrowSupport::arrowTableSlicingCacheSpec()
 }
 
 } // namespace o2::framework
-#pragma GGC diagnostic pop

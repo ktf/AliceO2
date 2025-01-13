@@ -1323,4 +1323,3 @@ std::vector<ServiceSpec> CommonServices::arrowServices()
 }
 
 } // namespace o2::framework
-#pragma GCC diagnostic pop
