@@ -1045,7 +1045,8 @@ struct TableIterator : IP, C... {
     bind();
   }
 
-  TableIterator(arrow::ChunkedArray* columnData[sizeof...(C)], IP&& policy) requires (WithIndexColumns<C...>)
+  TableIterator(arrow::ChunkedArray* columnData[sizeof...(C)], IP&& policy)
+    requires(WithIndexColumns<C...>)
     : IP{policy},
       C(columnData[framework::has_type_at_v<C>(all_columns{})])...
   {
