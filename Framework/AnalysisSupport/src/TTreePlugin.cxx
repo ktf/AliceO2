@@ -13,6 +13,7 @@
 #include "Framework/Plugins.h"
 #include "Framework/Signpost.h"
 #include "Framework/Endian.h"
+#include <arrow/buffer.h>
 #include <arrow/dataset/file_base.h>
 #include <arrow/util/key_value_metadata.h>
 #include <arrow/array/array_nested.h>
@@ -245,6 +246,8 @@ struct TTreeObjectReadingImplementation : public RootArrowFactoryPlugin {
   }
 };
 
+O2_DECLARE_DYNAMIC_LOG(ttree_format);
+
 arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
   const std::shared_ptr<arrow::dataset::ScanOptions>& options,
   const std::shared_ptr<arrow::dataset::FileFragment>& fragment) const
@@ -268,13 +271,17 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
 
     int64_t rows = -1;
     auto& tree = fs->GetTree(treeFragment->source());
+    O2_SIGNPOST_ID_FROM_POINTER(sid, ttree_format, tree.get());
+    O2_SIGNPOST_START(ttree_format, sid, "TTreeFormat", "Scanning Batches for %{public}s (cache %zu)", tree->GetName(), (size_t)tree->GetCacheSize());
     for (auto& field : fields) {
       // The field actually on disk
       auto physicalField = physical_schema->GetFieldByName(field->name());
       TBranch* branch = tree->GetBranch(physicalField->name().c_str());
       assert(branch);
       buffer.Reset();
-      auto totalEntries = branch->GetEntries();
+      size_t totalEntries = branch->GetEntries();
+      O2_SIGNPOST_EVENT_EMIT(ttree_format, sid, "TTreeFormat", "Reading %zu entries from branch %{public}s to field %{public}s",
+                             totalEntries, branch->GetName(), field->name().c_str());
       if (rows == -1) {
         rows = totalEntries;
       }
@@ -344,12 +351,13 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
         auto typeSize = physicalField->type()->byte_width();
         // This is needed for branches which have not been persisted.
         auto bytes = branch->GetTotBytes();
-        auto branchSize = bytes ? bytes : 1000000;
-        auto&& result = arrow::AllocateResizableBuffer(branchSize, pool);
+        size_t branchSize = bytes ? bytes : 1000000;
+        O2_SIGNPOST_EVENT_EMIT(ttree_format, sid, "TTreeFormat", "Allocating buffer for branch %{public}s %zu.", physicalField->name().c_str(), branchSize);
+        arrow::Result<std::shared_ptr<arrow::ResizableBuffer>>&& result = arrow::AllocateResizableBuffer(branchSize, pool);
         if (!result.ok()) {
           throw runtime_error("Cannot allocate values buffer");
         }
-        std::shared_ptr<arrow::Buffer> arrowValuesBuffer = std::move(result).ValueUnsafe();
+        std::shared_ptr<arrow::Buffer> arrowValuesBuffer = result.MoveValueUnsafe();
         auto ptr = arrowValuesBuffer->mutable_data();
         if (ptr == nullptr) {
           throw runtime_error("Invalid buffer");
@@ -379,7 +387,7 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
           if (!result.ok()) {
             throw runtime_error("Cannot allocate offset buffer");
           }
-          arrowOffsetBuffer = std::move(result).ValueUnsafe();
+          arrowOffsetBuffer = result.MoveValueUnsafe();
           unsigned char* ptrOffset = arrowOffsetBuffer->mutable_data();
           auto* tPtrOffset = reinterpret_cast<int*>(ptrOffset);
           offsets = std::span<int>{tPtrOffset, tPtrOffset + totalEntries + 1};
@@ -434,6 +442,7 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
 
       columns.push_back(array);
     }
+    O2_SIGNPOST_END(ttree_format, sid, "TTreeFormat", "Done creating batches %{public}s.", tree->GetName());
     auto batch = arrow::RecordBatch::Make(dataset_schema, rows, columns);
     totalCompressedSize += tree->GetZipBytes();
     totalUncompressedSize += tree->GetTotBytes();
@@ -545,6 +554,9 @@ arrow::Result<std::shared_ptr<arrow::Schema>> TTreeFileFormat::Inspect(const arr
   }
   auto& tree = treeFs->GetTree(source);
 
+  O2_SIGNPOST_ID_FROM_POINTER(sid, ttree_format, tree.get());
+  O2_SIGNPOST_START(ttree_format, sid, "TTreeFileFormat::Inspect", "Starting inspection of source %{public}s", source.path().c_str());
+
   auto branches = tree->GetListOfBranches();
   auto n = branches->GetEntries();
 
@@ -581,18 +593,24 @@ arrow::Result<std::shared_ptr<arrow::Schema>> TTreeFileFormat::Inspect(const arr
     auto field = std::make_shared<arrow::Field>(bi.ptr->GetName(), arrowTypeFromROOT(type, listSize));
     fields.push_back(field);
 
+    O2_SIGNPOST_EVENT_EMIT(ttree_format, sid, "TTreeFileFormat::Inspect", "Adding branch %{public}s to cache", bi.ptr->GetName());
     tree->AddBranchToCache(bi.ptr);
     if (strncmp(bi.ptr->GetName(), "fIndexArray", strlen("fIndexArray")) == 0) {
       std::string sizeBranchName = bi.ptr->GetName();
       sizeBranchName += "_size";
       auto* sizeBranch = (TBranch*)tree->GetBranch(sizeBranchName.c_str());
       if (sizeBranch) {
+        O2_SIGNPOST_EVENT_EMIT(ttree_format, sid, "TTreeFileFormat::Inspect", "Adding branch %{public}s to cache", sizeBranch->GetName());
         tree->AddBranchToCache(sizeBranch);
+      } else {
+        O2_SIGNPOST_EVENT_EMIT(ttree_format, sid, "TTreeFileFormat::Inspect", "Branch %{public}s not added to cache", sizeBranchName.c_str());
       }
     }
   }
   tree->StopCacheLearningPhase();
 
+  O2_SIGNPOST_END(ttree_format, sid, "TTreeFileFormat::Inspect", "Done inspection %zu fields found. Using %zu bytes for cache", fields.size(),
+                  (size_t)tree->GetCacheSize());
   return std::make_shared<arrow::Schema>(fields);
 }
 

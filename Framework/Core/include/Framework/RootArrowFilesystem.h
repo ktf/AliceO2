@@ -140,6 +140,8 @@ class TFileFileSystem : public VirtualRootFileSystemBase
  private:
   TDirectoryFile* mFile;
   RootObjectReadingFactory& mObjectFactory;
+  arrow::dataset::FileSource mCachedSource;
+  std::shared_ptr<VirtualRootFileSystemBase> mCachedFS;
 };
 
 class TBufferFileFS : public VirtualRootFileSystemBase
