@@ -533,7 +533,7 @@ void TreeToTable::setLabel(const char* label)
   mTableLabel = label;
 }
 
-void TreeToTable::fill(TTree*tree)
+void TreeToTable::fill(TTree* tree)
 {
   std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
   std::vector<std::shared_ptr<arrow::Field>> fields;
