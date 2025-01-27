@@ -43,6 +43,11 @@ TFileFileSystem::TFileFileSystem(TDirectoryFile* f, size_t readahead, RootObject
 
 std::shared_ptr<VirtualRootFileSystemBase> TFileFileSystem::GetSubFilesystem(arrow::dataset::FileSource source)
 {
+  // If the filesystem was already found last time we got called, lets return a copy
+  // cached version of it.
+  if (mCachedSource.path() == source.path()) {
+    return mCachedFS;
+  }
   // We use a plugin to create the actual objects inside the
   // file, so that we can support TTree and RNTuple at the same time
   // without having to depend on both.
@@ -53,13 +58,17 @@ std::shared_ptr<VirtualRootFileSystemBase> TFileFileSystem::GetSubFilesystem(arr
       continue;
     }
     if (handle) {
-      return capability.factory().getSubFilesystem(handle);
+      mCachedFS = capability.factory().getSubFilesystem(handle);
+      mCachedSource = source;
+      return mCachedFS;
     }
   }
 
   auto directory = (TDirectoryFile*)mFile->GetObjectChecked(source.path().c_str(), TClass::GetClass<TDirectory>());
   if (directory) {
-    return std::shared_ptr<VirtualRootFileSystemBase>(new TFileFileSystem(directory, 50 * 1024 * 1024, mObjectFactory));
+    mCachedFS = std::shared_ptr<VirtualRootFileSystemBase>(new TFileFileSystem(directory, 50 * 1024 * 1024, mObjectFactory));
+    mCachedSource = source;
+    return mCachedFS;
   }
   throw runtime_error_f("Unsupported file layout");
 }
