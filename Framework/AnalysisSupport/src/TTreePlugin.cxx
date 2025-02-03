@@ -286,6 +286,8 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
 
   auto generator = [pool = options->pool, treeFragment, dataset_schema, &totalCompressedSize = mTotCompressedSize,
                     &totalUncompressedSize = mTotUncompressedSize]() -> arrow::Future<std::shared_ptr<arrow::RecordBatch>> {
+    O2_SIGNPOST_ID_FROM_POINTER(tid, root_arrow_fs, treeFragment->GetTree());
+    O2_SIGNPOST_START(root_arrow_fs, tid, "Generator", "Creating batch for tree %{public}s",treeFragment->GetTree()->GetName());
     std::vector<std::shared_ptr<arrow::Array>> columns;
     std::vector<std::shared_ptr<arrow::Field>> fields = dataset_schema->fields();
     auto physical_schema = *treeFragment->ReadPhysicalSchema();
@@ -492,6 +494,7 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
     auto batch = arrow::RecordBatch::Make(dataset_schema, rows, columns);
     totalCompressedSize += tree->GetZipBytes();
     totalUncompressedSize += tree->GetTotBytes();
+    O2_SIGNPOST_END(root_arrow_fs, tid, "Generator", "Done creating batch compressed:%zu uncompressed:%zu", totalCompressedSize, totalUncompressedSize);
     return batch;
   };
   return generator;
