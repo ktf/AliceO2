@@ -144,6 +144,8 @@ class TFileFileSystem : public VirtualRootFileSystemBase
 
   TFileFileSystem(TDirectoryFile* f, size_t readahead, RootObjectReadingFactory&);
 
+  ~TFileFileSystem() override;
+
   std::string type_name() const override
   {
     return "TDirectoryFile";

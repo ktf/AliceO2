@@ -13,6 +13,7 @@
 #include "Framework/Plugins.h"
 #include "Framework/Signpost.h"
 #include "Framework/Endian.h"
+#include <arrow/buffer.h>
 #include <arrow/dataset/file_base.h>
 #include <arrow/extension_type.h>
 #include <arrow/status.h>
@@ -286,6 +287,8 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
 
   auto generator = [pool = options->pool, treeFragment, dataset_schema, &totalCompressedSize = mTotCompressedSize,
                     &totalUncompressedSize = mTotUncompressedSize]() -> arrow::Future<std::shared_ptr<arrow::RecordBatch>> {
+    O2_SIGNPOST_ID_FROM_POINTER(tid, root_arrow_fs, treeFragment->GetTree());
+    O2_SIGNPOST_START(root_arrow_fs, tid, "Generator", "Creating batch for tree %{public}s", treeFragment->GetTree()->GetName());
     std::vector<std::shared_ptr<arrow::Array>> columns;
     std::vector<std::shared_ptr<arrow::Field>> fields = dataset_schema->fields();
     auto physical_schema = *treeFragment->ReadPhysicalSchema();
@@ -299,26 +302,47 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
 
     for (int fi = 0; fi < dataset_schema->num_fields(); ++fi) {
       auto dataset_field = dataset_schema->field(fi);
+      // This is needed because for now the dataset_field
+      // is actually the schema of the ttree
+      O2_SIGNPOST_EVENT_EMIT(root_arrow_fs, tid, "Generator", "Processing dataset field %{public}s.", dataset_field->name().c_str());
       int physicalFieldIdx = physical_schema->GetFieldIndex(dataset_field->name());
 
       if (physicalFieldIdx < 0) {
         throw runtime_error_f("Cannot find physical field associated to %s", dataset_field->name().c_str());
       }
       if (physicalFieldIdx > 1 && physical_schema->field(physicalFieldIdx - 1)->name().ends_with("_size")) {
+        O2_SIGNPOST_EVENT_EMIT(root_arrow_fs, tid, "Generator", "Field %{public}s has sizes in %{public}s.", dataset_field->name().c_str(),
+                               physical_schema->field(physicalFieldIdx - 1)->name().c_str());
         mappings.push_back({physicalFieldIdx, physicalFieldIdx - 1, fi});
       } else {
+        if (physicalFieldIdx > 1) {
+          O2_SIGNPOST_EVENT_EMIT(root_arrow_fs, tid, "Generator", "Field %{public}s previous field is %{public}s.", dataset_field->name().c_str(),
+                                 physical_schema->field(physicalFieldIdx - 1)->name().c_str());
+        }
         mappings.push_back({physicalFieldIdx, -1, fi});
       }
     }
 
     auto* tree = treeFragment->GetTree();
-    tree->SetCacheSize(25000000);
     auto branches = tree->GetListOfBranches();
+    size_t totalTreeSize = 0;
+    std::vector<TBranch*> selectedBranches;
     for (auto& mapping : mappings) {
-      tree->AddBranchToCache((TBranch*)branches->At(mapping.mainBranchIdx), false);
+      selectedBranches.push_back((TBranch*)branches->At(mapping.mainBranchIdx));
+      O2_SIGNPOST_EVENT_EMIT(root_arrow_fs, tid, "Generator", "Adding branch %{public}s to stream.", selectedBranches.back()->GetName());
+      totalTreeSize += selectedBranches.back()->GetTotalSize();
       if (mapping.vlaIdx != -1) {
-        tree->AddBranchToCache((TBranch*)branches->At(mapping.vlaIdx), false);
+        selectedBranches.push_back((TBranch*)branches->At(mapping.vlaIdx));
+        O2_SIGNPOST_EVENT_EMIT(root_arrow_fs, tid, "Generator", "Adding branch %{public}s to stream.", selectedBranches.back()->GetName());
+        totalTreeSize += selectedBranches.back()->GetTotalSize();
       }
+    }
+
+    size_t cacheSize = std::max(std::min(totalTreeSize, 25000000UL), 1000000UL);
+    O2_SIGNPOST_EVENT_EMIT(root_arrow_fs, tid, "Generator", "Resizing cache to %zu.", cacheSize);
+    tree->SetCacheSize(cacheSize);
+    for (auto* branch : selectedBranches) {
+      tree->AddBranchToCache(branch, false);
     }
     tree->StopCacheLearningPhase();
 
@@ -400,9 +424,7 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
         }
       } else {
         // This is needed for branches which have not been persisted.
-        auto bytes = branch->GetTotBytes();
-        auto branchSize = bytes ? bytes : 1000000;
-        auto&& result = arrow::AllocateResizableBuffer(branchSize, pool);
+        auto&& result = arrow::AllocateBuffer(branch->GetTotalSize(), pool);
         if (!result.ok()) {
           throw runtime_error("Cannot allocate values buffer");
         }
@@ -423,7 +445,7 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
         if (mapping.vlaIdx != -1) {
           auto* mSizeBranch = (TBranch*)branches->At(mapping.vlaIdx);
           offsetBuffer = std::make_unique<TBufferFile>(TBuffer::EMode::kWrite, 4 * 1024 * 1024);
-          result = arrow::AllocateResizableBuffer((totalEntries + 1) * (int64_t)sizeof(int), pool);
+          result = arrow::AllocateBuffer((totalEntries + 1) * (int64_t)sizeof(int), pool);
           if (!result.ok()) {
             throw runtime_error("Cannot allocate offset buffer");
           }
@@ -435,6 +457,9 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
           // read sizes first
           while (readEntries < totalEntries) {
             auto readLast = mSizeBranch->GetBulkRead().GetEntriesSerialized(readEntries, *offsetBuffer);
+            if (readLast == -1) {
+              throw runtime_error_f("Unable to read from branch %s.", mSizeBranch->GetName());
+            }
             readEntries += readLast;
             for (auto i = 0; i < readLast; ++i) {
               offsets[count++] = (int)offset;
@@ -492,6 +517,7 @@ arrow::Result<arrow::RecordBatchGenerator> TTreeFileFormat::ScanBatchesAsync(
     auto batch = arrow::RecordBatch::Make(dataset_schema, rows, columns);
     totalCompressedSize += tree->GetZipBytes();
     totalUncompressedSize += tree->GetTotBytes();
+    O2_SIGNPOST_END(root_arrow_fs, tid, "Generator", "Done creating batch compressed:%zu uncompressed:%zu", totalCompressedSize, totalUncompressedSize);
     return batch;
   };
   return generator;
