@@ -83,7 +83,7 @@ consteval uint32_t operator""_h(const char* str, size_t)
 
 uint32_t runtime_crc32(char const* str, int length);
 
-constexpr uint32_t runtime_hash(char const* str)
+uint32_t runtime_hash(char const* str)
 {
   return runtime_crc32(str, static_cast<int>(__builtin_strlen(str)) - 1) ^ 0xFFFFFFFF;
 }
