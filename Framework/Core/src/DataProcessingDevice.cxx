@@ -1385,7 +1385,12 @@ void DataProcessingDevice::Run()
           state.transitionHandling = TransitionHandlingState::Requested;
           ref.get<CallbackService>().call<CallbackService::Id::ExitRequested>(ServiceRegistryRef{ref});
           uv_update_time(state.loop);
-          O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "Starting %d s timer for exitTransitionTimeout.", deviceContext.exitTransitionTimeout);
+          if (hasOnlyGenerated(spec)) {
+            state.streaming = StreamingState::EndOfStreaming;
+          }
+          O2_SIGNPOST_EVENT_EMIT(calibration, lid, "timer_setup", "Starting %d s timer for exitTransitionTimeout. Streaming state %d.",
+                                 deviceContext.exitTransitionTimeout,
+                                 (int)state.streaming);
           uv_timer_start(deviceContext.gracePeriodTimer, on_transition_requested_expired, deviceContext.exitTransitionTimeout * 1000, 0);
           if (mProcessingPolicies.termination == TerminationPolicy::QUIT) {
             O2_SIGNPOST_EVENT_EMIT_INFO(device, lid, "run_loop", "New state requested. Waiting for %d seconds before quitting.", (int)deviceContext.exitTransitionTimeout);
