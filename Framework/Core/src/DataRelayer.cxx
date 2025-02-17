@@ -486,7 +486,7 @@ DataRelayer::RelayChoice
         O2_SIGNPOST_EVENT_EMIT(calibration, cid, "calibration",
                                "Dropping incoming %zu messages because they are data processing.", nPayloads);
         // Actually dropping messages.
-        for (size_t i = mi ; i < mi + nPayloads + 1; i++) {
+        for (size_t i = mi; i < mi + nPayloads + 1; i++) {
           auto discard = std::move(messages[i]);
         }
         mi += nPayloads;
