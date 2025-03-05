@@ -66,8 +66,8 @@ int main(int argc, char** argv)
   // Test actions associtated to a given debug stream.
   static bool testMustCall = false;
   static bool testMustNotCall = false;
-  O2_SIGNPOST_ACTION(SignpostStacktrace, [](void *) { testMustCall = true; });
+  O2_SIGNPOST_ACTION(SignpostStacktrace, [](void*) { testMustCall = true; });
   O2_LOG_DISABLE(SignpostStacktrace);
-  O2_SIGNPOST_ACTION(SignpostStacktrace, [](void *) { testMustNotCall = true; });
+  O2_SIGNPOST_ACTION(SignpostStacktrace, [](void*) { testMustNotCall = true; });
   return testMustCall && (!testMustNotCall) ? 0 : 1;
 }
