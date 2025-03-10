@@ -45,29 +45,6 @@ struct ROOTTypeInfo {
 auto arrowTypeFromROOT(EDataType type, int size);
 auto basicROOTTypeFromArrow(arrow::Type::type id);
 
-class BranchToColumn
-{
- public:
-  BranchToColumn(TBranch* branch, bool VLA, std::string name, EDataType type, int listSize, arrow::MemoryPool* pool);
-  //  BranchToColumn(TBranch* branch, TBranch* sizeBranch, std::string name, EDataType type, arrow::MemoryPool* pool);
-  ~BranchToColumn() = default;
-  TBranch* branch();
-
-  std::pair<std::shared_ptr<arrow::ChunkedArray>, std::shared_ptr<arrow::Field>> read(TBuffer* buffer);
-
- private:
-  TBranch* mBranch = nullptr;
-  bool mVLA = false;
-  std::string mColumnName;
-  EDataType mType;
-  std::shared_ptr<arrow::DataType> mArrowType;
-  arrow::ArrayBuilder* mValueBuilder = nullptr;
-  std::unique_ptr<arrow::ArrayBuilder> mListBuilder = nullptr;
-  int mListSize = 1;
-  std::unique_ptr<arrow::ArrayBuilder> mBuilder = nullptr;
-  arrow::MemoryPool* mPool = nullptr;
-};
-
 class ColumnToBranch
 {
  public:
