@@ -447,11 +447,6 @@ std::shared_ptr<TTree> TableToTree::process()
   return mTree;
 }
 
-TreeToTable::TreeToTable(arrow::MemoryPool* pool)
-  : mArrowMemoryPool{pool}
-{
-}
-
 namespace
 {
 struct BranchInfo {
@@ -460,113 +455,6 @@ struct BranchInfo {
   bool mVLA;
 };
 } // namespace
-
-void TreeToTable::addAllColumns(TTree* tree, std::vector<std::string>&& names)
-{
-  auto branches = tree->GetListOfBranches();
-  auto n = branches->GetEntries();
-  if (n == 0) {
-    throw runtime_error("Tree has no branches");
-  }
-
-  std::vector<BranchInfo> branchInfos;
-  for (auto i = 0; i < n; ++i) {
-    auto branch = static_cast<TBranch*>(branches->At(i));
-    auto name = std::string{branch->GetName()};
-    auto pos = name.find(TableTreeHelpers::sizeBranchSuffix);
-    if (pos != std::string::npos) {
-      name.erase(pos);
-      branchInfos.emplace_back(BranchInfo{name, (TBranch*)nullptr, true});
-    } else {
-      auto lookup = std::find_if(branchInfos.begin(), branchInfos.end(), [&](BranchInfo const& bi) {
-        return bi.name == name;
-      });
-      if (lookup == branchInfos.end()) {
-        branchInfos.emplace_back(BranchInfo{name, branch, false});
-      } else {
-        lookup->ptr = branch;
-      }
-    }
-  }
-
-  if (names.empty()) {
-    for (auto& bi : branchInfos) {
-      addReader(bi.ptr, bi.name, bi.mVLA);
-    }
-  } else {
-    for (auto& name : names) {
-      auto lookup = std::find_if(branchInfos.begin(), branchInfos.end(), [&](BranchInfo const& bi) {
-        return name == bi.name;
-      });
-      if (lookup != branchInfos.end()) {
-        addReader(lookup->ptr, lookup->name, lookup->mVLA);
-      }
-    }
-    if (names.size() != mBranchReaders.size()) {
-      LOGF(warn, "Not all requested columns were found in the tree");
-    }
-  }
-  if (mBranchReaders.empty()) {
-    throw runtime_error("No columns will be read");
-  }
-  // Was affected by https://github.com/root-project/root/issues/8962
-  // Re-enabling this seems to cut the number of IOPS in half
-  tree->SetCacheSize(25000000);
-  // tree->SetClusterPrefetch(true);
-  for (auto& reader : mBranchReaders) {
-    tree->AddBranchToCache(reader->branch());
-    if (strncmp(reader->branch()->GetName(), "fIndexArray", strlen("fIndexArray")) == 0) {
-      std::string sizeBranchName = reader->branch()->GetName();
-      sizeBranchName += "_size";
-      auto* sizeBranch = (TBranch*)tree->GetBranch(sizeBranchName.c_str());
-      if (sizeBranch) {
-        tree->AddBranchToCache(sizeBranch);
-      }
-    }
-  }
-  tree->StopCacheLearningPhase();
-}
-
-void TreeToTable::setLabel(const char* label)
-{
-  mTableLabel = label;
-}
-
-void TreeToTable::fill(TTree* tree)
-{
-  std::vector<std::shared_ptr<arrow::ChunkedArray>> columns;
-  std::vector<std::shared_ptr<arrow::Field>> fields;
-  static TBufferFile buffer{TBuffer::EMode::kWrite, 4 * 1024 * 1024};
-  O2_SIGNPOST_ID_FROM_POINTER(sid, tabletree_helpers, &buffer);
-  O2_SIGNPOST_START(tabletree_helpers, sid, "TreeToTable", "Filling %{public}s", tree->GetName());
-  for (auto& reader : mBranchReaders) {
-    buffer.Reset();
-    auto arrayAndField = reader->read(&buffer);
-    columns.push_back(arrayAndField.first);
-    fields.push_back(arrayAndField.second);
-  }
-  O2_SIGNPOST_END(tabletree_helpers, sid, "TreeToTable", "Done filling.");
-
-  auto schema = std::make_shared<arrow::Schema>(fields, std::make_shared<arrow::KeyValueMetadata>(std::vector{std::string{"label"}}, std::vector{mTableLabel}));
-  mTable = arrow::Table::Make(schema, columns);
-}
-
-void TreeToTable::addReader(TBranch* branch, std::string const& name, bool VLA)
-{
-  static TClass* cls;
-  EDataType type;
-  branch->GetExpectedType(cls, type);
-  auto listSize = -1;
-  if (!VLA) {
-    listSize = static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0))->GetLenStatic();
-  }
-  mBranchReaders.emplace_back(std::make_unique<BranchToColumn>(branch, VLA, name, type, listSize, mArrowMemoryPool));
-}
-
-std::shared_ptr<arrow::Table> TreeToTable::finalize()
-{
-  return mTable;
-}
 
 FragmentToBatch::FragmentToBatch(StreamerCreator creator, std::shared_ptr<arrow::dataset::FileFragment> fragment, arrow::MemoryPool* pool)
   : mFragment{std::move(fragment)},

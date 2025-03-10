@@ -36,19 +36,6 @@ namespace o2::framework
 //    OR t2t.addBranch(column.get(), field.get()), ...;
 //  . t2t.process();
 //
-// .............................................................................
-// -----------------------------------------------------------------------------
-// TreeToTable allows to fill the contents of a given TTree to an arrow::Table
-//  ColumnIterator is used by TreeToTable
-//
-// To copy the contents of a tree tr to a table ta do:
-//  . TreeToTable t2t(tr);
-//  . t2t.addColumn(columnname1); t2t.addColumn(columnname2); ...
-//    OR
-//    t2t.addAllColumns();
-//  . auto ta = t2t.process();
-//
-// .............................................................................
 struct ROOTTypeInfo {
   EDataType type;
   char suffix[3];
@@ -125,24 +112,6 @@ class TableToTree
   int64_t mRows = 0;
   std::shared_ptr<TTree> mTree;
   std::vector<std::unique_ptr<ColumnToBranch>> mColumnReaders;
-};
-
-class TreeToTable
-{
- public:
-  TreeToTable(arrow::MemoryPool* pool = arrow::default_memory_pool());
-  void setLabel(const char* label);
-  void addAllColumns(TTree* tree, std::vector<std::string>&& names = {});
-  void fill(TTree*);
-  std::shared_ptr<arrow::Table> finalize();
-
- private:
-  arrow::MemoryPool* mArrowMemoryPool;
-  std::vector<std::unique_ptr<BranchToColumn>> mBranchReaders;
-  std::string mTableLabel;
-  std::shared_ptr<arrow::Table> mTable;
-
-  void addReader(TBranch* branch, std::string const& name, bool VLA);
 };
 
 class FragmentToBatch
