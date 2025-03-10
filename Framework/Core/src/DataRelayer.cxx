@@ -8,6 +8,7 @@
 // In applying this license CERN does not waive the privileges and immunities
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
+#include "Framework/DeviceState.h"
 #include "Framework/RootSerializationSupport.h"
 #include "Framework/DataRelayer.h"
 #include "Framework/DataProcessingStats.h"
@@ -17,6 +18,7 @@
 #include "Framework/DataDescriptorMatcher.h"
 #include "Framework/DataSpecUtils.h"
 #include "Framework/DataProcessingHeader.h"
+#include "Framework/DataProcessingContext.h"
 #include "Framework/DataRef.h"
 #include "Framework/InputRecord.h"
 #include "Framework/InputSpan.h"
@@ -42,11 +44,11 @@
 #include <Monitoring/Metric.h>
 #include <Monitoring/Monitoring.h>
 
+#include <fairlogger/Logger.h>
 #include <fairmq/Channel.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>
 #include <gsl/span>
-#include <numeric>
 #include <string>
 
 using namespace o2::framework::data_matcher;
@@ -55,6 +57,8 @@ using DataProcessingHeader = o2::framework::DataProcessingHeader;
 using Verbosity = o2::monitoring::Verbosity;
 
 O2_DECLARE_DYNAMIC_LOG(data_relayer);
+// Stream which keeps track of the calibration lifetime logic
+O2_DECLARE_DYNAMIC_LOG(calibration);
 
 namespace o2::framework
 {
@@ -333,7 +337,11 @@ void DataRelayer::setOldestPossibleInput(TimesliceId proposed, ChannelIndex chan
         if (element.size() == 0) {
           auto& state = mContext.get<DeviceState>();
           if (state.transitionHandling != TransitionHandlingState::NoTransition && DefaultsHelpers::onlineDeploymentMode()) {
-            LOGP(warning, "Missing {} (lifetime:{}) while dropping incomplete data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
+            if (state.allowedProcessing == DeviceState::CalibrationOnly) {
+              LOGP(info, "Missing {} (lifetime:{}) while dropping non-calibration data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
+            } else {
+              LOGP(warn, "Missing {} (lifetime:{}) while dropping incomplete data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
+            }
           } else {
             LOGP(error, "Missing {} (lifetime:{}) while dropping incomplete data in slot {} with timestamp {} < {}.", DataSpecUtils::describe(input), input.lifetime, si, timestamp.value, newOldest.timeslice.value);
           }
@@ -480,6 +488,13 @@ DataRelayer::RelayChoice
       // We are in calibration mode and the data does not have the calibration bit set.
       // We do not store it.
       if (services.get<DeviceState>().allowedProcessing == DeviceState::ProcessingType::CalibrationOnly && !isCalibrationData(messages[mi])) {
+        O2_SIGNPOST_ID_FROM_POINTER(cid, calibration, &services.get<DataProcessorContext>());
+        O2_SIGNPOST_EVENT_EMIT(calibration, cid, "calibration",
+                               "Dropping incoming %zu messages because they are data processing.", nPayloads);
+        // Actually dropping messages.
+        for (size_t i = mi; i < mi + nPayloads + 1; i++) {
+          auto discard = std::move(messages[i]);
+        }
         mi += nPayloads;
         continue;
       }
