@@ -411,7 +411,8 @@ struct CalculateDelta {
     mTarget += (uv_hrtime() - start);
   }
 
-  void deactivate() {
+  void deactivate()
+  {
     active = false;
   }
 
