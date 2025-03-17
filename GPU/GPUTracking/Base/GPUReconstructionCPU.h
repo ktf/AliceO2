@@ -49,7 +49,7 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
 
  public:
   ~GPUReconstructionCPU() override;
-  static constexpr krnlRunRange krnlRunRangeNone{0, -1};
+  static constexpr krnlRunRange krnlRunRangeNone{0};
   static constexpr krnlEvent krnlEventNone = krnlEvent{nullptr, nullptr, 0};
 
   template <class S, int32_t I = 0, typename... Args>
@@ -77,7 +77,7 @@ class GPUReconstructionCPU : public GPUReconstructionKernels<GPUReconstructionCP
 
   GPUReconstructionCPU(const GPUSettingsDeviceBackend& cfg) : GPUReconstructionKernels(cfg) {}
 
-#define GPUCA_KRNL(x_class, attributes, x_arguments, x_forward, x_types)                                                                                                                     \
+#define GPUCA_KRNL(x_class, x_attributes, x_arguments, x_forward, x_types)                                                                                                                   \
   inline void runKernelImplWrapper(gpu_reconstruction_kernels::classArgument<GPUCA_M_KRNL_TEMPLATE(x_class)>, bool cpuFallback, double& timer, krnlSetup&& setup GPUCA_M_STRIP(x_arguments)) \
   {                                                                                                                                                                                          \
     if (cpuFallback) {                                                                                                                                                                       \
@@ -134,8 +134,8 @@ template <class S, int32_t I, typename... Args>
 inline void GPUReconstructionCPU::runKernel(krnlSetup&& setup, Args&&... args)
 {
   HighResTimer* t = nullptr;
-  GPUCA_RECO_STEP myStep = S::GetRecoStep() == GPUCA_RECO_STEP::NoRecoStep ? setup.x.step : S::GetRecoStep();
-  if (myStep == GPUCA_RECO_STEP::NoRecoStep) {
+  GPUDataTypes::RecoStep myStep = S::GetRecoStep() == GPUDataTypes::RecoStep::NoRecoStep ? setup.x.step : S::GetRecoStep();
+  if (myStep == GPUDataTypes::RecoStep::NoRecoStep) {
     throw std::runtime_error("Failure running general kernel without defining RecoStep");
   }
   int32_t cpuFallback = IsGPU() ? (setup.x.device == krnlDeviceType::CPU ? 2 : (mRecoSteps.stepsGPUMask & myStep) != myStep) : 0;
@@ -161,7 +161,7 @@ inline void GPUReconstructionCPU::runKernel(krnlSetup&& setup, Args&&... args)
     throw std::runtime_error("GPUCA_MAX_THREADS exceeded");
   }
   if (mProcessingSettings.debugLevel >= 3) {
-    GPUInfo("Running kernel %s (Stream %d, Range %d/%d, Grid %d/%d) on %s", GetKernelName<S, I>(), stream, setup.y.start, setup.y.num, nBlocks, nThreads, cpuFallback == 2 ? "CPU (forced)" : cpuFallback ? "CPU (fallback)" : mDeviceName.c_str());
+    GPUInfo("Running kernel %s (Stream %d, Index %d, Grid %d/%d) on %s", GetKernelName<S, I>(), stream, setup.y.index, nBlocks, nThreads, cpuFallback == 2 ? "CPU (forced)" : cpuFallback ? "CPU (fallback)" : mDeviceName.c_str());
   }
   if (nThreads == 0 || nBlocks == 0) {
     return;

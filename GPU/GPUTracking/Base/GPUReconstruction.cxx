@@ -93,6 +93,9 @@ GPUReconstruction::GPUReconstruction(const GPUSettingsDeviceBackend& cfg) : mHos
   for (uint32_t i = 0; i < NSECTORS; i++) {
     processors()->tpcTrackers[i].SetSector(i); // TODO: Move to a better place
     processors()->tpcClusterer[i].mISector = i;
+#ifdef GPUCA_HAS_ONNX
+    processors()->tpcNNClusterer[i].mISector = i;
+#endif
   }
 #ifndef GPUCA_NO_ROOT
   mROOTDump = GPUROOTDumpCore::getAndCreate();
@@ -270,15 +273,6 @@ int32_t GPUReconstruction::InitPhaseBeforeDevice()
   }
   if (mProcessingSettings.deterministicGPUReconstruction && mProcessingSettings.debugLevel >= 6) {
     mProcessingSettings.nTPCClustererLanes = 1;
-    if (mProcessingSettings.trackletConstructorInPipeline < 0) {
-      mProcessingSettings.trackletConstructorInPipeline = 1;
-    }
-    if (mProcessingSettings.trackletSelectorInPipeline < 0) {
-      mProcessingSettings.trackletSelectorInPipeline = 1;
-    }
-    if (mProcessingSettings.trackletSelectorSectors < 0) {
-      mProcessingSettings.trackletSelectorSectors = 1;
-    }
   }
   if (mProcessingSettings.createO2Output > 1 && mProcessingSettings.runQA && mProcessingSettings.qcRunFraction == 100.f) {
     mProcessingSettings.createO2Output = 1;
@@ -296,9 +290,6 @@ int32_t GPUReconstruction::InitPhaseBeforeDevice()
 
   UpdateAutomaticProcessingSettings();
   GPUCA_GPUReconstructionUpdateDefaults();
-  if (!mProcessingSettings.trackletConstructorInPipeline) {
-    mProcessingSettings.trackletSelectorInPipeline = false;
-  }
   if (!mProcessingSettings.rtc.enable) {
     mProcessingSettings.rtc.optConstexpr = false;
   }
@@ -1085,6 +1076,21 @@ int32_t GPUReconstruction::CheckErrorCodes(bool cpuOnly, bool forceShowErrors, s
     }
   }
   return retVal;
+}
+
+int32_t GPUReconstruction::GPUChkErrA(const int64_t error, const char* file, int32_t line, bool failOnError)
+{
+  if (error == 0 || !GPUChkErrInternal(error, file, line)) {
+    return 0;
+  }
+  if (failOnError) {
+    if (mInitialized && mInErrorHandling == false) {
+      mInErrorHandling = true;
+      CheckErrorCodes(false, true);
+    }
+    throw std::runtime_error("GPU Backend Failure");
+  }
+  return 1;
 }
 
 void GPUReconstruction::DumpSettings(const char* dir)

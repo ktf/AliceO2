@@ -31,7 +31,6 @@
 #include "GPUOutputControl.h"
 #include "GPUMemoryResource.h"
 #include "GPUConstantMem.h"
-#include "GPUTPCSectorOutput.h"
 #include "GPULogging.h"
 
 namespace o2::its
@@ -53,7 +52,7 @@ namespace gpu_reconstruction_kernels
 {
 struct deviceEvent;
 class threadContext;
-}
+} // namespace gpu_reconstruction_kernels
 
 class GPUReconstruction
 {
@@ -144,6 +143,7 @@ class GPUReconstruction
   virtual void* getGPUPointer(void* ptr) { return ptr; }
   virtual void startGPUProfiling() {}
   virtual void endGPUProfiling() {}
+  int32_t GPUChkErrA(const int64_t error, const char* file, int32_t line, bool failOnError);
   int32_t CheckErrorCodes(bool cpuOnly = false, bool forceShowErrors = false, std::vector<std::array<uint32_t, 4>>* fillErrors = nullptr);
   void RunPipelineWorker();
   void TerminatePipelineWorker();
@@ -193,7 +193,7 @@ class GPUReconstruction
   bool IsInitialized() const { return mInitialized; }
   void SetSettings(float solenoidBzNominalGPU, const GPURecoStepConfiguration* workflow = nullptr);
   void SetSettings(const GPUSettingsGRP* grp, const GPUSettingsRec* rec = nullptr, const GPUSettingsProcessing* proc = nullptr, const GPURecoStepConfiguration* workflow = nullptr);
-  void SetResetTimers(bool reset) { mProcessingSettings.resetTimers = reset; } // May update also after Init()
+  void SetResetTimers(bool reset) { mProcessingSettings.resetTimers = reset; }     // May update also after Init()
   void SetDebugLevelTmp(int32_t level) { mProcessingSettings.debugLevel = level; } // Temporarily, before calling SetSettings()
   void UpdateSettings(const GPUSettingsGRP* g, const GPUSettingsProcessing* p = nullptr, const GPUSettingsRecDynamic* d = nullptr);
   void UpdateDynamicSettings(const GPUSettingsRecDynamic* d);
@@ -201,7 +201,7 @@ class GPUReconstruction
   void SetOutputControl(void* ptr, size_t size);
   void SetInputControl(void* ptr, size_t size);
   GPUOutputControl& OutputControl() { return mOutputControl; }
-  int32_t NStreams() const { return mNStreams; }
+  uint32_t NStreams() const { return mNStreams; }
   const void* DeviceMemoryBase() const { return mDeviceMemoryBase; }
 
   RecoStepField GetRecoSteps() const { return mRecoSteps.steps; }
@@ -247,6 +247,7 @@ class GPUReconstruction
   void UpdateMaxMemoryUsed();
   int32_t EnqueuePipeline(bool terminate = false);
   GPUChain* GetNextChainInQueue();
+  virtual int32_t GPUChkErrInternal(const int64_t error, const char* file, int32_t line) const { return 0; }
 
   virtual int32_t registerMemoryForGPU_internal(const void* ptr, size_t size) = 0;
   virtual int32_t unregisterMemoryForGPU_internal(const void* ptr) = 0;
@@ -328,6 +329,7 @@ class GPUReconstruction
 
   // Others
   bool mInitialized = false;
+  bool mInErrorHandling = false;
   uint32_t mStatNEvents = 0;
   uint32_t mNEventsProcessed = 0;
   double mStatKernelTime = 0.;

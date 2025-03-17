@@ -30,22 +30,19 @@ struct classArgument {
 };
 
 struct krnlExec {
-  constexpr krnlExec(uint32_t b, uint32_t t, int32_t s, GPUReconstruction::krnlDeviceType d = GPUReconstruction::krnlDeviceType::Auto) : nBlocks(b), nThreads(t), stream(s), device(d), step(GPUCA_RECO_STEP::NoRecoStep) {}
-  constexpr krnlExec(uint32_t b, uint32_t t, int32_t s, GPUCA_RECO_STEP st) : nBlocks(b), nThreads(t), stream(s), device(GPUReconstruction::krnlDeviceType::Auto), step(st) {}
-  constexpr krnlExec(uint32_t b, uint32_t t, int32_t s, GPUReconstruction::krnlDeviceType d, GPUCA_RECO_STEP st) : nBlocks(b), nThreads(t), stream(s), device(d), step(st) {}
+  constexpr krnlExec(uint32_t b, uint32_t t, int32_t s, GPUReconstruction::krnlDeviceType d = GPUReconstruction::krnlDeviceType::Auto) : nBlocks(b), nThreads(t), stream(s), device(d), step(GPUDataTypes::RecoStep::NoRecoStep) {}
+  constexpr krnlExec(uint32_t b, uint32_t t, int32_t s, GPUDataTypes::RecoStep st) : nBlocks(b), nThreads(t), stream(s), device(GPUReconstruction::krnlDeviceType::Auto), step(st) {}
+  constexpr krnlExec(uint32_t b, uint32_t t, int32_t s, GPUReconstruction::krnlDeviceType d, GPUDataTypes::RecoStep st) : nBlocks(b), nThreads(t), stream(s), device(d), step(st) {}
   uint32_t nBlocks;
   uint32_t nThreads;
   int32_t stream;
   GPUReconstruction::krnlDeviceType device;
-  GPUCA_RECO_STEP step;
+  GPUDataTypes::RecoStep step;
 };
 struct krnlRunRange {
   constexpr krnlRunRange() = default;
-  constexpr krnlRunRange(uint32_t a) : start(a), num(0) {}
-  constexpr krnlRunRange(uint32_t s, int32_t n) : start(s), num(n) {}
-
-  uint32_t start = 0;
-  int32_t num = 0;
+  constexpr krnlRunRange(uint32_t v) : index(v) {}
+  uint32_t index = 0;
 };
 struct krnlEvent {
   constexpr krnlEvent(deviceEvent* e = nullptr, deviceEvent* el = nullptr, int32_t n = 1) : ev(e), evList(el), nEvents(n) {}
@@ -63,7 +60,7 @@ struct krnlProperties {
 };
 
 struct krnlSetup {
-  krnlSetup(const krnlExec& xx, const krnlRunRange& yy = {0, -1}, const krnlEvent& zz = {nullptr, nullptr, 0}) : x(xx), y(yy), z(zz) {}
+  krnlSetup(const krnlExec& xx, const krnlRunRange& yy = {0}, const krnlEvent& zz = {nullptr, nullptr, 0}) : x(xx), y(yy), z(zz) {}
   krnlExec x;
   krnlRunRange y;
   krnlEvent z;
@@ -98,7 +95,7 @@ class GPUReconstructionKernels : public T
   template <class S, int32_t I = 0, typename... Args>
   using krnlSetupArgs = gpu_reconstruction_kernels::krnlSetupArgs<S, I, Args...>;
 
-#define GPUCA_KRNL(x_class, attributes, x_arguments, x_forward, x_types)                                                                                \
+#define GPUCA_KRNL(x_class, x_attributes, x_arguments, x_forward, x_types)                                                                              \
   virtual void runKernelImpl(const krnlSetupArgs<GPUCA_M_KRNL_TEMPLATE(x_class) GPUCA_M_STRIP(x_types)>& args)                                          \
   {                                                                                                                                                     \
     T::template runKernelBackend<GPUCA_M_KRNL_TEMPLATE(x_class)>(args);                                                                                 \

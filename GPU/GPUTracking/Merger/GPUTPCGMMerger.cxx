@@ -42,7 +42,6 @@
 #include "GPUCommonConstants.h"
 
 #include "GPUTPCTrackParam.h"
-#include "GPUTPCSectorOutput.h"
 #include "GPUTPCGMMergedTrack.h"
 #include "GPUParam.h"
 #include "GPUTPCTrackLinearisation.h"
@@ -770,7 +769,7 @@ struct MergeBorderTracks_compMin {
 } // namespace o2::gpu::internal
 
 template <>
-inline void GPUCA_KRNL_BACKEND_CLASS::runKernelBackendInternal<GPUTPCGMMergerMergeBorders, 3>(const krnlSetupTime& _xyz, GPUTPCGMBorderRange* const& range, int32_t const& N, int32_t const& cmpMax)
+inline void GPUCA_M_CAT3(GPUReconstruction, GPUCA_GPUTYPE, Backend)::runKernelBackendInternal<GPUTPCGMMergerMergeBorders, 3>(const krnlSetupTime& _xyz, GPUTPCGMBorderRange* const& range, int32_t const& N, int32_t const& cmpMax)
 {
   thrust::device_ptr<GPUTPCGMBorderRange> p(range);
   ThrustVolatileAsyncAllocator alloc(this);
@@ -1874,7 +1873,7 @@ struct GPUTPCGMMergerSortTracksQPt_comp {
 } // namespace o2::gpu::internal
 
 template <>
-inline void GPUCA_KRNL_BACKEND_CLASS::runKernelBackendInternal<GPUTPCGMMergerSortTracks, 0>(const krnlSetupTime& _xyz)
+inline void GPUCA_M_CAT3(GPUReconstruction, GPUCA_GPUTYPE, Backend)::runKernelBackendInternal<GPUTPCGMMergerSortTracks, 0>(const krnlSetupTime& _xyz)
 {
   thrust::device_ptr<uint32_t> trackSort((uint32_t*)mProcessorsShadow->tpcMerger.TrackOrderProcess());
   ThrustVolatileAsyncAllocator alloc(this);
@@ -1882,7 +1881,7 @@ inline void GPUCA_KRNL_BACKEND_CLASS::runKernelBackendInternal<GPUTPCGMMergerSor
 }
 
 template <>
-inline void GPUCA_KRNL_BACKEND_CLASS::runKernelBackendInternal<GPUTPCGMMergerSortTracksQPt, 0>(const krnlSetupTime& _xyz)
+inline void GPUCA_M_CAT3(GPUReconstruction, GPUCA_GPUTYPE, Backend)::runKernelBackendInternal<GPUTPCGMMergerSortTracksQPt, 0>(const krnlSetupTime& _xyz)
 {
   thrust::device_ptr<uint32_t> trackSort((uint32_t*)mProcessorsShadow->tpcMerger.TrackSort());
   ThrustVolatileAsyncAllocator alloc(this);
@@ -2107,7 +2106,7 @@ struct GPUTPCGMMergerMergeLoopers_comp {
 } // namespace o2::gpu::internal
 
 template <>
-inline void GPUCA_KRNL_BACKEND_CLASS::runKernelBackendInternal<GPUTPCGMMergerMergeLoopers, 1>(const krnlSetupTime& _xyz)
+inline void GPUCA_M_CAT3(GPUReconstruction, GPUCA_GPUTYPE, Backend)::runKernelBackendInternal<GPUTPCGMMergerMergeLoopers, 1>(const krnlSetupTime& _xyz)
 {
   thrust::device_ptr<MergeLooperParam> params(mProcessorsShadow->tpcMerger.LooperCandidates());
   ThrustVolatileAsyncAllocator alloc(this);
@@ -2141,7 +2140,7 @@ GPUd() void GPUTPCGMMerger::MergeLoopersMain(int32_t nBlocks, int32_t nThreads, 
       }
       const float d2xy = CAMath::Sum2(params[i].x - params[j].x, params[i].y - params[j].y);
       if (d2xy > 15.f) {
-        //bs |= 1;
+        // bs |= 1;
         continue;
       }
       const auto& trk1 = mOutputTracks[params[i].id];
@@ -2149,7 +2148,7 @@ GPUd() void GPUTPCGMMerger::MergeLoopersMain(int32_t nBlocks, int32_t nThreads, 
       const auto& param1 = trk1.GetParam();
       const auto& param2 = trk2.GetParam();
       if (CAMath::Abs(param1.GetDzDs()) > 0.03f && CAMath::Abs(param2.GetDzDs()) > 0.03f && param1.GetDzDs() * param2.GetDzDs() * param1.GetQPt() * param2.GetQPt() < 0) {
-        //bs |= 2;
+        // bs |= 2;
         continue;
       }
 
@@ -2171,7 +2170,7 @@ GPUd() void GPUTPCGMMerger::MergeLoopersMain(int32_t nBlocks, int32_t nThreads, 
         }
       }
       if (!dzcorrok) {
-        //bs |= 4;
+        // bs |= 4;
         continue;
       }
 
