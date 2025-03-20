@@ -25,7 +25,9 @@ struct DataProcessorInfo {
   /// Name of the associated DataProcessorSpec
   std::string name = "Unknown";
   /// The executable name of the program which holds the DataProcessorSpec
-  std::string executable = "/bin/false";
+  std::string executable = "";
+  /// The plugin spec of the plugin which holds the DataProcessorSpec
+  std::string plugin = "";
   /// The argument passed on the command line for this DataProcessorSpec
   std::vector<std::string> cmdLineArgs = {};
   /// The workflow options which are available for the associated DataProcessorSpec
