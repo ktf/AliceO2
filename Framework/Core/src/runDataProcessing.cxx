@@ -683,20 +683,22 @@ void handle_crash(int sig)
 }
 
 /// This will start a new device by forking and executing a
-/// new child
-void spawnDevice(uv_loop_t* loop,
-                 DeviceRef ref,
-                 std::vector<DeviceSpec> const& specs,
-                 DriverInfo& driverInfo,
-                 std::vector<DeviceControl>&,
-                 std::vector<DeviceExecution>& executions,
-                 std::vector<DeviceInfo>& deviceInfos,
-                 std::vector<DataProcessingStates>& allStates,
-                 ServiceRegistryRef serviceRegistry,
-                 boost::program_options::variables_map& varmap,
-                 std::vector<DeviceStdioContext>& childFds,
-                 unsigned parentCPU,
-                 unsigned parentNode)
+/// new child.
+/// @return the PID of the new process (or 0 if we are in the driver)
+std::string spawnDevice(uv_loop_t* loop,
+                        DeviceRef ref,
+                        std::vector<DeviceSpec> const& specs,
+                        DriverInfo& driverInfo,
+                        DriverControl& driverControl,
+                        std::vector<DeviceControl>&,
+                        std::vector<DeviceExecution>& executions,
+                        std::vector<DeviceInfo>& deviceInfos,
+                        std::vector<DataProcessingStates>& allStates,
+                        ServiceRegistryRef serviceRegistry,
+                        boost::program_options::variables_map& varmap,
+                        std::vector<DeviceStdioContext>& childFds,
+                        unsigned parentCPU,
+                        unsigned parentNode)
 {
   // FIXME: this might not work when more than one DPL driver on the same
   // machine. Hopefully we do not care.
@@ -761,6 +763,15 @@ void spawnDevice(uv_loop_t* loop,
       putenv(strdup(DeviceSpecHelpers::reworkTimeslicePlaceholder(env, spec).data()));
     }
     execvp(execution.args[0], execution.args.data());
+    // In the general case we never end up here, because execvp is used.
+    // Once we move to plugins however, the run the plugin without loading
+    // a new environment so the new pid can be used to identify.
+    //
+    // Let's stop immediately so that we can attach debuggers from here.
+    driverControl.forcedTransitions = {
+      DriverState::DO_CHILD,
+      DriverState::BIND_GUI_PORT};
+    return spec.id;
   } else {
     O2_SIGNPOST_ID_GENERATE(sid, driver);
     O2_SIGNPOST_EVENT_EMIT(driver, sid, "spawnDevice", "New child at %{pid}d", id);
@@ -844,6 +855,7 @@ void spawnDevice(uv_loop_t* loop,
 
   // Let's add also metrics information for the given device
   gDeviceMetricsInfos.emplace_back(DeviceMetricsInfo{});
+  return "";
 }
 
 void processChildrenOutput(uv_loop_t* loop,
@@ -2108,14 +2120,24 @@ int runStateMachine(DataProcessorSpecs const& workflow,
                               runningWorkflow.devices[di], controls[di], deviceExecutions[di], infos, allStates);
           } else {
             DeviceRef ref{di};
-            spawnDevice(loop,
-                        ref,
-                        runningWorkflow.devices, driverInfo,
-                        controls, deviceExecutions, infos,
-                        allStates,
-                        serviceRegistry, varmap,
-                        childFds, parentCPU, parentNode);
+            frameworkId = spawnDevice(loop,
+                                      ref,
+                                      runningWorkflow.devices,
+                                       driverInfo, 
+                                      driverControl,
+                                      controls, deviceExecutions, infos,
+                                      allStates,
+                                      serviceRegistry, varmap,
+                                      childFds, parentCPU, parentNode);
+            // We are in the child in this case. Do not continue spawning.
+            if (!frameworkId.empty()) {
+              break;
+            }
           }
+        }
+        // Do not bother about the rest of the scheduling if we are in the child.
+        if (!frameworkId.empty()) {
+          break;
         }
         handleSignals();
         handleChildrenStdio(&serverContext, forwardedStdin.str(), childFds, pollHandles);
