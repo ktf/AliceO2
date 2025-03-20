@@ -13,9 +13,7 @@
 #include <stdexcept>
 #include "Framework/BoostOptionsRetriever.h"
 #include "Framework/BacktraceHelpers.h"
-#include "Framework/CallbacksPolicy.h"
 #include "Framework/ChannelConfigurationPolicy.h"
-#include "Framework/ChannelMatching.h"
 #include "Framework/ConfigParamsHelper.h"
 #include "Framework/ConfigParamSpec.h"
 #include "Framework/ConfigContext.h"
@@ -38,7 +36,6 @@
 #include "Framework/ServiceRegistryHelpers.h"
 #include "Framework/DevicesManager.h"
 #include "Framework/DebugGUI.h"
-#include "Framework/LocalRootFileService.h"
 #include "Framework/LogParsingHelpers.h"
 #include "Framework/Logger.h"
 #include "Framework/ParallelContext.h"
@@ -62,6 +59,7 @@
 #include "Framework/DeviceContext.h"
 #include "Framework/ServiceMetricsInfo.h"
 #include "Framework/DataTakingContext.h"
+#include "Framework/WorkflowDefinitionContext.h"
 #include "Framework/CommonServices.h"
 #include "Framework/DefaultsHelpers.h"
 #include "ProcessingPoliciesHelpers.h"
@@ -192,13 +190,28 @@ char* getIdString(int argc, char** argv)
   return nullptr;
 }
 
-int callMain(int argc, char** argv, int (*mainNoCatch)(int, char**))
+int doMain(int argc, char** argv, std::string pluginName, o2::framework::WorkflowDefinitionContext& workflowContext);
+
+int callMain(int argc, char** argv, char const* pluginSpec)
 {
+  std::vector<LoadablePlugin> plugins;
+  auto morePlugins = PluginManager::parsePluginSpecString(pluginSpec);
+  for (auto& extra : morePlugins) {
+    plugins.push_back(extra);
+  }
+  // Only one for now
+  assert(plugins.size() == 1);
+
+  std::vector<o2::framework::WorkflowDefinition> availableWorkflows;
+  PluginManager::loadFromPlugin<WorkflowDefinition, WorkflowPlugin>(plugins, availableWorkflows);
+
+  assert(availableWorkflows.size() == 1);
   static bool noCatch = getenv("O2_NO_CATCHALL_EXCEPTIONS") && strcmp(getenv("O2_NO_CATCHALL_EXCEPTIONS"), "0");
   int result = 1;
+  o2::framework::WorkflowDefinitionContext workflowContext = availableWorkflows.back().defineWorkflow(argc, argv);
   if (noCatch) {
     try {
-      result = mainNoCatch(argc, argv);
+      result = doMain(argc, argv, pluginSpec, workflowContext);
     } catch (o2::framework::RuntimeErrorRef& ref) {
       doDPLException(ref, argv[0]);
       throw;
@@ -209,7 +222,7 @@ int callMain(int argc, char** argv, int (*mainNoCatch)(int, char**))
       // SFINAE expression above fit better the version which invokes user code over
       // the default one.
       // The default policy is a catch all pub/sub setup to be consistent with the past.
-      result = mainNoCatch(argc, argv);
+      result = doMain(argc, argv, pluginSpec, workflowContext);
     } catch (boost::exception& e) {
       doBoostException(e, argv[0]);
       throw;
@@ -238,7 +251,6 @@ void getChildData(int infd, DeviceInfo& outinfo)
   int bytes_read;
   // NOTE: do not quite understand read ends up blocking if I read more than
   //        once. Oh well... Good enough for now.
-  int64_t total_bytes_read = 0;
   int64_t count = 0;
   bool once = false;
   while (true) {
@@ -670,20 +682,22 @@ void handle_crash(int sig)
 }
 
 /// This will start a new device by forking and executing a
-/// new child
-void spawnDevice(uv_loop_t* loop,
-                 DeviceRef ref,
-                 std::vector<DeviceSpec> const& specs,
-                 DriverInfo& driverInfo,
-                 std::vector<DeviceControl>&,
-                 std::vector<DeviceExecution>& executions,
-                 std::vector<DeviceInfo>& deviceInfos,
-                 std::vector<DataProcessingStates>& allStates,
-                 ServiceRegistryRef serviceRegistry,
-                 boost::program_options::variables_map& varmap,
-                 std::vector<DeviceStdioContext>& childFds,
-                 unsigned parentCPU,
-                 unsigned parentNode)
+/// new child.
+/// @return the PID of the new process (or 0 if we are in the driver)
+std::string spawnDevice(uv_loop_t* loop,
+                        DeviceRef ref,
+                        std::vector<DeviceSpec> const& specs,
+                        DriverInfo& driverInfo,
+                        DriverControl& driverControl,
+                        std::vector<DeviceControl>&,
+                        std::vector<DeviceExecution>& executions,
+                        std::vector<DeviceInfo>& deviceInfos,
+                        std::vector<DataProcessingStates>& allStates,
+                        ServiceRegistryRef serviceRegistry,
+                        boost::program_options::variables_map& varmap,
+                        std::vector<DeviceStdioContext>& childFds,
+                        unsigned parentCPU,
+                        unsigned parentNode)
 {
   // FIXME: this might not work when more than one DPL driver on the same
   // machine. Hopefully we do not care.
@@ -703,14 +717,24 @@ void spawnDevice(uv_loop_t* loop,
   id = fork();
   // We are the child: prepare options and reexec.
   if (id == 0) {
+    if (driverControl.defaultStopped && (execution.plugin.empty() == false)) {
+      kill(getpid(), SIGSTOP);
+    }
+    // Needed in case we want to reuse the same loop of the parent.
+    uv_loop_fork(loop);
+    uv_loop_fork(uv_default_loop());
     // We allow being debugged and do not terminate on SIGTRAP
     signal(SIGTRAP, SIG_IGN);
     // We immediately ignore SIGUSR1 and SIGUSR2 so that we do not
     // get killed by the parent trying to force stepping children.
     // We will re-enable them later on, when it is actually safe to
     // do so.
-    signal(SIGUSR1, SIG_IGN);
-    signal(SIGUSR2, SIG_IGN);
+    // We do not do so if the plugin is there, because that confuses libuv
+    // FIXME: maybe use libuv to ignore?
+    if (execution.plugin.empty()) {
+      signal(SIGUSR1, SIG_IGN);
+      signal(SIGUSR2, SIG_IGN);
+    }
 
     // This is the child.
     // For stdout / stderr, we close the read part of the pipe, the
@@ -747,7 +771,20 @@ void spawnDevice(uv_loop_t* loop,
     for (auto& env : execution.environ) {
       putenv(strdup(DeviceSpecHelpers::reworkTimeslicePlaceholder(env, spec).data()));
     }
-    execvp(execution.args[0], execution.args.data());
+    if (execution.plugin.empty()) {
+      LOG(info) << "Child device runs in a separate executable. Launching " << execution.args[0] << " ...";
+      execvp(execution.args[0], execution.args.data());
+    }
+    LOG(info) << "Child device uses plugins. Loading " << execution.plugin << ".";
+    // In the general case we never end up here, because execvp is used.
+    // Once we move to plugins however, the run the plugin without loading
+    // a new environment so the new pid can be used to identify.
+    //
+    // Let's stop immediately so that we can attach debuggers from here.
+    driverControl.forcedTransitions = {
+      DriverState::DO_CHILD,
+      DriverState::BIND_GUI_PORT};
+    return spec.id;
   } else {
     O2_SIGNPOST_ID_GENERATE(sid, driver);
     O2_SIGNPOST_EVENT_EMIT(driver, sid, "spawnDevice", "New child at %{pid}d", id);
@@ -831,6 +868,7 @@ void spawnDevice(uv_loop_t* loop,
 
   // Let's add also metrics information for the given device
   gDeviceMetricsInfos.emplace_back(DeviceMetricsInfo{});
+  return "";
 }
 
 void processChildrenOutput(uv_loop_t* loop,
@@ -1074,14 +1112,13 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
                                      &deviceProxy,
                                      &processingPolicies,
                                      &deviceContext,
-                                     &driverConfig,
-                                     &loop](fair::mq::DeviceRunner& r) {
+                                     &driverConfig](fair::mq::DeviceRunner& r) {
     ServiceRegistryRef serviceRef = {serviceRegistry};
     simpleRawDeviceService = std::make_unique<SimpleRawDeviceService>(nullptr, spec);
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<RawDeviceService>(simpleRawDeviceService.get()));
 
     deviceState = std::make_unique<DeviceState>();
-    deviceState->loop = loop;
+    deviceState->loop = uv_loop_new();
     deviceState->tracingFlags = DeviceStateHelpers::parseTracingFlags(r.fConfig.GetPropertyAsString("dpl-tracing-flags"));
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<DeviceState>(deviceState.get()));
 
@@ -1121,6 +1158,7 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
 
 struct WorkflowInfo {
   std::string executable;
+  std::string plugin;
   std::vector<std::string> args;
   std::vector<ConfigParamSpec> options;
 };
@@ -1619,12 +1657,12 @@ int runStateMachine(DataProcessorSpecs const& workflow,
             channels.push_back(channel.name);
           }
           dataProcessorInfos.push_back(
-            DataProcessorInfo{
-              device.id,
-              workflowInfo.executable,
-              workflowInfo.args,
-              workflowInfo.options,
-              channels});
+            {.name = device.id,
+             .executable = workflowInfo.executable,
+             .plugin = workflowInfo.plugin,
+             .cmdLineArgs = workflowInfo.args,
+             .workflowOptions = workflowInfo.options,
+             .channels = channels});
         }
         break;
       case DriverState::MATERIALISE_WORKFLOW:
@@ -1937,10 +1975,15 @@ int runStateMachine(DataProcessorSpecs const& workflow,
         if (driverControl.defaultStopped) {
           kill(getpid(), SIGSTOP);
         }
+        // We are in the child here, the frameworkId must be set.
+        assert(!frameworkId.empty());
         for (size_t di = 0; di < runningWorkflow.devices.size(); di++) {
           RunningDeviceRef ref{di};
           if (runningWorkflow.devices[di].id == frameworkId) {
-            return doChild(driverInfo.argc, driverInfo.argv,
+            auto &execution = deviceExecutions[ref.index];
+            // Last pointer is nullptr
+            assert(execution.args.data()[execution.args.size() -1] == nullptr);
+            return doChild(execution.args.size()-1, execution.args.data(),
                            serviceRegistry,
                            runningWorkflow, ref,
                            driverConfig,
@@ -2095,14 +2138,24 @@ int runStateMachine(DataProcessorSpecs const& workflow,
                               runningWorkflow.devices[di], controls[di], deviceExecutions[di], infos, allStates);
           } else {
             DeviceRef ref{di};
-            spawnDevice(loop,
-                        ref,
-                        runningWorkflow.devices, driverInfo,
-                        controls, deviceExecutions, infos,
-                        allStates,
-                        serviceRegistry, varmap,
-                        childFds, parentCPU, parentNode);
+            frameworkId = spawnDevice(loop,
+                                      ref,
+                                      runningWorkflow.devices,
+                                      driverInfo,
+                                      driverControl,
+                                      controls, deviceExecutions, infos,
+                                      allStates,
+                                      serviceRegistry, varmap,
+                                      childFds, parentCPU, parentNode);
+            // We are in the child in this case. Do not continue spawning.
+            if (!frameworkId.empty()) {
+              break;
+            }
           }
+        }
+        // Do not bother about the rest of the scheduling if we are in the child.
+        if (!frameworkId.empty()) {
+          break;
         }
         handleSignals();
         handleChildrenStdio(&serverContext, forwardedStdin.str(), childFds, pollHandles);
@@ -2808,10 +2861,10 @@ void overrideAll(o2::framework::ConfigContext& ctx, std::vector<o2::framework::D
   overrideLabels(ctx, workflow);
 }
 
-o2::framework::ConfigContext createConfigContext(std::unique_ptr<ConfigParamRegistry>& workflowOptionsRegistry,
-                                                 o2::framework::ServiceRegistry& configRegistry,
-                                                 std::vector<o2::framework::ConfigParamSpec>& workflowOptions,
-                                                 std::vector<o2::framework::ConfigParamSpec>& extraOptions, int argc, char** argv)
+std::unique_ptr<o2::framework::ConfigContext> createConfigContext(std::unique_ptr<ConfigParamRegistry>& workflowOptionsRegistry,
+                                                                  o2::framework::ServiceRegistry& configRegistry,
+                                                                  std::vector<o2::framework::ConfigParamSpec>& workflowOptions,
+                                                                  std::vector<o2::framework::ConfigParamSpec>& extraOptions, int argc, char** argv)
 {
   std::vector<std::unique_ptr<o2::framework::ParamRetriever>> retrievers;
   std::unique_ptr<o2::framework::ParamRetriever> retriever{new o2::framework::BoostOptionsRetriever(true, argc, argv)};
@@ -2825,7 +2878,7 @@ o2::framework::ConfigContext createConfigContext(std::unique_ptr<ConfigParamRegi
     workflowOptions.push_back(extra);
   }
 
-  return o2::framework::ConfigContext(*workflowOptionsRegistry, o2::framework::ServiceRegistryRef{configRegistry}, argc, argv);
+  return std::make_unique<o2::framework::ConfigContext>(*workflowOptionsRegistry, o2::framework::ServiceRegistryRef{configRegistry}, argc, argv);
 }
 
 std::unique_ptr<o2::framework::ServiceRegistry> createRegistry()
@@ -2842,16 +2895,7 @@ std::unique_ptr<o2::framework::ServiceRegistry> createRegistry()
 //     killing them all on ctrl-c).
 //   - Child, pick the data-processor ID and start a O2DataProcessorDevice for
 //     each DataProcessorSpec
-int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
-           std::vector<ChannelConfigurationPolicy> const& channelPolicies,
-           std::vector<CompletionPolicy> const& completionPolicies,
-           std::vector<DispatchPolicy> const& dispatchPolicies,
-           std::vector<ResourcePolicy> const& resourcePolicies,
-           std::vector<CallbacksPolicy> const& callbacksPolicies,
-           std::vector<SendingPolicy> const& sendingPolicies,
-           std::vector<ConfigParamSpec> const& currentWorkflowOptions,
-           std::vector<ConfigParamSpec> const& detectedParams,
-           o2::framework::ConfigContext& configContext)
+int doMain(int argc, char** argv, std::string pluginName, o2::framework::WorkflowDefinitionContext& workflowContext)
 {
   // Peek very early in the driver options and look for
   // signposts, so the we can enable it without going through the whole dance
@@ -2868,9 +2912,10 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   }
 
   WorkflowInfo currentWorkflow{
-    argv[0],
-    currentArgs,
-    currentWorkflowOptions};
+    .executable = argv[0],
+    .plugin = pluginName,
+    .args = currentArgs,
+    .options = workflowContext.workflowOptions};
 
   ProcessingPolicies processingPolicies;
   enum LogParsingHelpers::LogLevel minFailureLevel;
@@ -2920,7 +2965,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   bpo::options_description visibleOptions;
   visibleOptions.add(executorOptions);
 
-  auto physicalWorkflow = workflow;
+  auto physicalWorkflow = workflowContext.specs;
   std::map<std::string, size_t> rankIndex;
   // We remove the duplicates because for the moment child get themself twice:
   // once from the actual definition in the child, a second time from the
@@ -2931,11 +2976,11 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   size_t workflowHashA = 0;
   std::hash<std::string> hash_fn;
 
-  for (auto& dp : workflow) {
+  for (auto& dp : workflowContext.specs) {
     workflowHashA += hash_fn(dp.name);
   }
 
-  for (auto& dp : workflow) {
+  for (auto& dp : workflowContext.specs) {
     rankIndex.insert(std::make_pair(dp.name, workflowHashA));
   }
 
@@ -2987,7 +3032,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   OverrideServiceSpecs driverServicesOverride = ServiceSpecHelpers::parseOverrides(getenv("DPL_DRIVER_OVERRIDE_SERVICES"));
   ServiceSpecs driverServices = ServiceSpecHelpers::filterDisabled(CommonDriverServices::defaultServices(), driverServicesOverride);
   // We insert the hash for the internal devices.
-  WorkflowHelpers::injectServiceDevices(physicalWorkflow, configContext);
+  WorkflowHelpers::injectServiceDevices(physicalWorkflow, *workflowContext.configContext);
   auto reader = std::find_if(physicalWorkflow.begin(), physicalWorkflow.end(), [](DataProcessorSpec& spec) { return spec.name == "internal-dpl-aod-reader"; });
   if (reader != physicalWorkflow.end()) {
     driverServices.push_back(ArrowSupport::arrowBackendSpec());
@@ -2997,7 +3042,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
       continue;
     }
     WorkflowSpecNode node{physicalWorkflow};
-    service.injectTopology(node, configContext);
+    service.injectTopology(node, *workflowContext.configContext);
   }
   for (auto& dp : physicalWorkflow) {
     if (dp.name.rfind("internal-", 0) == 0) {
@@ -3103,7 +3148,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   // Use the hidden options as veto, all config specs matching a definition
   // in the hidden options are skipped in order to avoid duplicate definitions
   // in the main parser. Note: all config specs are forwarded to devices
-  visibleOptions.add(ConfigParamsHelper::prepareOptionDescriptions(physicalWorkflow, currentWorkflowOptions, gHiddenDeviceOptions));
+  visibleOptions.add(ConfigParamsHelper::prepareOptionDescriptions(physicalWorkflow, workflowContext.workflowOptions, gHiddenDeviceOptions));
 
   bpo::options_description od;
   od.add(visibleOptions);
@@ -3139,7 +3184,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
   conflicting_options(varmap, "no-batch", "batch");
 
   if (varmap.count("help")) {
-    printHelp(varmap, executorOptions, physicalWorkflow, currentWorkflowOptions);
+    printHelp(varmap, executorOptions, physicalWorkflow, workflowContext.workflowOptions);
     exit(0);
   }
   /// Set the fair::Logger severity to the one specified in the command line
@@ -3189,16 +3234,16 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
     return true;
   };
   DriverInfo driverInfo{
-    .sendingPolicies = sendingPolicies,
+    .sendingPolicies = workflowContext.sendingPolicies,
     .forwardingPolicies = forwardingPolicies,
-    .callbacksPolicies = callbacksPolicies};
+    .callbacksPolicies = workflowContext.callbacksPolicies};
   driverInfo.states.reserve(10);
   driverInfo.sigintRequested = false;
   driverInfo.sigchldRequested = false;
-  driverInfo.channelPolicies = channelPolicies;
-  driverInfo.completionPolicies = completionPolicies;
-  driverInfo.dispatchPolicies = dispatchPolicies;
-  driverInfo.resourcePolicies = resourcePolicies;
+  driverInfo.channelPolicies = workflowContext.channelPolicies;
+  driverInfo.completionPolicies = workflowContext.completionPolicies;
+  driverInfo.dispatchPolicies = workflowContext.dispatchPolicies;
+  driverInfo.resourcePolicies = workflowContext.resourcePolicies;
   driverInfo.argc = argc;
   driverInfo.argv = argv;
   driverInfo.noSHMCleanup = varmap["no-cleanup"].as<bool>();
@@ -3230,7 +3275,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
 
   // FIXME: should use the whole dataProcessorInfos, actually...
   driverInfo.processorInfo = dataProcessorInfos;
-  driverInfo.configContext = &configContext;
+  driverInfo.configContext = workflowContext.configContext.get();
 
   DriverControl driverControl;
   initialiseDriverControl(varmap, driverInfo, driverControl);
@@ -3259,7 +3304,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
                          driverInfo,
                          driverConfig,
                          gDeviceMetricsInfos,
-                         detectedParams,
+                         workflowContext.extraOptions,
                          varmap,
                          driverServices,
                          frameworkId);

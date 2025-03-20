@@ -326,6 +326,7 @@ AddOption(oclPlatformNum, int32_t, -1, "", 0, "Platform to use, in case the back
 AddOption(oclCompileFromSources, bool, false, "", 0, "Compile OpenCL binary from included source code instead of using included spirv code")
 AddOption(oclOverrideSourceBuildFlags, std::string, "", "", 0, "Override OCL build flags for compilation from source, put a space for empty options")
 AddOption(printSettings, bool, false, "", 0, "Print all settings when initializing")
+AddOption(tpcFreeAllocatedMemoryAfterProcessing, bool, false, "", 0, "Clean all memory allocated by TPC when TPC processing done, only data written to external output resources will remain")
 AddVariable(eventDisplay, o2::gpu::GPUDisplayFrontendInterface*, nullptr)
 AddSubConfig(GPUSettingsProcessingRTC, rtc)
 AddSubConfig(GPUSettingsProcessingParam, param)
@@ -520,7 +521,7 @@ AddOption(outputcontrolmem, uint64_t, 0, "outputMemory", 0, "Use predefined outp
 AddOption(inputcontrolmem, uint64_t, 0, "inputMemory", 0, "Use predefined input buffer of this size", min(0ul), message("Using %s bytes as input memory"))
 AddOption(cpuAffinity, int32_t, -1, "", 0, "Pin CPU affinity to this CPU core", min(-1))
 AddOption(fifoScheduler, bool, false, "", 0, "Use FIFO realtime scheduler", message("Setting FIFO scheduler: %s"))
-AddOption(fpe, bool, true, "", 0, "Trap on floating point exceptions")
+AddOption(fpe, int8_t, -1, "", 0, "Trap on floating point exceptions (-1 = if no ffast-math)")
 AddOption(flushDenormals, bool, true, "", 0, "Enable FTZ and DAZ (Flush all denormals to zero)")
 AddOption(solenoidBzNominalGPU, float, -1e6f, "", 0, "Field strength of solenoid Bz in kGaus")
 AddOption(constBz, bool, false, "", 0, "Force constand Bz")
@@ -606,7 +607,7 @@ EndConfig()
 
 // Derrived parameters used in GPUParam
 BeginHiddenConfig(GPUSettingsParam, param)
-AddVariableRTC(dAlpha, float, 0.f)                 // angular size
+AddVariableRTC(dAlpha, float, 0.f)            // angular size
 AddVariableRTC(assumeConstantBz, int8_t, 0)   // Assume a constant magnetic field
 AddVariableRTC(toyMCEventsFlag, int8_t, 0)    // events were build with home-made event generator
 AddVariableRTC(continuousTracking, int8_t, 0) // Continuous tracking, estimate bz and errors for abs(z) = 125cm during seeding

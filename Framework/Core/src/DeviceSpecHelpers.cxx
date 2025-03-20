@@ -1711,6 +1711,8 @@ void DeviceSpecHelpers::prepareArguments(bool defaultQuiet, bool defaultStopped,
     }
     O2_SIGNPOST_END(device_spec_helpers, poid, "prepareArguments", "The following options are being forwarded to %{public}s: %{public}s",
                     spec.id.c_str(), str.str().c_str());
+    // Copy the plugin over from the DataProcessingInfo
+    execution.plugin = pi->plugin;
   }
 }
 
