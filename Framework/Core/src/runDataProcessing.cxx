@@ -1644,12 +1644,12 @@ int runStateMachine(DataProcessorSpecs const& workflow,
             channels.push_back(channel.name);
           }
           dataProcessorInfos.push_back(
-            DataProcessorInfo{
-              device.id,
-              workflowInfo.executable,
-              workflowInfo.args,
-              workflowInfo.options,
-              channels});
+            {.name = device.id,
+             .executable = workflowInfo.executable,
+             .plugin = workflowInfo.plugin,
+             .cmdLineArgs = workflowInfo.args,
+             .workflowOptions = workflowInfo.options,
+             .channels = channels});
         }
         break;
       case DriverState::MATERIALISE_WORKFLOW:
@@ -2123,7 +2123,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
             frameworkId = spawnDevice(loop,
                                       ref,
                                       runningWorkflow.devices,
-                                       driverInfo, 
+                                      driverInfo,
                                       driverControl,
                                       controls, deviceExecutions, infos,
                                       allStates,
@@ -2894,9 +2894,9 @@ int doMain(int argc, char** argv, o2::framework::WorkflowDefinitionContext& work
   }
 
   WorkflowInfo currentWorkflow{
-    argv[0],
-    currentArgs,
-    workflowContext.workflowOptions};
+    .executable = argv[0],
+    .args = currentArgs,
+    .options = workflowContext.workflowOptions};
 
   ProcessingPolicies processingPolicies;
   enum LogParsingHelpers::LogLevel minFailureLevel;
