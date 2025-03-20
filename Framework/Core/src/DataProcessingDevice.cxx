@@ -1085,8 +1085,8 @@ void DataProcessingDevice::InitTask()
   if (deviceContext.sigusr1Handle == nullptr) {
     deviceContext.sigusr1Handle = (uv_signal_t*)malloc(sizeof(uv_signal_t));
     deviceContext.sigusr1Handle->data = &mServiceRegistry;
-    uv_signal_init(state.loop, deviceContext.sigusr1Handle);
-    uv_signal_start(deviceContext.sigusr1Handle, on_signal_callback, SIGUSR1);
+    //    uv_signal_init(state.loop, deviceContext.sigusr1Handle);
+    //    uv_signal_start(deviceContext.sigusr1Handle, on_signal_callback, SIGUSR1);
   }
   // If there is any signal, we want to make sure they are active
   for (auto& handle : state.activeSignals) {

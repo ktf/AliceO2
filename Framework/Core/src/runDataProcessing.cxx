@@ -729,8 +729,12 @@ std::string spawnDevice(uv_loop_t* loop,
     // get killed by the parent trying to force stepping children.
     // We will re-enable them later on, when it is actually safe to
     // do so.
-    signal(SIGUSR1, SIG_IGN);
-    signal(SIGUSR2, SIG_IGN);
+    // We do not do so if the plugin is there, because that confuses libuv
+    // FIXME: maybe use libuv to ignore?
+    if (execution.plugin.empty()) {
+      signal(SIGUSR1, SIG_IGN);
+      signal(SIGUSR2, SIG_IGN);
+    }
 
     // This is the child.
     // For stdout / stderr, we close the read part of the pipe, the
