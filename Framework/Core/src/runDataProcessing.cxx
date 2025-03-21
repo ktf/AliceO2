@@ -1980,10 +1980,10 @@ int runStateMachine(DataProcessorSpecs const& workflow,
         for (size_t di = 0; di < runningWorkflow.devices.size(); di++) {
           RunningDeviceRef ref{di};
           if (runningWorkflow.devices[di].id == frameworkId) {
-            auto &execution = deviceExecutions[ref.index];
+            auto& execution = deviceExecutions[ref.index];
             // Last pointer is nullptr
-            assert(execution.args.data()[execution.args.size() -1] == nullptr);
-            return doChild(execution.args.size()-1, execution.args.data(),
+            assert(execution.args.data()[execution.args.size() - 1] == nullptr);
+            return doChild(execution.args.size() - 1, execution.args.data(),
                            serviceRegistry,
                            runningWorkflow, ref,
                            driverConfig,

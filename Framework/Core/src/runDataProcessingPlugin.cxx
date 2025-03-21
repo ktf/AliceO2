@@ -40,7 +40,7 @@ int main(int argc, char** argv)
       break;
     }
     if (argSize == optionSize && (strncmp(argv[i], pluginOption, optionSize) == 0) && i < argc) {
-      pluginSpec = argv[i+i];
+      pluginSpec = argv[i + i];
       break;
     }
   }
