@@ -717,6 +717,12 @@ std::string spawnDevice(uv_loop_t* loop,
   id = fork();
   // We are the child: prepare options and reexec.
   if (id == 0) {
+    if (driverControl.defaultStopped && (execution.plugin.empty() == false)) {
+      kill(getpid(), SIGSTOP);
+    }
+    // Needed in case we want to reuse the same loop of the parent.
+    uv_loop_fork(loop);
+    uv_loop_fork(uv_default_loop());
     // We allow being debugged and do not terminate on SIGTRAP
     signal(SIGTRAP, SIG_IGN);
     // We immediately ignore SIGUSR1 and SIGUSR2 so that we do not
@@ -761,7 +767,11 @@ std::string spawnDevice(uv_loop_t* loop,
     for (auto& env : execution.environ) {
       putenv(strdup(DeviceSpecHelpers::reworkTimeslicePlaceholder(env, spec).data()));
     }
-    execvp(execution.args[0], execution.args.data());
+    if (execution.plugin.empty()) {
+      LOG(info) << "Child device runs in a separate executable. Launching " << execution.args[0] << " ...";
+      execvp(execution.args[0], execution.args.data());
+    }
+    LOG(info) << "Child device uses plugins. Loading " << execution.plugin << ".";
     // In the general case we never end up here, because execvp is used.
     // Once we move to plugins however, the run the plugin without loading
     // a new environment so the new pid can be used to identify.
@@ -1098,14 +1108,13 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
                                      &deviceProxy,
                                      &processingPolicies,
                                      &deviceContext,
-                                     &driverConfig,
-                                     &loop](fair::mq::DeviceRunner& r) {
+                                     &driverConfig](fair::mq::DeviceRunner& r) {
     ServiceRegistryRef serviceRef = {serviceRegistry};
     simpleRawDeviceService = std::make_unique<SimpleRawDeviceService>(nullptr, spec);
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<RawDeviceService>(simpleRawDeviceService.get()));
 
     deviceState = std::make_unique<DeviceState>();
-    deviceState->loop = loop;
+    deviceState->loop = uv_loop_new();
     deviceState->tracingFlags = DeviceStateHelpers::parseTracingFlags(r.fConfig.GetPropertyAsString("dpl-tracing-flags"));
     serviceRef.registerService(ServiceRegistryHelpers::handleForService<DeviceState>(deviceState.get()));
 
@@ -1962,10 +1971,15 @@ int runStateMachine(DataProcessorSpecs const& workflow,
         if (driverControl.defaultStopped) {
           kill(getpid(), SIGSTOP);
         }
+        // We are in the child here, the frameworkId must be set.
+        assert(!frameworkId.empty());
         for (size_t di = 0; di < runningWorkflow.devices.size(); di++) {
           RunningDeviceRef ref{di};
           if (runningWorkflow.devices[di].id == frameworkId) {
-            return doChild(driverInfo.argc, driverInfo.argv,
+            auto &execution = deviceExecutions[ref.index];
+            // Last pointer is nullptr
+            assert(execution.args.data()[execution.args.size() -1] == nullptr);
+            return doChild(execution.args.size()-1, execution.args.data(),
                            serviceRegistry,
                            runningWorkflow, ref,
                            driverConfig,
