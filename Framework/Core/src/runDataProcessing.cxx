@@ -190,7 +190,7 @@ char* getIdString(int argc, char** argv)
   return nullptr;
 }
 
-int doMain(int argc, char** argv, o2::framework::WorkflowDefinitionContext& workflowContext);
+int doMain(int argc, char** argv, std::string pluginName, o2::framework::WorkflowDefinitionContext& workflowContext);
 
 int callMain(int argc, char** argv, char const* pluginSpec)
 {
@@ -211,7 +211,7 @@ int callMain(int argc, char** argv, char const* pluginSpec)
   o2::framework::WorkflowDefinitionContext workflowContext = availableWorkflows.back().defineWorkflow(argc, argv);
   if (noCatch) {
     try {
-      result = doMain(argc, argv, workflowContext);
+      result = doMain(argc, argv, pluginSpec, workflowContext);
     } catch (o2::framework::RuntimeErrorRef& ref) {
       doDPLException(ref, argv[0]);
       throw;
@@ -222,7 +222,7 @@ int callMain(int argc, char** argv, char const* pluginSpec)
       // SFINAE expression above fit better the version which invokes user code over
       // the default one.
       // The default policy is a catch all pub/sub setup to be consistent with the past.
-      result = doMain(argc, argv, workflowContext);
+      result = doMain(argc, argv, pluginSpec, workflowContext);
     } catch (boost::exception& e) {
       doBoostException(e, argv[0]);
       throw;
@@ -251,7 +251,6 @@ void getChildData(int infd, DeviceInfo& outinfo)
   int bytes_read;
   // NOTE: do not quite understand read ends up blocking if I read more than
   //        once. Oh well... Good enough for now.
-  int64_t total_bytes_read = 0;
   int64_t count = 0;
   bool once = false;
   while (true) {
@@ -1146,6 +1145,7 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
 
 struct WorkflowInfo {
   std::string executable;
+  std::string plugin;
   std::vector<std::string> args;
   std::vector<ConfigParamSpec> options;
 };
@@ -2877,7 +2877,7 @@ std::unique_ptr<o2::framework::ServiceRegistry> createRegistry()
 //     killing them all on ctrl-c).
 //   - Child, pick the data-processor ID and start a O2DataProcessorDevice for
 //     each DataProcessorSpec
-int doMain(int argc, char** argv, o2::framework::WorkflowDefinitionContext& workflowContext)
+int doMain(int argc, char** argv, std::string pluginName, o2::framework::WorkflowDefinitionContext& workflowContext)
 {
   // Peek very early in the driver options and look for
   // signposts, so the we can enable it without going through the whole dance
@@ -2895,6 +2895,7 @@ int doMain(int argc, char** argv, o2::framework::WorkflowDefinitionContext& work
 
   WorkflowInfo currentWorkflow{
     .executable = argv[0],
+    .plugin = pluginName,
     .args = currentArgs,
     .options = workflowContext.workflowOptions};
 
