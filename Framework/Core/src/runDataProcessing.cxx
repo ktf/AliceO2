@@ -1646,6 +1646,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
           dataProcessorInfos.push_back(
             {.name = device.id,
              .executable = workflowInfo.executable,
+             .plugin = workflowInfo.plugin,
              .cmdLineArgs = workflowInfo.args,
              .workflowOptions = workflowInfo.options,
              .channels = channels});
