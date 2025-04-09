@@ -977,11 +977,18 @@ DataProcessorSpec specifyFairMQDeviceOutputProxy(char const* name,
         if (channelName != outputChannelName) {
           continue;
         }
+
+        uint32_t runNumber = 0;
+        try {
+          runNumber = strtoul(device->fConfig->GetProperty<std::string>("runNumber", "").c_str(), nullptr, 10);
+        } catch (...) {
+        }
         DataHeader dh;
         dh.dataOrigin = "DPL";
         dh.dataDescription = "EOS";
         dh.subSpecification = 0;
         dh.payloadSize = 0;
+        dh.runNumber = runNumber;
         dh.payloadSerializationMethod = o2::header::gSerializationMethodNone;
         dh.tfCounter = 0;
         dh.firstTForbit = 0;
