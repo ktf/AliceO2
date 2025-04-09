@@ -11,6 +11,7 @@
 #ifndef O2_FRAMEWORK_DATAREFUTILS_H_
 #define O2_FRAMEWORK_DATAREFUTILS_H_
 
+#include "Framework/DataDescriptorMatcher.h"
 #include "Framework/DataRef.h"
 #include "Framework/RootSerializationSupport.h"
 #include "Framework/SerializationMethods.h"
@@ -32,6 +33,9 @@ class ConfigurableParam;
 
 namespace o2::framework
 {
+
+template <typename H>
+concept DataHeaderLike = requires(H& dh) {dh.dataOrigin; dh.dataDescription; dh.subSpecification; };
 
 // FIXME: Should enforce the fact that DataRefs are read only...
 struct DataRefUtils {
@@ -220,16 +224,23 @@ struct DataRefUtils {
     return ref.spec != nullptr && ref.spec->binding == binding;
   }
 
-  /// check if the O2 message referred by DataRef matches a particular
-  /// input spec. The DataHeader is retrieved from the header message and matched
-  /// against @ref spec parameter.
-  static bool match(DataRef const& ref, InputSpec const& spec)
+  template <DataHeaderLike H>
+  static bool matchHeader(DataRef const& ref, InputSpec const& spec)
   {
-    auto dh = DataRefUtils::getHeader<o2::header::DataHeader*>(ref);
+    auto const* dh = o2::header::get<H*>(ref.header);
     if (dh == nullptr) {
       return false;
     }
     return DataSpecUtils::match(spec, dh->dataOrigin, dh->dataDescription, dh->subSpecification);
+  }
+
+  /// check if the O2 message referred by DataRef matches a particular
+  /// input spec. The DataHeader is retrieved from the header message and matched
+  /// against @ref spec parameter.
+  template <DataHeaderLike... H>
+  static bool match(DataRef const& ref, InputSpec const& spec)
+  {
+    return (DataRefUtils::matchHeader<H>(ref, spec) || ... || matchHeader<o2::header::DataHeader>(ref, spec));
   }
 };
 
