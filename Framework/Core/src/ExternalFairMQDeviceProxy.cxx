@@ -397,6 +397,11 @@ void injectMissingData(fair::mq::Device& device, fair::mq::Parts& parts, std::ve
     }
     std::string missing = "";
     bool showAlarm = false;
+    uint32_t runNumber = 0;
+    try {
+      runNumber = strtoul(device.fConfig->GetProperty<std::string>("runNumber", "").c_str(), nullptr, 10);
+    } catch (...) {
+    }
     for (auto mi : unmatchedDescriptions) {
       auto& spec = routes[mi].matcher;
       missing += " " + DataSpecUtils::describe(spec);
@@ -412,6 +417,7 @@ void injectMissingData(fair::mq::Device& device, fair::mq::Parts& parts, std::ve
       dh.dataDescription = concrete.description;
       dh.subSpecification = *subSpec;
       dh.payloadSize = 0;
+      dh.runNumber = runNumber;
       dh.splitPayloadParts = 0;
       dh.splitPayloadIndex = 0;
       dh.payloadSerializationMethod = header::gSerializationMethodNone;
@@ -623,6 +629,11 @@ InjectorFunction incrementalConverter(OutputSpec const& spec, o2::header::Serial
   auto timesliceId = std::make_shared<size_t>(startTime);
   return [timesliceId, spec, step, method](TimingInfo&, ServiceRegistryRef const& services, fair::mq::Parts& parts, ChannelRetriever channelRetriever, size_t newTimesliceId, bool&) {
     auto* device = services.get<RawDeviceService>().device();
+    uint32_t runNumber = 0;
+    try {
+      runNumber = strtoul(device->fConfig->GetProperty<std::string>("runNumber", "").c_str(), nullptr, 10);
+    } catch (...) {
+    }
     // We iterate on all the parts and we send them two by two,
     // adding the appropriate O2 header.
     for (int i = 0; i < parts.Size(); ++i) {
@@ -635,6 +646,7 @@ InjectorFunction incrementalConverter(OutputSpec const& spec, o2::header::Serial
       dh.dataDescription = matcher.description;
       dh.subSpecification = matcher.subSpec;
       dh.payloadSize = parts.At(i)->GetSize();
+      dh.runNumber = runNumber;
 
       DataProcessingHeader dph{newTimesliceId, 0};
       if (*timesliceId != newTimesliceId) {
@@ -977,11 +989,18 @@ DataProcessorSpec specifyFairMQDeviceOutputProxy(char const* name,
         if (channelName != outputChannelName) {
           continue;
         }
+
+        uint32_t runNumber = 0;
+        try {
+          runNumber = strtoul(device->fConfig->GetProperty<std::string>("runNumber", "").c_str(), nullptr, 10);
+        } catch (...) {
+        }
         DataHeader dh;
         dh.dataOrigin = "DPL";
         dh.dataDescription = "EOS";
         dh.subSpecification = 0;
         dh.payloadSize = 0;
+        dh.runNumber = runNumber;
         dh.payloadSerializationMethod = o2::header::gSerializationMethodNone;
         dh.tfCounter = 0;
         dh.firstTForbit = 0;
@@ -1091,12 +1110,18 @@ DataProcessorSpec specifyFairMQDeviceMultiOutputProxy(char const* name,
         if (!checkChannel(channelName)) {
           continue;
         }
+        uint32_t runNumber = 0;
+        try {
+          runNumber = strtoul(device->fConfig->GetProperty<std::string>("runNumber", "").c_str(), nullptr, 10);
+        } catch (...) {
+        }
         DataHeader dh;
         dh.dataOrigin = "DPL";
         dh.dataDescription = "EOS";
         dh.subSpecification = 0;
         dh.payloadSize = 0;
         dh.payloadSerializationMethod = o2::header::gSerializationMethodNone;
+        dh.runNumber = runNumber;
         dh.tfCounter = 0;
         dh.firstTForbit = 0;
         SourceInfoHeader sih;
