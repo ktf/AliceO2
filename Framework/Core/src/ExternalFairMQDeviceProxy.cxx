@@ -510,7 +510,8 @@ InjectorFunction dplModelAdaptor(std::vector<OutputSpec> const& filterSpecs, DPL
         LOG(error) << "unexpected nullptr found. Skipping message pair.";
         continue;
       }
-      const auto dh = o2::header::get<DataHeader*>(parts.At(msgidx)->GetData());
+      auto* header = parts.At(msgidx)->GetData();
+      const auto dh = o2::header::get<DataHeader*>(header);
       if (!dh) {
         LOG(error) << "data on input " << msgidx << " does not follow the O2 data model, DataHeader missing";
         if (msgidx > 0) {
@@ -518,7 +519,7 @@ InjectorFunction dplModelAdaptor(std::vector<OutputSpec> const& filterSpecs, DPL
         }
         continue;
       }
-      auto dph = o2::header::get<DataProcessingHeader*>(parts.At(msgidx)->GetData());
+      auto dph = o2::header::get<DataProcessingHeader*>(header);
       if (!dph) {
         LOG(error) << "data on input " << msgidx << " does not follow the O2 data model, DataProcessingHeader missing";
         continue;
@@ -533,7 +534,7 @@ InjectorFunction dplModelAdaptor(std::vector<OutputSpec> const& filterSpecs, DPL
       timingInfo.runNumber = dh->runNumber;
       timingInfo.tfCounter = dh->tfCounter;
       LOG(debug) << msgidx << ": " << DataSpecUtils::describe(OutputSpec{dh->dataOrigin, dh->dataDescription, dh->subSpecification}) << " part " << dh->splitPayloadIndex << " of " << dh->splitPayloadParts << "  payload " << parts.At(msgidx + 1)->GetSize();
-      if (dh->runNumber == 0 || dh->tfCounter == 0 || (fmqRunNumber > 0 && fmqRunNumber != dh->runNumber)) {
+      if (dh->runNumber == 0 || (dh->tfCounter == 0 && o2::header::get<SourceInfoHeader*>(header) == nullptr) || (fmqRunNumber > 0 && fmqRunNumber != dh->runNumber)) {
         LOG(error) << "INVALID runNumber / tfCounter: runNumber " << dh->runNumber
                    << ", tfCounter " << dh->tfCounter << ", FMQ runNumber " << fmqRunNumber
                    << " for msgidx " << msgidx << ": " << DataSpecUtils::describe(OutputSpec{dh->dataOrigin, dh->dataDescription, dh->subSpecification}) << " part " << dh->splitPayloadIndex << " of " << dh->splitPayloadParts << "  payload " << parts.At(msgidx + 1)->GetSize();
