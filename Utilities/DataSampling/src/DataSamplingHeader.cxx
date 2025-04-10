@@ -19,7 +19,7 @@
 namespace o2::utilities
 {
 
-DataSamplingHeader::DataSamplingHeader(uint64_t _sampleTimeUs, uint32_t _totalAcceptedMessages, uint32_t _totalEvaluatedMessages, DeviceIDType _deviceID, header::DataHeader const&_original)
+DataSamplingHeader::DataSamplingHeader(uint64_t _sampleTimeUs, uint32_t _totalAcceptedMessages, uint32_t _totalEvaluatedMessages, DeviceIDType _deviceID, header::DataHeader const& _original)
   : BaseHeader(sizeof(DataSamplingHeader), sHeaderType, sSerializationMethod, sVersion),
     sampleTimeUs(_sampleTimeUs),
     totalAcceptedMessages(_totalAcceptedMessages),

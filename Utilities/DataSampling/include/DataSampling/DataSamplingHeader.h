@@ -49,7 +49,7 @@ struct DataSamplingHeader : public header::BaseHeader {
   header::DataHeader::SubSpecificationType subSpecification;
 
   DataSamplingHeader() = delete;
-  DataSamplingHeader(uint64_t _sampleTimeUs, uint32_t _totalAcceptedMessages, uint32_t _totalEvaluatedMessages, DeviceIDType _deviceID, header::DataHeader const&original);
+  DataSamplingHeader(uint64_t _sampleTimeUs, uint32_t _totalAcceptedMessages, uint32_t _totalEvaluatedMessages, DeviceIDType _deviceID, header::DataHeader const& original);
   DataSamplingHeader(const DataSamplingHeader&) = default;
   DataSamplingHeader& operator=(const DataSamplingHeader&) = default;
 

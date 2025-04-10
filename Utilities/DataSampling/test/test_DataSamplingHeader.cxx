@@ -23,7 +23,7 @@ using namespace o2::header;
 
 BOOST_AUTO_TEST_CASE(DataSamplingHeaderInit)
 {
-  o2::header::DataHeader original( "A", "TST", 1);
+  o2::header::DataHeader original("A", "TST", 1);
   DataSamplingHeader header{123, 456, 789, "abc", original};
 
   BOOST_CHECK_EQUAL(header.sampleTimeUs, 123);
@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(DataSamplingHeaderInit)
 
 BOOST_AUTO_TEST_CASE(DataSamplingHeaderCopy)
 {
-  o2::header::DataHeader original( "A", "TST", 1);
+  o2::header::DataHeader original("A", "TST", 1);
   DataSamplingHeader header{123, 456, 789, "abc", original};
   DataSamplingHeader copy(header);
 
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(DataSamplingHeaderCopy)
 
 BOOST_AUTO_TEST_CASE(DataSamplingHeaderAssignement)
 {
-  o2::header::DataHeader original( "A", "TST", 1);
+  o2::header::DataHeader original("A", "TST", 1);
   DataSamplingHeader first{123, 456, 789, "abc", original};
   DataSamplingHeader second = first;
 
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(DataSamplingHeaderAssignement)
 
 BOOST_AUTO_TEST_CASE(DataSamplingHeaderOnStack)
 {
-  o2::header::DataHeader original( "A", "TST", 1);
+  o2::header::DataHeader original("A", "TST", 1);
   DataSamplingHeader header{123, 456, 789, "abc", original};
   Stack headerStack{header};
 
