@@ -791,7 +791,7 @@ std::string spawnDevice(uv_loop_t* loop,
         execution.args.push_back(nullptr);
       }
       LOGP(detail, "Child runs {} in a separate executable {} from the current one ({}). Using execvp, resources will not be shared.",
-                   execution.plugin, execution.args[0], driverInfo.argv[0]);
+           execution.plugin, execution.args[0], driverInfo.argv[0]);
       execvp(execution.args[0], execution.args.data());
     }
     LOG(info) << "Child device uses plugins. Loading " << execution.plugin << ".";
@@ -1109,7 +1109,7 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
       ("data-processing-timeout", bpo::value<std::string>()->default_value(defaultDataProcessingTimeout), "how many second to wait before stopping data processing and allowing data calibration") //
       ("timeframes-rate-limit", bpo::value<std::string>()->default_value("0"), "how many timeframe can be in fly at the same moment (0 disables)")                                                 //
       ("configuration,cfg", bpo::value<std::string>()->default_value("command-line"), "configuration backend")                                                                                     //
-      ("workflow-plugin", bpo::value<std::string>()->default_value(""), "workflow plugin to use")                                                                                     //
+      ("workflow-plugin", bpo::value<std::string>()->default_value(""), "workflow plugin to use")                                                                                                  //
       ("infologger-mode", bpo::value<std::string>()->default_value(defaultInfologgerMode), "O2_INFOLOGGER_MODE override");
     r.fConfig.AddToCmdLineOptions(optsDesc, true);
   });
