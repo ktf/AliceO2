@@ -716,6 +716,7 @@ std::string spawnDevice(uv_loop_t* loop,
   // the framework-id as one of the options.
   pid_t id = 0;
   id = fork();
+  bool sameExecutable = strcmp(execution.args[0], driverInfo.argv[0]) == 0;
   // We are the child: prepare options and reexec.
   if (id == 0) {
     // If we are using plugins we can stop immediately when
@@ -1108,6 +1109,7 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
       ("data-processing-timeout", bpo::value<std::string>()->default_value(defaultDataProcessingTimeout), "how many second to wait before stopping data processing and allowing data calibration") //
       ("timeframes-rate-limit", bpo::value<std::string>()->default_value("0"), "how many timeframe can be in fly at the same moment (0 disables)")                                                 //
       ("configuration,cfg", bpo::value<std::string>()->default_value("command-line"), "configuration backend")                                                                                     //
+      ("workflow-plugin", bpo::value<std::string>()->default_value(""), "workflow plugin to use")                                                                                     //
       ("infologger-mode", bpo::value<std::string>()->default_value(defaultInfologgerMode), "O2_INFOLOGGER_MODE override");
     r.fConfig.AddToCmdLineOptions(optsDesc, true);
   });
