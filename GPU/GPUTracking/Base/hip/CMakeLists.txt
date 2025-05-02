@@ -24,7 +24,7 @@ message(STATUS "Building GPUTracking with HIP support ${TMP_TARGET}")
 if(NOT DEFINED GPUCA_HIP_HIPIFY_FROM_CUDA OR "${GPUCA_HIP_HIPIFY_FROM_CUDA}")
   set(GPUCA_HIP_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hipify)
   file(MAKE_DIRECTORY ${GPUCA_HIP_SOURCE_DIR})
-  set(GPUCA_HIP_FILE_LIST GPUReconstructionCUDA.cu GPUReconstructionCUDAExternalProvider.cu GPUReconstructionCUDA.h GPUReconstructionCUDAInternals.h GPUReconstructionCUDAHelpers.inc GPUReconstructionCUDAkernel.template.cu GPUReconstructionCUDADef.h GPUReconstructionCUDAGenRTC.cxx GPUReconstructionCUDAKernels.cu GPUReconstructionCUDArtc.cu GPUReconstructionCUDARTCCalls.cu)
+  set(GPUCA_HIP_FILE_LIST GPUReconstructionCUDA.cu GPUReconstructionCUDAExternalProvider.cu GPUReconstructionCUDA.h GPUReconstructionCUDAInternals.h GPUReconstructionCUDAHelpers.inc GPUReconstructionCUDAkernel.template.cu GPUReconstructionCUDADef.h GPUReconstructionCUDAGenRTC.cxx GPUReconstructionCUDAKernels.cu GPUReconstructionCUDAKernelsSpecialize.inc GPUReconstructionCUDArtc.cu GPUReconstructionCUDARTCCalls.cu)
   set(GPUCA_HIP_LOCAL_FILE_LIST GPUReconstructionHIPIncludesSystem.h)
   set(HIP_SOURCES "")
   foreach(file ${GPUCA_HIP_FILE_LIST})
@@ -169,8 +169,6 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
       ${GPUCA_HIP_SOURCE_DIR}
     TARGETVARNAME targetName)
 
-  install(FILES ${HDRS} DESTINATION include/GPU)
-
 #  o2_add_test(GPUsortHIP NAME test_GPUsortHIP
 #                  SOURCES test/testGPUsortHIP.hip
 #                  PUBLIC_LINK_LIBRARIES O2::GPUCommon hip::host hip::device hip::hipcub roc::rocthrust
@@ -187,7 +185,16 @@ if(ALIGPU_BUILD_TYPE STREQUAL "Standalone")
   include_directories(${GPUCA_HIP_SOURCE_DIR})
 endif()
 
+install(FILES ${HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/GPU)
+
 target_compile_definitions(${targetName} PRIVATE $<TARGET_PROPERTY:O2::GPUTracking,COMPILE_DEFINITIONS>)
+
+if (onnxruntime_FOUND)
+  target_compile_definitions(${targetName} PRIVATE
+                                           $<$<BOOL:${ORT_ROCM_BUILD}>:ORT_ROCM_BUILD>
+                                           $<$<BOOL:${ORT_MIGRAPHX_BUILD}>:ORT_MIGRAPHX_BUILD>)
+  target_link_libraries(${targetName} PRIVATE onnxruntime::onnxruntime)
+endif()
 
 add_library(${MODULE}_CXX OBJECT ${SRCS_CXX}) # Adding a C++ library for the .cxx code of the HIP library, such that it does not link to HIP libraries, and CMake HIP Language doesn't add HIP compile flags.
 target_compile_definitions(${MODULE}_CXX PRIVATE $<TARGET_PROPERTY:O2::GPUTracking,COMPILE_DEFINITIONS>)

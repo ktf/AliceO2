@@ -22,6 +22,15 @@
 
 using namespace o2::ml;
 
+class OrtMemoryInfo;
+class OrtAllocator;
+struct MockedOrtAllocator;
+namespace Ort
+{
+struct Env;
+struct MemoryInfo;
+} // namespace Ort
+
 namespace o2::OrtDataType
 {
 struct Float16_t;
@@ -30,6 +39,7 @@ struct Float16_t;
 namespace o2::gpu
 {
 
+class GPUReconstruction;
 class GPUTPCNNClusterizer;
 struct GPUSettingsProcessingNNclusterizer;
 
@@ -37,30 +47,21 @@ class GPUTPCNNClusterizerHost
 {
  public:
   GPUTPCNNClusterizerHost() = default;
-  GPUTPCNNClusterizerHost(const GPUSettingsProcessingNNclusterizer&, GPUTPCNNClusterizer&);
+  GPUTPCNNClusterizerHost(const GPUSettingsProcessingNNclusterizer& settings) { init(settings); }
 
-  void networkInference(o2::ml::OrtModel model, GPUTPCNNClusterizer& clusterer, size_t size, float* output, int32_t dtype);
+  void init(const GPUSettingsProcessingNNclusterizer&);
+  void initClusterizer(const GPUSettingsProcessingNNclusterizer&, GPUTPCNNClusterizer&);
 
-  std::unordered_map<std::string, std::string> OrtOptions;
-  o2::ml::OrtModel model_class, model_reg_1, model_reg_2; // For splitting clusters
-  std::vector<std::string> reg_model_paths;
+  // ONNX
+  void volatileOrtAllocator(Ort::Env*, Ort::MemoryInfo*, GPUReconstruction*, bool = false);
+  MockedOrtAllocator* getMockedAllocator();
+  const OrtMemoryInfo* getMockedMemoryInfo();
 
- private:
-  // Avoid including CommonUtils/StringUtils.h
-  std::vector<std::string> splitString(const std::string& input, const std::string& delimiter)
-  {
-    std::vector<std::string> tokens;
-    std::size_t pos = 0;
-    std::size_t found;
-
-    while ((found = input.find(delimiter, pos)) != std::string::npos) {
-      tokens.push_back(input.substr(pos, found - pos));
-      pos = found + delimiter.length();
-    }
-    tokens.push_back(input.substr(pos));
-
-    return tokens;
-  }
+  std::unordered_map<std::string, std::string> mOrtOptions;
+  o2::ml::OrtModel mModelClass, mModelReg1, mModelReg2;  // For splitting clusters
+  std::vector<bool> mModelsUsed = {false, false, false}; // 0: class, 1: reg_1, 2: reg_2
+  int32_t mDeviceId = -1;
+  std::shared_ptr<MockedOrtAllocator> mMockedAlloc = nullptr;
 }; // class GPUTPCNNClusterizerHost
 
 } // namespace o2::gpu

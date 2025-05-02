@@ -120,8 +120,6 @@ if(ALIGPU_BUILD_TYPE STREQUAL "O2")
       ${CMAKE_SOURCE_DIR}/DataFormats/Reconstruction/src
       ${CMAKE_CURRENT_SOURCE_DIR}
     TARGETVARNAME targetName)
-
-  install(FILES ${HDRS} DESTINATION include/GPU)
 endif()
 
 if(ALIGPU_BUILD_TYPE STREQUAL "Standalone")
@@ -133,7 +131,16 @@ if(ALIGPU_BUILD_TYPE STREQUAL "Standalone")
   include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
+install(FILES ${HDRS} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/GPU)
+
 target_compile_definitions(${targetName} PRIVATE $<TARGET_PROPERTY:O2::GPUTracking,COMPILE_DEFINITIONS>)
+
+if (onnxruntime_FOUND)
+  target_compile_definitions(${targetName} PRIVATE
+                                           $<$<BOOL:${ORT_CUDA_BUILD}>:ORT_CUDA_BUILD>
+                                           $<$<BOOL:${ORT_TENSORRT_BUILD}>:ORT_TENSORRT_BUILD>)
+  target_link_libraries(${targetName} PRIVATE onnxruntime::onnxruntime)
+endif()
 
 # Setting target architecture and adding GPU libraries
 target_link_libraries(${targetName} PRIVATE cuda cudart nvrtc)
