@@ -130,7 +130,7 @@ TEST_CASE("WithWildCardsBuffer")
   char buffer2[1024];
   size = DataSpecUtils::describe(buffer2, 5, spec);
   // We always null terminate the buffer.
-  CHECK( std::string_view(buffer2, size) == "<mat");
+  CHECK(std::string_view(buffer2, size) == "<mat");
 }
 
 TEST_CASE("MatchingInputs")

@@ -22,7 +22,7 @@ namespace o2::framework
 {
 
 template <typename T>
-concept HasMatcher =  requires (T& t) { t.matcher; };
+concept HasMatcher = requires(T& t) { t.matcher; };
 
 struct DataSpecUtils {
   /// @return true if a given InputSpec @a spec matches with a @a target ConcreteDataMatcher

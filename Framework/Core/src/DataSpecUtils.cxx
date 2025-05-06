@@ -93,19 +93,19 @@ template <HasMatcher T>
 size_t DataSpecUtils::describe(char* buffer, size_t size, T const& spec)
 {
   auto result = std::visit(overloaded{
-    [buffer, size](ConcreteDataMatcher const& concrete) -> fmt::format_to_n_result<char*> {
-      return fmt::format_to_n(buffer, size - 1, "{:.4}/{:.16}/{}", concrete.origin.str, concrete.description.str, concrete.subSpec);
-    },
-    [buffer, size](ConcreteDataTypeMatcher const& concrete) -> fmt::format_to_n_result<char*> {
-      return fmt::format_to_n(buffer, size - 1, "<matcher query: {}/{}>", concrete.origin, concrete.description);
-    },
-    [buffer, size](DataDescriptorMatcher const& matcher) -> fmt::format_to_n_result<char*> {
-      std::ostringstream ss;
-      ss << "<matcher query: " << matcher << ">";
-      return fmt::format_to_n(buffer, size - 1, "{}", ss.str());
-    },
-    [](...) -> fmt::format_to_n_result<char*> { throw std::runtime_error("Unsupported Input / Output Spec"); }
-  }, spec.matcher);
+                             [buffer, size](ConcreteDataMatcher const& concrete) -> fmt::format_to_n_result<char*> {
+                               return fmt::format_to_n(buffer, size - 1, "{:.4}/{:.16}/{}", concrete.origin.str, concrete.description.str, concrete.subSpec);
+                             },
+                             [buffer, size](ConcreteDataTypeMatcher const& concrete) -> fmt::format_to_n_result<char*> {
+                               return fmt::format_to_n(buffer, size - 1, "<matcher query: {}/{}>", concrete.origin, concrete.description);
+                             },
+                             [buffer, size](DataDescriptorMatcher const& matcher) -> fmt::format_to_n_result<char*> {
+                               std::ostringstream ss;
+                               ss << "<matcher query: " << matcher << ">";
+                               return fmt::format_to_n(buffer, size - 1, "{}", ss.str());
+                             },
+                             [](...) -> fmt::format_to_n_result<char*> { throw std::runtime_error("Unsupported Input / Output Spec"); }},
+                           spec.matcher);
   *result.out = '\0';
   return result.out - buffer;
 }
