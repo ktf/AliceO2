@@ -58,5 +58,4 @@ class CTPRateFetcher
 };
 } // namespace o2::ctp
 
-
 #endif // COMMON_CCDB_CTPRATEFETCHER_H_
