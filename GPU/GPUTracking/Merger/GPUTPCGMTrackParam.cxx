@@ -216,7 +216,7 @@ GPUd() bool GPUTPCGMTrackParam::Fit(GPUTPCGMMerger* GPUrestrict() merger, int32_
           continue;
         }
       } else if (allowModification && lastRow != 255 && CAMath::Abs(cluster.row - lastRow) > 1) {
-        bool dodEdx = param.par.dodEdx && param.dodEdxDownscaled && param.rec.tpc.adddEdxSubThresholdClusters && iWay == nWays - 1 && CAMath::Abs(cluster.row - lastRow) == 2 && cluster.leg == clusters[maxN - 1].leg;
+        bool dodEdx = param.par.dodEdx && param.dodEdxEnabled && param.rec.tpc.adddEdxSubThresholdClusters && iWay == nWays - 1 && CAMath::Abs(cluster.row - lastRow) == 2 && cluster.leg == clusters[maxN - 1].leg;
         dodEdx = AttachClustersPropagate(merger, cluster.sector, lastRow, cluster.row, iTrk, cluster.leg == clusters[maxN - 1].leg, prop, inFlyDirection, GPUCA_MAX_SIN_PHI, dodEdx);
         if (dodEdx) {
           dEdx.fillSubThreshold(lastRow - wayDirection);
@@ -367,7 +367,7 @@ GPUd() bool GPUTPCGMTrackParam::Fit(GPUTPCGMMerger* GPUrestrict() merger, int32_
           CADEBUG(printf("Reinit linearization\n"));
           prop.SetTrack(this, prop.GetAlpha());
         }
-        if (param.par.dodEdx && param.dodEdxDownscaled && iWay == nWays - 1 && cluster.leg == clusters[maxN - 1].leg) { // TODO: Costimize flag to remove, and option to remove double-clusters
+        if (param.par.dodEdx && param.dodEdxEnabled && iWay == nWays - 1 && cluster.leg == clusters[maxN - 1].leg) { // TODO: Costimize flag to remove, and option to remove double-clusters
           bool acc = (clusterState & param.rec.tpc.dEdxClusterRejectionFlagMask) == 0, accAlt = (clusterState & param.rec.tpc.dEdxClusterRejectionFlagMaskAlt) == 0;
           if (acc || accAlt) {
             float qtot = 0, qmax = 0, pad = 0, relTime = 0;
@@ -407,7 +407,7 @@ GPUd() bool GPUTPCGMTrackParam::Fit(GPUTPCGMMerger* GPUrestrict() merger, int32_
         break; // bad chi2 for the whole track, stop the fit
       }
     }
-    if (((nWays - iWay) & 1) && (clusters[0].sector < 18) == (clusters[maxN - 1].sector < 18)) {
+    if (((nWays - iWay) & 1) && (iWay != nWays - 1) && (clusters[0].sector < 18) == (clusters[maxN - 1].sector < 18)) {
       ShiftZ2(clusters, clustersXYZ, merger, maxN);
     }
   }
@@ -426,7 +426,7 @@ GPUd() bool GPUTPCGMTrackParam::Fit(GPUTPCGMMerger* GPUrestrict() merger, int32_
 
   // TODO: we have looping tracks here with 0 accepted clusters in the primary leg. In that case we should refit the track using only the primary leg.
 
-  if (param.par.dodEdx && param.dodEdxDownscaled) {
+  if (param.par.dodEdx && param.dodEdxEnabled) {
     dEdx.computedEdx(merger->OutputTracksdEdx()[iTrk], param);
     dEdxAlt.computedEdx(merger->OutputTracksdEdxAlt()[iTrk], param);
   }
