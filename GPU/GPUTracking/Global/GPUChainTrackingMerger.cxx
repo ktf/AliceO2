@@ -143,7 +143,7 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
   runKernel<GPUTPCGMMergerMergeWithinPrepare>(GetGridAuto(0, deviceType));
   RunTPCTrackingMerger_MergeBorderTracks(1, 0, deviceType);
   RunTPCTrackingMerger_Resolve(0, 1, deviceType);
-  DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingMergedTracks, doGPU, Merger, &GPUTPCGMMerger::DumpMergedWithinSectors, *mDebugFile);
+  DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingMatching, doGPU, Merger, &GPUTPCGMMerger::DumpMergedWithinSectors, *mDebugFile);
 
   runKernel<GPUTPCGMMergerClearLinks>(GetGridAuto(0, deviceType), false);
   runKernel<GPUMemClean16>({{1, -WarpSize(), 0, deviceType, RecoStep::TPCMerging}}, MergerShadowAll.TmpCounter(), 2 * NSECTORS * sizeof(*MergerShadowAll.TmpCounter()));
@@ -158,7 +158,7 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
   runKernel<GPUTPCGMMergerMergeSectorsPrepare>(GetGridBlk(std::max(2u, numBlocks), 0, deviceType), 0, 1, 1);
   RunTPCTrackingMerger_MergeBorderTracks(0, -1, deviceType);
   RunTPCTrackingMerger_Resolve(0, 1, deviceType);
-  DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingMergedTracks, doGPU, Merger, &GPUTPCGMMerger::DumpMergedBetweenSectors, *mDebugFile);
+  DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingMatching, doGPU, Merger, &GPUTPCGMMerger::DumpMergedBetweenSectors, *mDebugFile);
 
   runKernel<GPUMemClean16>({{1, -WarpSize(), 0, deviceType, RecoStep::TPCMerging}}, MergerShadowAll.TmpCounter(), 2 * NSECTORS * sizeof(*MergerShadowAll.TmpCounter()));
 
@@ -202,7 +202,7 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
   runKernel<GPUTPCGMMergerPrepareClusters, 1>(GetGridAuto(0, deviceType));
   runKernel<GPUTPCGMMergerPrepareClusters, 2>(GetGridAuto(0, deviceType));
 
-  DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingRefit, doGPU, Merger, &GPUTPCGMMerger::DumpFitPrepare, *mDebugFile);
+  DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingPrepareFit, doGPU, Merger, &GPUTPCGMMerger::DumpFitPrepare, *mDebugFile);
 
   if (doGPU) {
     CondWaitEvent(waitForTransfer, &mEvents->single);
@@ -220,7 +220,7 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
     mOutputQueue.clear();
   }
 
-  runKernel<GPUTPCGMMergerTrackFit>(doGPU ? GetGrid(Merger.NOutputTracks(), 0) : GetGridAuto(0), mergerSortTracks ? 1 : 0);
+  runKernel<GPUTPCGMMergerTrackFit>(doGPU ? GetGrid(Merger.NMergedTracks(), 0) : GetGridAuto(0), mergerSortTracks ? 1 : 0);
   if (param().rec.tpc.retryRefit == 1) {
     runKernel<GPUTPCGMMergerTrackFit>(GetGridAuto(0), -1);
   }
@@ -233,13 +233,14 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
   runKernel<GPUTPCGMMergerFinalize, 1>(GetGridAuto(0, deviceType));
   runKernel<GPUTPCGMMergerFinalize, 2>(GetGridAuto(0, deviceType));
   if (param().rec.tpc.mergeLoopersAfterburner) {
-    runKernel<GPUTPCGMMergerMergeLoopers, 0>(doGPU ? GetGrid(Merger.NOutputTracks(), 0, deviceType) : GetGridAuto(0, deviceType));
+    runKernel<GPUTPCGMMergerMergeLoopers, 0>(doGPU ? GetGrid(Merger.NMergedTracks(), 0, deviceType) : GetGridAuto(0, deviceType));
     if (doGPU) {
       TransferMemoryResourceLinkToHost(RecoStep::TPCMerging, Merger.MemoryResMemory(), 0);
       SynchronizeStream(0); // TODO: could probably synchronize on an event after runKernel<GPUTPCGMMergerMergeLoopers, 1>
     }
     runKernel<GPUTPCGMMergerMergeLoopers, 1>(GetGridAuto(0, deviceType));
     runKernel<GPUTPCGMMergerMergeLoopers, 2>(doGPU ? GetGrid(Merger.Memory()->nLooperMatchCandidates, 0, deviceType) : GetGridAuto(0, deviceType));
+    DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingLoopers, Merger, &GPUTPCGMMerger::DumpLoopers, *mDebugFile);
   }
   DoDebugAndDump(RecoStep::TPCMerging, GPUChainTrackingDebugFlags::TPCMergingRefit, doGPU, Merger, &GPUTPCGMMerger::DumpFinal, *mDebugFile);
 
@@ -255,10 +256,10 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
           throw std::runtime_error("QA Scratch buffer exceeded");
         }
       }
-      GPUMemCpy(RecoStep::TPCMerging, Merger.OutputTracks(), MergerShadowAll.OutputTracks(), Merger.NOutputTracks() * sizeof(*Merger.OutputTracks()), outputStream, 0, nullptr, waitEvent);
+      GPUMemCpy(RecoStep::TPCMerging, Merger.MergedTracks(), MergerShadowAll.MergedTracks(), Merger.NMergedTracks() * sizeof(*Merger.MergedTracks()), outputStream, 0, nullptr, waitEvent);
       waitEvent = nullptr;
       if (param().dodEdxEnabled) {
-        GPUMemCpy(RecoStep::TPCMerging, Merger.OutputTracksdEdx(), MergerShadowAll.OutputTracksdEdx(), Merger.NOutputTracks() * sizeof(*Merger.OutputTracksdEdx()), outputStream, 0);
+        GPUMemCpy(RecoStep::TPCMerging, Merger.MergedTracksdEdx(), MergerShadowAll.MergedTracksdEdx(), Merger.NMergedTracks() * sizeof(*Merger.MergedTracksdEdx()), outputStream, 0);
       }
       GPUMemCpy(RecoStep::TPCMerging, Merger.Clusters(), MergerShadowAll.Clusters(), Merger.NOutputTrackClusters() * sizeof(*Merger.Clusters()), outputStream, 0);
       if (param().par.earlyTpcTransform) {
@@ -325,8 +326,8 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
     mRec->ReturnVolatileDeviceMemory();
   }
 
-  mIOPtrs.mergedTracks = Merger.OutputTracks();
-  mIOPtrs.nMergedTracks = Merger.NOutputTracks();
+  mIOPtrs.mergedTracks = Merger.MergedTracks();
+  mIOPtrs.nMergedTracks = Merger.NMergedTracks();
   mIOPtrs.mergedTrackHits = Merger.Clusters();
   mIOPtrs.mergedTrackHitsXYZ = Merger.ClustersXYZ();
   mIOPtrs.nMergedTrackHits = Merger.NOutputTrackClusters();
@@ -339,8 +340,8 @@ int32_t GPUChainTracking::RunTPCTrackingMerger(bool synchronizeOutput)
   mIOPtrs.outputTracksTPCO2MC = Merger.OutputTracksTPCO2MC();
 
   if (doGPU) {
-    processorsShadow()->ioPtrs.mergedTracks = MergerShadow.OutputTracks();
-    processorsShadow()->ioPtrs.nMergedTracks = Merger.NOutputTracks();
+    processorsShadow()->ioPtrs.mergedTracks = MergerShadow.MergedTracks();
+    processorsShadow()->ioPtrs.nMergedTracks = Merger.NMergedTracks();
     processorsShadow()->ioPtrs.mergedTrackHits = MergerShadow.Clusters();
     processorsShadow()->ioPtrs.mergedTrackHitsXYZ = MergerShadow.ClustersXYZ();
     processorsShadow()->ioPtrs.nMergedTrackHits = Merger.NOutputTrackClusters();
