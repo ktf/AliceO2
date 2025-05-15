@@ -115,7 +115,7 @@ set(GPU_RTC_BIN ${CMAKE_CURRENT_BINARY_DIR}/GPUReconstructionHIPrtc)
 add_custom_command(
     OUTPUT ${GPU_RTC_BIN}.src
     COMMAND cp ${GPUDIR}/Base/hip/GPUReconstructionHIPIncludesSystem.h ${GPU_RTC_BIN}.src
-    COMMAND ${CMAKE_CXX_COMPILER} ${GPU_RTC_DEFINES} ${GPU_RTC_INCLUDES} -std=c++${CMAKE_HIP_STANDARD} -D__HIPCC__ -D__HIP_DEVICE_COMPILE__ -x c++ -nostdinc -E -P ${GPU_RTC_SRC} >> ${GPU_RTC_BIN}.src
+    COMMAND ${CMAKE_HIP_COMPILER} ${GPU_RTC_DEFINES} ${GPU_RTC_INCLUDES} -std=c++${CMAKE_HIP_STANDARD} -D__HIPCC__ -D__HIP_DEVICE_COMPILE__ -x c++ -nostdinc -E -P ${GPU_RTC_SRC} >> ${GPU_RTC_BIN}.src
     MAIN_DEPENDENCY ${GPU_RTC_SRC}
     IMPLICIT_DEPENDS CXX ${GPU_RTC_SRC}
     DEPENDS ${MODULE}_HIPIFIED
@@ -270,8 +270,3 @@ add_dependencies(GPUTrackingHIPExternalProvider O2::GPUTracking) # must not depe
 if(NOT DEFINED GPUCA_HIP_HIPIFY_FROM_CUDA OR "${GPUCA_HIP_HIPIFY_FROM_CUDA}")
   add_dependencies(GPUTrackingHIPExternalProvider ${MODULE}_HIPIFIED)
 endif()
-
-set_source_files_properties("${GPUCA_HIP_SOURCE_DIR}/GPUReconstructionHIPGenRTC.cxx"
-TARGET_DIRECTORY O2::GPUTrackingHIP
-PROPERTIES
-COMPILE_DEFINITIONS "GPUCA_HIP_WORKAROUND_CONSTEXPR")
