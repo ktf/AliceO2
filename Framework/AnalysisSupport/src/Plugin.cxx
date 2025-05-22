@@ -72,8 +72,13 @@ struct RunSummary : o2::framework::ServicePlugin {
             if (metric.filledMetrics) {
               LOGP(info, "### Files read stats ###");
             }
+            std::string lastFileRead;
             for (size_t fi = 0; fi < metric.filledMetrics; ++fi) {
-              LOGP(info, "{}", files[fi % files.size()].data);
+              lastFileRead = files[fi % files.size()].data;
+              LOGP(info, "{}", lastFileRead);
+            }
+            if (lastFileRead.empty() == false) {
+              LOGP(info, "Last file read: {}", lastFileRead);
             }
           }
         } },
