@@ -77,12 +77,12 @@ struct RunSummary : o2::framework::ServicePlugin {
             }
           }
           for (size_t li = 0; li < metrics.metricLabels.size(); ++li) {
-            MetricLabel const&label = metrics.metricLabels[li];
+            MetricLabel const& label = metrics.metricLabels[li];
             if (strcmp(label.label, "aod-file-open-info") != 0) {
               continue;
             }
-            MetricInfo const&metric = metrics.metrics[li];
-            auto &files = metrics.stringMetrics[metric.storeIdx];
+            MetricInfo const& metric = metrics.metrics[li];
+            auto& files = metrics.stringMetrics[metric.storeIdx];
             if (metric.filledMetrics) {
               LOGP(info, "### Files opened stats ###");
             }
