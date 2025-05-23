@@ -38,8 +38,7 @@
 #include "GPUTPCGMMerger.h"
 #include "GPUChainTracking.h"
 #include "GPUConstantMem.h"
-
-#include "../utils/qconfig.h"
+#include "GPUSettings.h"
 
 using namespace o2::gpu;
 using namespace std;
@@ -169,7 +168,6 @@ int32_t genEvents::GenerateEvent(const GPUParam& param, char* filename)
 
   GPUTPCGMPropagator prop;
   {
-    prop.SetToyMCEventsFlag(kTRUE);
     const GPUTPCGMMerger& merger = mRec->GetProcessors()->tpcMerger;
     prop.SetPolynomialField(&merger.Param().polynomialField);
   }

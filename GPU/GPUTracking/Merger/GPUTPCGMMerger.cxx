@@ -493,7 +493,6 @@ GPUd() int32_t GPUTPCGMMerger::RefitSectorTrack(GPUTPCGMSectorTrack& sectorTrack
   GPUTPCGMPropagator prop;
   prop.SetMaterialTPC();
   prop.SetMaxSinPhi(GPUCA_MAX_SIN_PHI);
-  prop.SetToyMCEventsFlag(false);
   prop.SetSeedingErrors(true); // Larger errors for seeds, better since we don't start with good hypothesis
   prop.SetFitInProjections(false);
   prop.SetPolynomialField(&Param().polynomialField);
@@ -666,7 +665,7 @@ GPUd() void GPUTPCGMMerger::MergeSectorsPrepareStep2(int32_t nBlocks, int32_t nT
 
   float fieldBz = Param().bzCLight;
 
-  float dAlpha = Param().par.dAlpha / 2;
+  float dAlpha = Param().dAlpha / 2;
   float x0 = 0;
 
   if (iBorder == 0) { // transport to the left edge of the sector and rotate horizontally

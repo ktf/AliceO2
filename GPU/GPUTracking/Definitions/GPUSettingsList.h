@@ -233,6 +233,7 @@ AddOption(cacheFolder, std::string, "./rtccache/", "", 0, "Folder in which the c
 AddOption(prependCommand, std::string, "", "", 0, "Prepend RTC compilation commands by this string")
 AddOption(overrideArchitecture, std::string, "", "", 0, "Override arhcitecture part of RTC compilation command line") // Part of cmdLine, so checked against the cache
 AddOption(loadLaunchBoundsFromFile, std::string, "", "", 0, "Load a parameter object containing the launch bounds from a file")
+AddOption(keepTempFiles, bool, false, "", 0, "Keep temporary source and object files")
 AddHelp("help", 'h')
 EndConfig()
 
@@ -650,13 +651,9 @@ EndConfig()
 
 // Derrived parameters used in GPUParam
 BeginHiddenConfig(GPUSettingsParam, param)
-AddVariableRTC(dAlpha, float, 0.f)            // angular size
-AddVariableRTC(assumeConstantBz, int8_t, 0)   // Assume a constant magnetic field
-AddVariableRTC(toyMCEventsFlag, int8_t, 0)    // events were build with home-made event generator
 AddVariableRTC(continuousTracking, int8_t, 0) // Continuous tracking, estimate bz and errors for abs(z) = 125cm during seeding
 AddVariableRTC(dodEdx, int8_t, 0)             // Do dEdx computation
 AddVariableRTC(earlyTpcTransform, int8_t, 0)  // do Early TPC transformation
-AddVariableRTC(debugLevel, int8_t, 0)         // Debug level
 EndConfig()
 
 EndNamespace() // gpu
