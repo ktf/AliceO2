@@ -31,7 +31,7 @@ constexpr std::size_t pack_size(pack<Ts...> const&)
 }
 
 template <typename P>
-concept PackLike = requires (P &p) { o2::framework::pack_size(p); };
+concept PackLike = requires(P& p) { o2::framework::pack_size(p); };
 
 template <std::size_t I, typename T>
 struct pack_element;

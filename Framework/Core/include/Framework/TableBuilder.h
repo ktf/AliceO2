@@ -753,7 +753,6 @@ auto makeEmptyTable()
   return b.finalize();
 }
 
-
 template <PackLike P>
 auto makeEmptyTable(const char* name)
 {
