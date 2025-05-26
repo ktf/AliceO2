@@ -24,10 +24,18 @@ o2_add_library(FrameworkAnalysisSupport
                PRIVATE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/src
                PUBLIC_LINK_LIBRARIES O2::Framework ${EXTRA_TARGETS} ROOT::TreePlayer)
 
+# To support both pre and post 6.36 API changes in RNTuple
+if(ROOT_MAJOR_VERSION EQUAL 6 AND ROOT_MINOR_VERSION LESS 36)
+o2_add_library(FrameworkAnalysisRNTupleSupport
+               SOURCES src/RNTupleExperimentalPlugin.cxx
+               PRIVATE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/src
+               PUBLIC_LINK_LIBRARIES O2::Framework ${EXTRA_TARGETS} ROOT::ROOTNTuple ROOT::ROOTNTupleUtil)
+else()
 o2_add_library(FrameworkAnalysisRNTupleSupport
                SOURCES src/RNTuplePlugin.cxx
                PRIVATE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_LIST_DIR}/src
                PUBLIC_LINK_LIBRARIES O2::Framework ${EXTRA_TARGETS} ROOT::ROOTNTuple ROOT::ROOTNTupleUtil)
+endif()
 
 o2_add_library(FrameworkAnalysisTTreeSupport
                SOURCES src/TTreePlugin.cxx

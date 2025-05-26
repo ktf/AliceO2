@@ -17,7 +17,6 @@
 #include <ROOT/RNTupleWriteOptions.hxx>
 #include <ROOT/RNTupleWriter.hxx>
 #include <ROOT/RField.hxx>
-#include <ROOT/RFieldBase.hxx>
 #include <ROOT/RNTuple.hxx>
 #include <ROOT/RNTupleReader.hxx>
 #include <ROOT/RFieldVisitor.hxx>
@@ -34,7 +33,7 @@
 #include <arrow/dataset/file_base.h>
 
 template class
-  std::unique_ptr<ROOT::RNTupleReader>;
+  std::unique_ptr<ROOT::Experimental::RNTupleReader>;
 
 namespace o2::framework
 {
@@ -54,13 +53,13 @@ class RNTupleFileSystem : public VirtualRootFileSystemBase
  public:
   ~RNTupleFileSystem() override;
 
-  virtual ROOT::RNTuple* GetRNTuple(arrow::dataset::FileSource source) = 0;
+  virtual ROOT::Experimental::RNTuple* GetRNTuple(arrow::dataset::FileSource source) = 0;
 };
 
 class SingleRNTupleFileSystem : public RNTupleFileSystem
 {
  public:
-  SingleRNTupleFileSystem(ROOT::RNTuple* tuple)
+  SingleRNTupleFileSystem(ROOT::Experimental::RNTuple* tuple)
     : RNTupleFileSystem(),
       mTuple(tuple)
   {
@@ -73,14 +72,14 @@ class SingleRNTupleFileSystem : public RNTupleFileSystem
     return "rntuple";
   }
 
-  ROOT::RNTuple* GetRNTuple(arrow::dataset::FileSource) override
+  ROOT::Experimental::RNTuple* GetRNTuple(arrow::dataset::FileSource) override
   {
     // Simply return the only TTree we have
     return mTuple;
   }
 
  private:
-  ROOT::RNTuple* mTuple;
+  ROOT::Experimental::RNTuple* mTuple;
 };
 
 arrow::Result<arrow::fs::FileInfo> SingleRNTupleFileSystem::GetFileInfo(std::string const& path)
@@ -111,16 +110,16 @@ class RNTupleFileFragment : public arrow::dataset::FileFragment
                             handler->format->type_name().c_str(),
                             format->type_name().c_str());
     }
-    mNTuple = handler->GetObjectAsOwner<ROOT::RNTuple>();
+    mNTuple = handler->GetObjectAsOwner<ROOT::Experimental::RNTuple>();
   }
 
-  ROOT::RNTuple* GetRNTuple()
+  ROOT::Experimental::RNTuple* GetRNTuple()
   {
     return mNTuple.get();
   }
 
  private:
-  std::unique_ptr<ROOT::RNTuple> mNTuple;
+  std::unique_ptr<ROOT::Experimental::RNTuple> mNTuple;
 };
 
 class RNTupleFileFormat : public arrow::dataset::FileFormat
@@ -174,72 +173,72 @@ class RNTupleFileFormat : public arrow::dataset::FileFormat
     std::shared_ptr<arrow::Schema> physical_schema) override;
 };
 
-struct RootNTupleVisitor : public ROOT::Detail::RFieldVisitor {
-  void VisitArrayField(const ROOT::RArrayField& field) override
+struct RootNTupleVisitor : public ROOT::Experimental::Detail::RFieldVisitor {
+  void VisitArrayField(const ROOT::Experimental::RArrayField& field) override
   {
     int size = field.GetLength();
     RootNTupleVisitor valueVisitor{};
-    auto valueField = field.GetConstSubfields()[0];
+    auto valueField = field.GetSubFields()[0];
     valueField->AcceptVisitor(valueVisitor);
     auto type = valueVisitor.datatype;
     this->datatype = arrow::fixed_size_list(type, size);
   }
 
-  void VisitRVecField(const ROOT::RRVecField& field) override
+  void VisitRVecField(const ROOT::Experimental::RRVecField& field) override
   {
     RootNTupleVisitor valueVisitor{};
-    auto valueField = field.GetConstSubfields()[0];
+    auto valueField = field.GetSubFields()[0];
     valueField->AcceptVisitor(valueVisitor);
     auto type = valueVisitor.datatype;
     this->datatype = arrow::list(type);
   }
 
-  void VisitField(const ROOT::RFieldBase& field) override
+  void VisitField(const ROOT::Experimental::RFieldBase& field) override
   {
     throw o2::framework::runtime_error_f("Unknown field %s with type %s", field.GetFieldName().c_str(), field.GetTypeName().c_str());
   }
 
-  void VisitInt32Field(const ROOT::RIntegralField<int>& field) override
+  void VisitIntField(const ROOT::Experimental::RField<int>& field) override
   {
     this->datatype = arrow::int32();
   }
 
-  void VisitInt8Field(const ROOT::RIntegralField<std::int8_t>& field) override
+  void VisitInt8Field(const ROOT::Experimental::RField<std::int8_t>& field) override
   {
     this->datatype = arrow::int8();
   }
 
-  void VisitInt16Field(const ROOT::RIntegralField<std::int16_t>& field) override
+  void VisitInt16Field(const ROOT::Experimental::RField<std::int16_t>& field) override
   {
     this->datatype = arrow::int16();
   }
 
-  void VisitUInt32Field(const ROOT::RIntegralField<std::uint32_t>& field) override
+  void VisitUInt32Field(const ROOT::Experimental::RField<std::uint32_t>& field) override
   {
     this->datatype = arrow::uint32();
   }
 
-  void VisitUInt8Field(const ROOT::RIntegralField<std::uint8_t>& field) override
+  void VisitUInt8Field(const ROOT::Experimental::RField<std::uint8_t>& field) override
   {
     this->datatype = arrow::uint8();
   }
 
-  void VisitUInt16Field(const ROOT::RIntegralField<std::uint16_t>& field) override
+  void VisitUInt16Field(const ROOT::Experimental::RField<std::uint16_t>& field) override
   {
     this->datatype = arrow::int16();
   }
 
-  void VisitBoolField(const ROOT::RField<bool>& field) override
+  void VisitBoolField(const ROOT::Experimental::RField<bool>& field) override
   {
     this->datatype = arrow::boolean();
   }
 
-  void VisitFloatField(const ROOT::RField<float>& field) override
+  void VisitFloatField(const ROOT::Experimental::RField<float>& field) override
   {
     this->datatype = arrow::float32();
   }
 
-  void VisitDoubleField(const ROOT::RField<double>& field) override
+  void VisitDoubleField(const ROOT::Experimental::RField<double>& field) override
   {
     this->datatype = arrow::float64();
   }
@@ -247,7 +246,7 @@ struct RootNTupleVisitor : public ROOT::Detail::RFieldVisitor {
 };
 } // namespace o2::framework
 
-auto arrowTypeFromRNTuple(ROOT::RFieldBase const& field, int size)
+auto arrowTypeFromRNTuple(ROOT::Experimental::RFieldBase const& field, int size)
 {
   o2::framework::RootNTupleVisitor visitor;
   field.AcceptVisitor(visitor);
@@ -256,34 +255,34 @@ auto arrowTypeFromRNTuple(ROOT::RFieldBase const& field, int size)
 
 namespace o2::framework
 {
-std::unique_ptr<ROOT::RFieldBase> rootFieldFromArrow(std::shared_ptr<arrow::Field> field, std::string name)
+std::unique_ptr<ROOT::Experimental::RFieldBase> rootFieldFromArrow(std::shared_ptr<arrow::Field> field, std::string name)
 {
   using namespace ROOT::Experimental;
   switch (field->type()->id()) {
     case arrow::Type::BOOL:
-      return std::make_unique<ROOT::RField<bool>>(name);
+      return std::make_unique<RField<bool>>(name);
     case arrow::Type::UINT8:
-      return std::make_unique<ROOT::RField<uint8_t>>(name);
+      return std::make_unique<RField<uint8_t>>(name);
     case arrow::Type::UINT16:
-      return std::make_unique<ROOT::RField<uint16_t>>(name);
+      return std::make_unique<RField<uint16_t>>(name);
     case arrow::Type::UINT32:
-      return std::make_unique<ROOT::RField<uint32_t>>(name);
+      return std::make_unique<RField<uint32_t>>(name);
     case arrow::Type::UINT64:
-      return std::make_unique<ROOT::RField<uint64_t>>(name);
+      return std::make_unique<RField<uint64_t>>(name);
     case arrow::Type::INT8:
-      return std::make_unique<ROOT::RField<int8_t>>(name);
+      return std::make_unique<RField<int8_t>>(name);
     case arrow::Type::INT16:
-      return std::make_unique<ROOT::RField<int16_t>>(name);
+      return std::make_unique<RField<int16_t>>(name);
     case arrow::Type::INT32:
-      return std::make_unique<ROOT::RField<int32_t>>(name);
+      return std::make_unique<RField<int32_t>>(name);
     case arrow::Type::INT64:
-      return std::make_unique<ROOT::RField<int64_t>>(name);
+      return std::make_unique<RField<int64_t>>(name);
     case arrow::Type::FLOAT:
-      return std::make_unique<ROOT::RField<float>>(name);
+      return std::make_unique<RField<float>>(name);
     case arrow::Type::DOUBLE:
-      return std::make_unique<ROOT::RField<double>>(name);
+      return std::make_unique<RField<double>>(name);
     case arrow::Type::STRING:
-      return std::make_unique<ROOT::RField<std::string>>(name);
+      return std::make_unique<RField<std::string>>(name);
     default:
       throw runtime_error("Unsupported arrow column type");
   }
@@ -291,7 +290,7 @@ std::unique_ptr<ROOT::RFieldBase> rootFieldFromArrow(std::shared_ptr<arrow::Fiel
 
 class RNTupleFileWriter : public arrow::dataset::FileWriter
 {
-  std::shared_ptr<ROOT::RNTupleWriter> mWriter;
+  std::shared_ptr<ROOT::Experimental::RNTupleWriter> mWriter;
   bool firstBatch = true;
   std::vector<std::shared_ptr<arrow::Array>> valueArrays;
   std::vector<std::shared_ptr<arrow::DataType>> valueTypes;
@@ -305,7 +304,7 @@ class RNTupleFileWriter : public arrow::dataset::FileWriter
   {
     using namespace ROOT::Experimental;
 
-    auto model = ROOT::RNTupleModel::CreateBare();
+    auto model = RNTupleModel::CreateBare();
     // Let's create a model from the physical schema
     for (auto i = 0u; i < schema->fields().size(); ++i) {
       auto& field = schema->field(i);
@@ -315,11 +314,11 @@ class RNTupleFileWriter : public arrow::dataset::FileWriter
         case arrow::Type::FIXED_SIZE_LIST: {
           auto list = std::static_pointer_cast<arrow::FixedSizeListType>(field->type());
           auto valueField = field->type()->field(0);
-          model->AddField(std::make_unique<ROOT::RArrayField>(field->name(), rootFieldFromArrow(valueField, "_0"), list->list_size()));
+          model->AddField(std::make_unique<RArrayField>(field->name(), rootFieldFromArrow(valueField, "_0"), list->list_size()));
         } break;
         case arrow::Type::LIST: {
           auto valueField = field->type()->field(0);
-          model->AddField(std::make_unique<ROOT::RRVecField>(field->name(), rootFieldFromArrow(valueField, "_0")));
+          model->AddField(std::make_unique<RRVecField>(field->name(), rootFieldFromArrow(valueField, "_0")));
         } break;
         default: {
           model->AddField(rootFieldFromArrow(field, field->name()));
@@ -328,7 +327,7 @@ class RNTupleFileWriter : public arrow::dataset::FileWriter
     }
     auto fileStream = std::dynamic_pointer_cast<TDirectoryFileOutputStream>(destination_);
     auto* file = dynamic_cast<TFile*>(fileStream->GetDirectory());
-    mWriter = ROOT::RNTupleWriter::Append(std::move(model), destination_locator_.path, *file, {});
+    mWriter = RNTupleWriter::Append(std::move(model), destination_locator_.path, *file, {});
   }
 
   arrow::Status Write(const std::shared_ptr<arrow::RecordBatch>& batch) override
@@ -414,7 +413,7 @@ class RNTupleFileWriter : public arrow::dataset::FileWriter
     int64_t pos = 0;
 
     auto entry = mWriter->CreateEntry();
-    std::vector<ROOT::RFieldToken> tokens;
+    std::vector<ROOT::Experimental::REntry::RFieldToken> tokens;
     tokens.reserve(batch->num_columns());
     std::vector<size_t> typeIds;
     typeIds.reserve(batch->num_columns());
@@ -436,7 +435,7 @@ class RNTupleFileWriter : public arrow::dataset::FileWriter
             auto value_slice = list->value_slice(pos);
 
             valueCount[ci] = value_slice->length();
-            auto bindValue = [&vc = valueCount, ci, token](auto array, std::unique_ptr<ROOT::REntry>& entry) -> void {
+            auto bindValue = [&vc = valueCount, ci, token](auto array, std::unique_ptr<ROOT::Experimental::REntry>& entry) -> void {
               using value_type = std::decay_t<decltype(*array.get())>::value_type;
               auto v = std::make_shared<ROOT::VecOps::RVec<value_type>>((value_type*)array->raw_values(), vc[ci]);
               entry->BindValue(token, v);
@@ -515,16 +514,15 @@ arrow::Result<std::shared_ptr<arrow::Schema>> RNTupleFileFormat::Inspect(const a
     throw runtime_error_f("Unexpected kind of filesystem %s to handle payload %s.\n", source.filesystem()->type_name().c_str(), source.path().c_str());
   }
   // We know this is a RNTuple, so we can continue with the inspection.
-  ROOT::RNTuple* rntuple = objectHandler->GetObjectAsOwner<ROOT::RNTuple>().release();
+  auto rntuple = objectHandler->GetObjectAsOwner<ROOT::Experimental::RNTuple>().release();
 
-  auto inspector = ROOT::Experimental::RNTupleInspector::Create(*rntuple);
+  auto inspector = ROOT::Experimental::RNTupleInspector::Create(rntuple);
 
-  auto reader = ROOT::RNTupleReader::Open(*rntuple);
+  auto reader = ROOT::Experimental::RNTupleReader::Open(rntuple);
 
-  auto& tupleField0 = reader->GetModel().GetConstFieldZero();
-
+  auto& tupleField0 = reader->GetModel().GetFieldZero();
   std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (auto& tupleField : tupleField0.GetConstSubfields()) {
+  for (auto& tupleField : tupleField0.GetSubFields()) {
     auto field = std::make_shared<arrow::Field>(tupleField->GetFieldName(), arrowTypeFromRNTuple(*tupleField, tupleField->GetValueSize()));
     fields.push_back(field);
   }
@@ -546,8 +544,8 @@ arrow::Result<arrow::RecordBatchGenerator> RNTupleFileFormat::ScanBatchesAsync(
     std::vector<std::shared_ptr<arrow::Field>> fields = dataset_schema->fields();
 
     int64_t rows = -1;
-    ROOT::RNTuple* rntuple = ntupleFragment->GetRNTuple();
-    auto reader = ROOT::RNTupleReader::Open(*rntuple);
+    ROOT::Experimental::RNTuple* rntuple = ntupleFragment->GetRNTuple();
+    auto reader = ROOT::Experimental::RNTupleReader::Open(rntuple);
     auto& model = reader->GetModel();
     for (auto& physicalField : fields) {
       auto bulk = model.CreateBulk(physicalField->name());
@@ -585,11 +583,11 @@ arrow::Result<arrow::RecordBatchGenerator> RNTupleFileFormat::ScanBatchesAsync(
           auto clusterIt = descriptor.FindClusterId(0, 0);
           // No adoption for now...
           // bulk.AdoptBuffer(buffer, totalEntries)
-          while (clusterIt != ROOT::kInvalidDescriptorId) {
+          while (clusterIt != kInvalidDescriptorId) {
             auto& index = descriptor.GetClusterDescriptor(clusterIt);
             auto mask = std::make_unique<bool[]>(index.GetNEntries());
             std::fill(mask.get(), mask.get() + index.GetNEntries(), true);
-            void* ptr = bulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
+            void* ptr = bulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
             int readLast = index.GetNEntries();
             readEntries += readLast;
             status &= static_cast<arrow::BooleanBuilder*>(valueBuilder)->AppendValues(reinterpret_cast<uint8_t const*>(ptr), readLast * listType->list_size());
@@ -616,11 +614,11 @@ arrow::Result<arrow::RecordBatchGenerator> RNTupleFileFormat::ScanBatchesAsync(
             throw runtime_error("Failed to reserve memory for array builder");
           }
           auto clusterIt = descriptor.FindClusterId(0, 0);
-          while (clusterIt != ROOT::kInvalidDescriptorId) {
+          while (clusterIt != kInvalidDescriptorId) {
             auto& index = descriptor.GetClusterDescriptor(clusterIt);
             auto mask = std::make_unique<bool[]>(index.GetNEntries());
             std::fill(mask.get(), mask.get() + index.GetNEntries(), true);
-            void* ptr = bulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
+            void* ptr = bulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
             int readLast = index.GetNEntries();
             readEntries += readLast;
             status &= valueBuilder->AppendValues(reinterpret_cast<uint8_t const*>(ptr), readLast);
@@ -661,11 +659,11 @@ arrow::Result<arrow::RecordBatchGenerator> RNTupleFileFormat::ScanBatchesAsync(
           listSize = fixedSizeList->list_size();
           typeSize = fixedSizeList->field(0)->type()->byte_width();
           auto clusterIt = descriptor.FindClusterId(0, 0);
-          while (clusterIt != ROOT::kInvalidDescriptorId) {
+          while (clusterIt != kInvalidDescriptorId) {
             auto& index = descriptor.GetClusterDescriptor(clusterIt);
             auto mask = std::make_unique<bool[]>(index.GetNEntries());
             std::fill(mask.get(), mask.get() + index.GetNEntries(), true);
-            void* inPtr = bulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
+            void* inPtr = bulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
 
             int readLast = index.GetNEntries();
             if (listSize == -1) {
@@ -721,41 +719,41 @@ arrow::Result<arrow::RecordBatchGenerator> RNTupleFileFormat::ScanBatchesAsync(
             }
           };
 
-          while (clusterIt != ROOT::kInvalidDescriptorId) {
+          while (clusterIt != kInvalidDescriptorId) {
             auto& index = descriptor.GetClusterDescriptor(clusterIt);
             auto mask = std::make_unique<bool[]>(index.GetNEntries());
             std::fill(mask.get(), mask.get() + index.GetNEntries(), true);
             int readLast = index.GetNEntries();
             switch (vlaListType->field(0)->type()->id()) {
               case arrow::Type::FLOAT: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<float>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<float>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::DOUBLE: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<double>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<double>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::INT8: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<int8_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<int8_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::INT16: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<int16_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<int16_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::INT32: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<int32_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<int32_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::INT64: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<int64_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<int64_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::UINT8: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<uint8_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<uint8_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::UINT16: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<uint16_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<uint16_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::UINT32: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<uint32_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<uint32_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               case arrow::Type::UINT64: {
-                copyOffsets((ROOT::Internal::VecOps::RVec<uint64_t>*)offsetBulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
+                copyOffsets((ROOT::Internal::VecOps::RVec<uint64_t>*)offsetBulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries()), readLast);
               } break;
               default: {
                 throw runtime_error("Unsupported kind of VLA");
@@ -767,11 +765,11 @@ arrow::Result<arrow::RecordBatchGenerator> RNTupleFileFormat::ScanBatchesAsync(
           }
         } else {
           auto clusterIt = descriptor.FindClusterId(0, 0);
-          while (clusterIt != ROOT::kInvalidDescriptorId) {
+          while (clusterIt != kInvalidDescriptorId) {
             auto& index = descriptor.GetClusterDescriptor(clusterIt);
             auto mask = std::make_unique<bool[]>(index.GetNEntries());
             std::fill(mask.get(), mask.get() + index.GetNEntries(), true);
-            void* inPtr = bulk.ReadBulk(ROOT::RNTupleLocalIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
+            void* inPtr = bulk.ReadBulk(RClusterIndex(clusterIt, index.GetFirstEntryIndex()), mask.get(), index.GetNEntries());
 
             int readLast = index.GetNEntries();
             if (listSize == -1) {
