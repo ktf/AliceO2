@@ -43,7 +43,6 @@ using DPLFieldToken = rns::REntry::RFieldToken;
 using DPLLocalIndex = rns::RClusterIndex;
 #endif
 
-
 template class
   std::unique_ptr<rns::RNTupleReader>;
 
@@ -186,15 +185,17 @@ class RNTupleFileFormat : public arrow::dataset::FileFormat
 };
 
 template <typename T>
-requires requires (T&& f) { f.GetSubFields(); }
-auto getSubfields(T const&field) {
-    return field.GetSubFields();
+  requires requires(T&& f) { f.GetSubFields(); }
+auto getSubfields(T const& field)
+{
+  return field.GetSubFields();
 }
 
 template <typename T>
-requires requires (T&& f) { f.GetConstSubfields(); }
-auto getSubfields(T const&field) {
-    return field.GetConstSubfields();
+  requires requires(T&& f) { f.GetConstSubfields(); }
+auto getSubfields(T const& field)
+{
+  return field.GetConstSubfields();
 }
 
 struct RootNTupleVisitor : public rns::Detail::RFieldVisitor {
@@ -281,7 +282,6 @@ struct RootNTupleVisitor : public rns::Detail::RFieldVisitor {
     this->datatype = arrow::int16();
   }
 #endif
-
 
   void VisitBoolField(const rns::RField<bool>& field) override
   {
@@ -560,17 +560,18 @@ class RNTupleFileWriter : public arrow::dataset::FileWriter
 };
 
 template <typename T>
-requires requires (T const&m) { m.GetFieldZero(); }
-auto &getFieldZero(T const &m) {
+  requires requires(T const& m) { m.GetFieldZero(); }
+auto& getFieldZero(T const& m)
+{
   return m.GetFieldZero();
 }
 
 template <typename T>
-requires requires (T const&m) { m.GetConstFieldZero(); }
-auto &getFieldZero(T const &m) {
+  requires requires(T const& m) { m.GetConstFieldZero(); }
+auto& getFieldZero(T const& m)
+{
   return m.GetConstFieldZero();
 }
-
 
 arrow::Result<std::shared_ptr<arrow::Schema>> RNTupleFileFormat::Inspect(const arrow::dataset::FileSource& source) const
 {
