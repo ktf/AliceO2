@@ -9,8 +9,20 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#include "ITStracking/TrackingConfigParam.h"
+#ifndef O2_TPC_TPCPRESSURETEMPERATURE_SPEC
+#define O2_TPC_TPCPRESSURETEMPERATURE_SPEC
 
-O2ParamImpl(o2::its::VertexerParamConfig);
-O2ParamImpl(o2::its::TrackerParamConfig);
-O2ParamImpl(o2::its::ITSGpuTrackingParamConfig);
+#include "Framework/DataProcessorSpec.h"
+#include "DetectorsBase/Propagator.h"
+
+namespace o2
+{
+namespace tpc
+{
+
+o2::framework::DataProcessorSpec getTPCPressureTemperatureSpec();
+
+} // end namespace tpc
+} // end namespace o2
+
+#endif
