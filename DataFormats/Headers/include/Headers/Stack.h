@@ -14,10 +14,7 @@
 #include "MemoryResources/MemoryResources.h"
 #include "Headers/DataHeader.h"
 
-namespace o2
-{
-
-namespace header
+namespace o2::header
 {
 //__________________________________________________________________________________________________
 /// @struct Stack
@@ -53,12 +50,12 @@ struct Stack {
   Stack(Stack&&) = default;
   Stack(Stack&) = delete;
   Stack& operator=(Stack&) = delete;
-  Stack& operator=(Stack&&) = default;
+  Stack& operator=(Stack&&) = delete;
 
-  value_type* data() const { return buffer.get(); }
-  size_t size() const { return bufferSize; }
+  [[nodiscard]] value_type* data() const { return buffer.get(); }
+  [[nodiscard]] size_t size() const { return bufferSize; }
   allocator_type get_allocator() const { return allocator; }
-  const BaseHeader* first() const { return reinterpret_cast<const BaseHeader*>(this->data()); }
+  [[nodiscard]] const BaseHeader* first() const { return reinterpret_cast<const BaseHeader*>(this->data()); }
   static const BaseHeader* firstHeader(std::byte const* buf) { return BaseHeader::get(buf); }
   static const BaseHeader* lastHeader(std::byte const* buf)
   {
@@ -231,7 +228,7 @@ struct Stack {
   }
 };
 
-} // namespace header
-} // namespace o2
+} // namespace o2::header
+
 
 #endif // HEADERS_STACK_H

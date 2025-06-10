@@ -59,14 +59,7 @@ struct Output {
 
   Output& operator=(const Output&) = delete;
 
-  Output& operator=(Output&& rhs)
-  {
-    origin = rhs.origin;
-    description = rhs.description;
-    subSpec = rhs.subSpec;
-    metaHeader = std::move(rhs.metaHeader);
-    return *this;
-  }
+  Output& operator=(Output&& rhs) = delete;
 
   bool operator==(const Output& that) const
   {
