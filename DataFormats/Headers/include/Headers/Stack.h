@@ -230,5 +230,4 @@ struct Stack {
 
 } // namespace o2::header
 
-
 #endif // HEADERS_STACK_H

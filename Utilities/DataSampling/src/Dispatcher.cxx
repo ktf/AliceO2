@@ -193,7 +193,6 @@ DataSamplingHeader Dispatcher::prepareDataSamplingHeader(const DataSamplingPolic
     original};
 }
 
-
 void Dispatcher::send(DataAllocator& dataAllocator, const DataRef& inputData, const Output& output) const
 {
   const auto* inputHeader = DataRefUtils::getHeader<header::DataHeader*>(inputData);
