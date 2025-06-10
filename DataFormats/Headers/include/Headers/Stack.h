@@ -45,7 +45,7 @@ struct Stack {
   };
 
  public:
-  using allocator_type = boost::container::pmr::polymorphic_allocator<std::byte>;
+  using allocator_type = fair::mq::pmr::polymorphic_allocator<std::byte>;
   using value_type = std::byte;
   using BufferType = std::unique_ptr<value_type[], freeobj>; //this gives us proper default move semantics for free
 
@@ -90,9 +90,9 @@ struct Stack {
   /// all headers must derive from BaseHeader, in addition also other stacks can be passed to ctor.
   template <typename FirstArgType, typename... Headers,
             typename std::enable_if_t<
-              !std::is_convertible<FirstArgType, boost::container::pmr::polymorphic_allocator<std::byte>>::value, int> = 0>
+              !std::is_convertible<FirstArgType, fair::mq::pmr::polymorphic_allocator<std::byte>>::value, int> = 0>
   Stack(FirstArgType&& firstHeader, Headers&&... headers)
-    : Stack(boost::container::pmr::new_delete_resource(), std::forward<FirstArgType>(firstHeader),
+    : Stack(fair::mq::pmr::new_delete_resource(), std::forward<FirstArgType>(firstHeader),
             std::forward<Headers>(headers)...)
   {
   }
@@ -143,7 +143,7 @@ struct Stack {
   constexpr static size_t calculateSize() { return 0; }
 
  private:
-  allocator_type allocator{boost::container::pmr::new_delete_resource()};
+  allocator_type allocator{fair::mq::pmr::new_delete_resource()};
   size_t bufferSize{0};
   BufferType buffer{nullptr, freeobj{allocator.resource()}};
 

@@ -314,7 +314,7 @@ BOOST_AUTO_TEST_CASE(headerStack_test)
   BOOST_CHECK(h3->secret == 42);
 
   //test constructing from a buffer and an additional header
-  using namespace boost::container::pmr;
+  using namespace fair::mq::pmr;
   Stack s5(new_delete_resource(), s1.data(), Stack{}, meta);
   BOOST_CHECK(s5.size() == s1.size() + sizeof(meta));
   // check if we can find the header even though there was an empty stack in the middle
