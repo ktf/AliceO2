@@ -60,8 +60,6 @@ BOOST_AUTO_TEST_CASE(transportallocatormap_test)
   BOOST_CHECK(_tmp == allocZMQ);
 }
 
-using namespace fair::mq::pmr;
-
 BOOST_AUTO_TEST_CASE(allocator_test)
 {
   size_t session{(size_t)getpid() * 1000 + 1};
@@ -76,7 +74,7 @@ BOOST_AUTO_TEST_CASE(allocator_test)
   testData::nconstructions = 0;
 
   {
-    std::vector<testData, polymorphic_allocator<testData>> v(polymorphic_allocator<testData>{allocZMQ});
+    std::vector<testData, std::pmr::polymorphic_allocator<testData>> v(std::pmr::polymorphic_allocator<testData>{allocZMQ});
     v.reserve(3);
     BOOST_CHECK(v.capacity() == 3);
     BOOST_CHECK(allocZMQ->getNumberOfMessages() == 1);
