@@ -25,7 +25,6 @@ namespace o2::framework
 class DataChunk : public std::vector<char, std::pmr::polymorphic_allocator<char>>
 {
  public:
-
   // DataChunk is special and for the moment it's enough to declare the constructor with size and allocator
   DataChunk(size_t size, const std::pmr::polymorphic_allocator<char>& allocator) : std::vector<char, std::pmr::polymorphic_allocator<char>>(size, allocator)
   {
