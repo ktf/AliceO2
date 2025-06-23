@@ -80,6 +80,8 @@
 #include <chrono>
 #include "GPUReconstructionConvert.h"
 #include "DetectorsRaw/RDHUtils.h"
+#include "DataFormatsTPC/VectorPadFlagsStreamer.h"
+
 #include <TStopwatch.h>
 #include <TObjArray.h>
 #include <TH1F.h>
@@ -98,6 +100,8 @@ namespace o2::gpu
 
 void GPURecoWorkflowSpec::initFunctionTPCCalib(InitContext& ic)
 {
+  TClass* cls = TClass::GetClass("std::vector<o2::tpc::PadFlags>");
+  cls->AdoptStreamer(new VectorPadFlagsStreamer());
   mTPCDeadChannelMapCreator.reset(new o2::tpc::DeadChannelMapCreator());
   const auto deadMapSource = (mSpecConfig.tpcDeadMapSources > -1) ? static_cast<tpc::SourcesDeadMap>(mSpecConfig.tpcDeadMapSources) : tpc::SourcesDeadMap::All;
   mTPCDeadChannelMapCreator->init();
