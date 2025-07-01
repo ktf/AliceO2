@@ -69,6 +69,40 @@ bool dataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
   return false;
 }
 
+// This is to make sure that if a device has sporadic / timer inputs
+// it gets sorted after one which does not, in case there is no other
+// dependencies between the two.
+bool occasionalDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
+{
+  auto checkOccasional = [](InputSpec const& input) {
+    return input.lifetime == Lifetime::Sporadic || input.lifetime == Lifetime::Timer;
+  };
+  bool isBWithOccasionalInput = std::find_if(b.inputs.begin(), b.inputs.end(), checkOccasional) != b.inputs.end();
+  bool isAWithOccasionalInput = std::find_if(a.inputs.begin(), a.inputs.end(), checkOccasional) != a.inputs.end();
+  // If neither has occasional inputs, we return false and sort as usual
+  if (!isAWithOccasionalInput && !isBWithOccasionalInput) {
+    return false;
+  }
+  // If both have occasional inputs, we return false and sort as usual.
+  if (isAWithOccasionalInput && isBWithOccasionalInput) {
+    return false;
+  }
+  // If a has occasional inputs
+  if (isAWithOccasionalInput && isBWithOccasionalInput) {
+    return false;
+  }
+
+  // We have a with occasional inputs. We sort it later, unless there was already some actual
+  // dependency between A and B.
+  if (isAWithOccasionalInput) {
+    bool hasDependency = dataDeps(b, a);
+    return !hasDependency;
+  }
+
+  // b is has occasional inputs and a does not. We are fine as it is.
+  return false;
+}
+
 bool expendableDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
 {
   O2_SIGNPOST_ID_GENERATE(sid, topology);
@@ -93,7 +127,7 @@ bool expendableDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
     return true;
   }
   // If we are here we do not have any data dependency,
-  // however we strill consider a dependent on b if
+  // however we still consider a dependent on b if
   // a has the "expendable" label and b does not.
   auto checkExpendable = [](DataProcessorLabel const& label) {
     if (label.value == "expendable") {
@@ -108,26 +142,45 @@ bool expendableDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
     }
     return false;
   };
+
   bool isBExpendable = std::find_if(b.labels.begin(), b.labels.end(), checkExpendable) != b.labels.end();
   bool isAExpendable = std::find_if(a.labels.begin(), a.labels.end(), checkExpendable) != a.labels.end();
   bool bResilient = std::find_if(b.labels.begin(), b.labels.end(), checkResilient) != b.labels.end();
 
   // If none is expendable. We simply return false and sort as usual.
   if (!isAExpendable && !isBExpendable) {
+    bool occasional = occasionalDataDeps(a, b);
+    if (occasional) {
+      O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. Neither %s nor %s are expendable. However the former has sporadic inputs so we sort it after.",
+                      a.name.c_str(), b.name.c_str());
+      return true;
+    }
     O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. Neither %s nor %s are expendable. No dependency beyond data deps.",
                     a.name.c_str(), b.name.c_str());
     return false;
   }
   // If both are expendable. We return false and sort as usual.
   if (isAExpendable && isBExpendable) {
+    bool occasional = occasionalDataDeps(a, b);
+    if (occasional) {
+      O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. Both %s and %s are expendable. However the former has sporadic inputs, so we sort it after.",
+                      a.name.c_str(), b.name.c_str());
+      return true;
+    }
     O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. Both %s and %s are expendable. No dependency.",
                     a.name.c_str(), b.name.c_str());
     return false;
   }
 
-  // If b is expendable but b is resilient, we can keep the same order.
+  // If a is expendable but b is resilient, we can keep the same order.
   if (isAExpendable && bResilient) {
-    O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. %s is expendable but %s is resilient, no need to add an unneeded dependency",
+    bool occasional = occasionalDataDeps(a, b);
+    if (occasional) {
+      O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. %s is expendable but %s is resilient, however the former also has occasional inputs, so we sort it after.",
+                      a.name.c_str(), b.name.c_str());
+      return true;
+    }
+    O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. %s is expendable but %s is resilient. No need to do do anything.",
                     a.name.c_str(), b.name.c_str());
     return false;
   }
@@ -138,11 +191,31 @@ bool expendableDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
     O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "%s is expendable. %s from %s to %s => %s.",
                     a.name.c_str(), hasDependency ? "There is however an inverse dependency" : "No inverse dependency", b.name.c_str(), a.name.c_str(),
                     !hasDependency ? "true" : "false");
-    return !hasDependency;
+    if (!hasDependency) {
+      O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "%s is expendable. There is however an inverse dependecy from %s to %s => true.",
+                      a.name.c_str(), b.name.c_str(), a.name.c_str());
+      return true;
+    }
+    bool occasional = occasionalDataDeps(a, b);
+    if (occasional) {
+      O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "%s is expendable. No inverse dependency from %s to %s. However the former has an occasioanl input => true.",
+                      a.name.c_str(), b.name.c_str(), a.name.c_str());
+    }
+    O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "%s is expendable. No inverse dependency from %s to %s => false.",
+                    a.name.c_str(), b.name.c_str(), a.name.c_str());
+    return false;
+  }
+  // b is expendable and a is not. We are fine with no dependency.
+  bool occasional = occasionalDataDeps(a, b);
+  if (occasional) {
+    O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. %s is expendable but %s is not. However the former has an occasional input => true.",
+                    b.name.c_str(), a.name.c_str());
+    return true;
   }
   // b is expendable and a is not. We are fine with no dependency.
   O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "false. %s is expendable but %s is not. No need to add an unneeded dependency.",
                   b.name.c_str(), a.name.c_str());
+
   return false;
 };
 
