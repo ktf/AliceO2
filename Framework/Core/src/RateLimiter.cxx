@@ -55,8 +55,8 @@ int RateLimiter::check(ProcessingContext& ctx, int maxInFlight, size_t minSHM)
                                        maxInFlight, mSentTimeframes, mConsumedTimeframes);
         } else {
           O2_SIGNPOST_EVENT_EMIT_INFO(rate_limiting, sid, "timeframe_ratelimit",
-                                       "Maximum number of TF in flight reached (%d: published %llu - finished %llu), waiting",
-                                       maxInFlight, mSentTimeframes, mConsumedTimeframes);
+                                      "Maximum number of TF in flight reached (%d: published %llu - finished %llu), waiting",
+                                      maxInFlight, mSentTimeframes, mConsumedTimeframes);
         }
         waitMessage = true;
         timeoutForMessage = false;
@@ -87,8 +87,8 @@ int RateLimiter::check(ProcessingContext& ctx, int maxInFlight, size_t minSHM)
                                          (mSentTimeframes - mConsumedTimeframes), maxInFlight);
       } else {
         O2_SIGNPOST_EVENT_EMIT_INFO(rate_limiting, sid, "timeframe_ratelimit",
-                                         "%lli / %d TF in flight, continue to publish",
-                                         (mSentTimeframes - mConsumedTimeframes), maxInFlight);
+                                    "%lli / %d TF in flight, continue to publish",
+                                    (mSentTimeframes - mConsumedTimeframes), maxInFlight);
       }
     }
 
