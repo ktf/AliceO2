@@ -358,7 +358,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        if (lastUnusedOfferedMemory != unusedOfferedMemory) {
                          O2_SIGNPOST_EVENT_EMIT(rate_limiting, sid, "offer",
                                                 "unusedOfferedMemory:%{bytes}d = offered:%{bytes}llu - (expired:%{bytes}llu + consumed:%{bytes}llu) / 1000000",
-                                                 unusedOfferedMemory, offeredSharedMemory, totalBytesExpired / 1000000, shmOfferBytesConsumed / 1000000);
+                                                unusedOfferedMemory, offeredSharedMemory, totalBytesExpired / 1000000, shmOfferBytesConsumed / 1000000);
                          lastUnusedOfferedMemory = unusedOfferedMemory;
                        }
                        // availableSharedMemory is the amount of memory which we know is available to be offered.
