@@ -31,7 +31,7 @@ WorkflowSpec defineDataProcessingWithSporadic()
   return {
     {.name = "input-proxy", .outputs = {OutputSpec{"QEMC", "CELL", 1}, OutputSpec{"CTF", "DONE", 0}}},
     {.name = "EMC-Cell-proxy", .inputs = Inputs{InputSpec{"a", "QEMC", "CELL", 1, Lifetime::Sporadic}}},
-          {.name = "calib-output-proxy-barrel-tf", .inputs = {InputSpec{"a", "CTF", "DONE", 0}}}};
+    {.name = "calib-output-proxy-barrel-tf", .inputs = {InputSpec{"a", "CTF", "DONE", 0}}}};
 }
 
 TEST_CASE("TestBrokenSporadic")
@@ -57,4 +57,3 @@ TEST_CASE("TestBrokenSporadic")
   DeviceSpecHelpers::dataProcessorSpecs2DeviceSpecs(workflow, channelPolicies, completionPolicies, callbacksPolicies, devices, rm, "workflow-id", *configContext);
   TopologyPolicyHelpers::buildEdges(workflow);
 }
-

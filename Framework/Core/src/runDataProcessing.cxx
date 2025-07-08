@@ -2836,7 +2836,6 @@ std::unique_ptr<o2::framework::ServiceRegistry> createRegistry()
   return std::make_unique<o2::framework::ServiceRegistry>();
 }
 
-
 // This is a toy executor for the workflow spec
 // What it needs to do is:
 //

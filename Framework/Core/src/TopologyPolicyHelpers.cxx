@@ -12,8 +12,10 @@
 #include "Framework/TopologyPolicyHelpers.h"
 #include "Framework/TopologyPolicy.h"
 
-namespace o2::framework {
-namespace {
+namespace o2::framework
+{
+namespace
+{
 void describeDataProcessorSpec(std::ostream& stream, DataProcessorSpec const& spec)
 {
   stream << spec.name;
@@ -27,9 +29,10 @@ void describeDataProcessorSpec(std::ostream& stream, DataProcessorSpec const& sp
     stream << ")";
   }
 }
-}
+} // namespace
 
-auto TopologyPolicyHelpers::buildEdges(WorkflowSpec& physicalWorkflow) -> std::vector < std::pair<int, int>> {
+auto TopologyPolicyHelpers::buildEdges(WorkflowSpec& physicalWorkflow) -> std::vector<std::pair<int, int>>
+{
   std::vector<TopologyPolicy> topologyPolicies = TopologyPolicy::createDefaultPolicies();
   std::vector<TopologyPolicy::DependencyChecker> dependencyCheckers;
   dependencyCheckers.reserve(physicalWorkflow.size());
