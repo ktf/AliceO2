@@ -87,10 +87,6 @@ bool sporadicDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
   if (isAWithSporadicInput && isBWithSporadicInput) {
     return false;
   }
-  // If a has sporadic inputs
-  if (isAWithSporadicInput && isBWithSporadicInput) {
-    return false;
-  }
 
   // We have a with sporadic inputs. We sort it later, unless there was already some actual
   // dependency between A and B.
@@ -200,6 +196,7 @@ bool expendableDataDeps(DataProcessorSpec const& a, DataProcessorSpec const& b)
     if (sporadic) {
       O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "%s is expendable. No inverse dependency from %s to %s. However the former has an occasioanl input => true.",
                       a.name.c_str(), b.name.c_str(), a.name.c_str());
+      return true;
     }
     O2_SIGNPOST_END(topology, sid, "expendableDataDeps", "%s is expendable. No inverse dependency from %s to %s => false.",
                     a.name.c_str(), b.name.c_str(), a.name.c_str());
