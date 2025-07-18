@@ -12,7 +12,6 @@
 #ifndef O2_FRAMEWORK_DEVICEMETRICSINFO_H_
 #define O2_FRAMEWORK_DEVICEMETRICSINFO_H_
 
-#include "Framework/RuntimeError.h"
 #include "Framework/CompilerBuiltins.h"
 #include "Framework/Traits.h"
 #include <array>
@@ -20,6 +19,7 @@
 #include <cstdint>
 #include <span>
 #include <vector>
+#include <iosfwd>
 
 namespace o2::framework
 {
