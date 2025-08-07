@@ -20,10 +20,8 @@
 #include "CCDB/CcdbApi.h"
 #include "CommonConstants/LHCConstants.h"
 #include "Framework/Signpost.h"
-#include <typeinfo>
 #include <TError.h>
 #include <TMemFile.h>
-#include <functional>
 
 O2_DECLARE_DYNAMIC_LOG(ccdb);
 
@@ -159,6 +157,55 @@ CCDBHelpers::ParserResult CCDBHelpers::parseRemappings(char const* str)
   }
 }
 
+void initialiseHelper(CCDBFetcherHelper& helper, ConfigParamRegistry const& options, std::vector<o2::framework::OutputRoute> const& outputRoutes)
+{
+  std::unordered_map<std::string, bool> accountedSpecs;
+  auto defHost = options.get<std::string>("condition-backend");
+  auto checkRate = options.get<int>("condition-tf-per-query");
+  auto checkMult = options.get<int>("condition-tf-per-query-multiplier");
+  helper.timeToleranceMS = options.get<int64_t>("condition-time-tolerance");
+  helper.queryPeriodGlo = checkRate > 0 ? checkRate : std::numeric_limits<int>::max();
+  helper.queryPeriodFactor = checkMult > 0 ? checkMult : 1;
+  LOGP(info, "CCDB Backend at: {}, validity check for every {} TF{}", defHost, helper.queryPeriodGlo, helper.queryPeriodFactor == 1 ? std::string{} : fmt::format(", (query for high-rate objects downscaled by {})", helper.queryPeriodFactor));
+  LOGP(info, "Hook to enable signposts for CCDB messages at {}", (void*)&private_o2_log_ccdb->stacktrace);
+  auto remapString = options.get<std::string>("condition-remap");
+  CCDBHelpers::ParserResult result = CCDBHelpers::parseRemappings(remapString.c_str());
+  if (!result.error.empty()) {
+    throw runtime_error_f("Error while parsing remapping string %s", result.error.c_str());
+  }
+  helper.remappings = result.remappings;
+  helper.apis[""].init(defHost); // default backend
+  LOGP(info, "Initialised default CCDB host {}", defHost);
+  //
+  for (auto& entry : helper.remappings) { // init api instances for every host seen in the remapping
+    if (helper.apis.find(entry.second) == helper.apis.end()) {
+      helper.apis[entry.second].init(entry.second);
+      LOGP(info, "Initialised custom CCDB host {}", entry.second);
+    }
+    LOGP(info, "{} is remapped to {}", entry.first, entry.second);
+  }
+  helper.createdNotBefore = std::to_string(options.get<int64_t>("condition-not-before"));
+  helper.createdNotAfter = std::to_string(options.get<int64_t>("condition-not-after"));
+
+  for (auto& route : outputRoutes) {
+    if (route.matcher.lifetime != Lifetime::Condition) {
+      continue;
+    }
+    auto specStr = DataSpecUtils::describe(route.matcher);
+    if (accountedSpecs.find(specStr) != accountedSpecs.end()) {
+      continue;
+    }
+    accountedSpecs[specStr] = true;
+    helper.routes.push_back(route);
+    LOGP(info, "The following route is a condition {}", DataSpecUtils::describe(route.matcher));
+    for (auto& metadata : route.matcher.metadata) {
+      if (metadata.type == VariantType::String) {
+        LOGP(info, "- {}: {}", metadata.name, metadata.defaultValue.asString());
+      }
+    }
+  }
+}
+
 auto getOrbitResetTime(std::pmr::vector<char> const& v) -> Long64_t
 {
   Int_t previousErrorLevel = gErrorIgnoreLevel;
@@ -261,19 +308,7 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
         LOGP(detail, "******** Default entry used for {} ********", path);
       }
       helper->mapURL2UUID[path].lastCheckedTF = timingInfo.tfCounter;
-      if (etag.empty()) {
-        helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
-        helper->mapURL2UUID[path].cachePopulatedAt = timestampToUse;
-        helper->mapURL2UUID[path].cacheMiss++;
-        helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
-        helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
-        api.appendFlatHeader(v, headers);
-        auto cacheId = allocator.adoptContainer(output, std::move(v), DataAllocator::CacheStrategy::Always, header::gSerializationMethodCCDB);
-        helper->mapURL2DPLCache[path] = cacheId;
-        O2_SIGNPOST_EVENT_EMIT(ccdb, sid, "populateCacheWith", "Caching %{public}s for %{public}s (DPL id %" PRIu64 ")", path.data(), headers["ETag"].data(), cacheId.value);
-        continue;
-      }
-      if (v.size()) { // but should be overridden by fresh object
+      if (etag.empty() || v.size()) { // but should be overridden by fresh object
         // somewhere here pruneFromCache should be called
         helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
         helper->mapURL2UUID[path].cachePopulatedAt = timestampToUse;
@@ -283,15 +318,16 @@ auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
         helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
         api.appendFlatHeader(v, headers);
         auto cacheId = allocator.adoptContainer(output, std::move(v), DataAllocator::CacheStrategy::Always, header::gSerializationMethodCCDB);
+        if (v.size()) {
+          // one could modify the    adoptContainer to take optional old cacheID to clean:
+          // mapURL2DPLCache[URL] = ctx.outputs().adoptContainer(output, std::move(outputBuffer), DataAllocator::CacheStrategy::Always, mapURL2DPLCache[URL]);
+        }
         helper->mapURL2DPLCache[path] = cacheId;
         O2_SIGNPOST_EVENT_EMIT(ccdb, sid, "populateCacheWith", "Caching %{public}s for %{public}s (DPL id %" PRIu64 ")", path.data(), headers["ETag"].data(), cacheId.value);
-        // one could modify the    adoptContainer to take optional old cacheID to clean:
-        // mapURL2DPLCache[URL] = ctx.outputs().adoptContainer(output, std::move(outputBuffer), DataAllocator::CacheStrategy::Always, mapURL2DPLCache[URL]);
         continue;
-      } else {
-        // Only once the etag is actually used, we get the information on how long the object is valid
-        helper->mapURL2UUID[path].cacheValidUntil = headers["Cache-Valid-Until"].empty() ? 0 : std::stoul(headers["Cache-Valid-Until"]);
       }
+      // Only once the etag is actually used, we get the information on how long the object is valid
+      helper->mapURL2UUID[path].cacheValidUntil = headers["Cache-Valid-Until"].empty() ? 0 : std::stoul(headers["Cache-Valid-Until"]);
     }
     // cached object is fine
     auto cacheId = helper->mapURL2DPLCache[path];
@@ -307,51 +343,7 @@ AlgorithmSpec CCDBHelpers::fetchFromCCDB()
 {
   return adaptStateful([](CallbackService& callbacks, ConfigParamRegistry const& options, DeviceSpec const& spec) {
       std::shared_ptr<CCDBFetcherHelper> helper = std::make_shared<CCDBFetcherHelper>();
-      std::unordered_map<std::string, bool> accountedSpecs;
-      auto defHost = options.get<std::string>("condition-backend");
-      auto checkRate = options.get<int>("condition-tf-per-query");
-      auto checkMult = options.get<int>("condition-tf-per-query-multiplier");
-      helper->timeToleranceMS = options.get<int64_t>("condition-time-tolerance");
-      helper->queryPeriodGlo = checkRate > 0 ? checkRate : std::numeric_limits<int>::max();
-      helper->queryPeriodFactor = checkMult > 0 ? checkMult : 1;
-      LOGP(info, "CCDB Backend at: {}, validity check for every {} TF{}", defHost, helper->queryPeriodGlo, helper->queryPeriodFactor == 1 ? std::string{} : fmt::format(", (query for high-rate objects downscaled by {})", helper->queryPeriodFactor));
-      LOGP(info, "Hook to enable signposts for CCDB messages at {}", (void*)&private_o2_log_ccdb->stacktrace);
-      auto remapString = options.get<std::string>("condition-remap");
-      ParserResult result = CCDBHelpers::parseRemappings(remapString.c_str());
-      if (!result.error.empty()) {
-        throw runtime_error_f("Error while parsing remapping string %s", result.error.c_str());
-      }
-      helper->remappings = result.remappings;
-      helper->apis[""].init(defHost); // default backend
-      LOGP(info, "Initialised default CCDB host {}", defHost);
-      //
-      for (auto& entry : helper->remappings) { // init api instances for every host seen in the remapping
-        if (helper->apis.find(entry.second) == helper->apis.end()) {
-          helper->apis[entry.second].init(entry.second);
-          LOGP(info, "Initialised custom CCDB host {}", entry.second);
-        }
-        LOGP(info, "{} is remapped to {}", entry.first, entry.second);
-      }
-      helper->createdNotBefore = std::to_string(options.get<int64_t>("condition-not-before"));
-      helper->createdNotAfter = std::to_string(options.get<int64_t>("condition-not-after"));
-
-      for (auto &route : spec.outputs) {
-        if (route.matcher.lifetime != Lifetime::Condition) {
-          continue;
-        }
-        auto specStr = DataSpecUtils::describe(route.matcher);
-        if (accountedSpecs.find(specStr) != accountedSpecs.end()) {
-          continue;
-        }
-        accountedSpecs[specStr] = true;
-        helper->routes.push_back(route);
-        LOGP(info, "The following route is a condition {}", DataSpecUtils::describe(route.matcher));
-        for (auto& metadata : route.matcher.metadata) {
-          if (metadata.type == VariantType::String) {
-            LOGP(info, "- {}: {}", metadata.name, metadata.defaultValue.asString());
-          }
-        }
-      }
+      initialiseHelper(*helper, options, spec.outputs);
       /// Add a callback on stop which dumps the statistics for the caching per
       /// path
       callbacks.set<CallbackService::Id::Stop>([helper]() {
@@ -398,7 +390,9 @@ AlgorithmSpec CCDBHelpers::fetchFromCCDB()
               // FIXME: I should send a dummy message.
               return;
             }
-            if (etag.empty()) {
+
+            if (etag.empty() || v.size()) {
+              // Overwrite on cache miss
               helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
               helper->mapURL2UUID[path].cacheMiss++;
               helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
@@ -407,20 +401,12 @@ AlgorithmSpec CCDBHelpers::fetchFromCCDB()
               api.appendFlatHeader(v, headers);
               auto cacheId = allocator.adoptContainer(output, std::move(v), DataAllocator::CacheStrategy::Always, header::gSerializationMethodNone);
               helper->mapURL2DPLCache[path] = cacheId;
+              if (v.size()) { // but should be overridden by fresh object
+                // somewhere here pruneFromCache should be called
+                // one could modify the adoptContainer to take optional old cacheID to clean:
+                // mapURL2DPLCache[URL] = ctx.outputs().adoptContainer(output, std::move(outputBuffer), DataAllocator::CacheStrategy::Always, mapURL2DPLCache[URL]);
+              }
               O2_SIGNPOST_EVENT_EMIT(ccdb, sid, "fetchFromCCDB", "Caching %{public}s for %{public}s (DPL id %" PRIu64 ")", path.data(), headers["ETag"].data(), cacheId.value);
-            } else if (v.size()) { // but should be overridden by fresh object
-              // somewhere here pruneFromCache should be called
-              helper->mapURL2UUID[path].etag = headers["ETag"]; // update uuid
-              helper->mapURL2UUID[path].cacheMiss++;
-              helper->mapURL2UUID[path].minSize = std::min(v.size(), helper->mapURL2UUID[path].minSize);
-              helper->mapURL2UUID[path].maxSize = std::max(v.size(), helper->mapURL2UUID[path].maxSize);
-              newOrbitResetTime = getOrbitResetTime(v);
-              api.appendFlatHeader(v, headers);
-              auto cacheId = allocator.adoptContainer(output, std::move(v), DataAllocator::CacheStrategy::Always, header::gSerializationMethodNone);
-              helper->mapURL2DPLCache[path] = cacheId;
-              O2_SIGNPOST_EVENT_EMIT(ccdb, sid, "fetchFromCCDB", "Caching %{public}s for %{public}s (DPL id %" PRIu64 ")", path.data(), headers["ETag"].data(), cacheId.value);
-              // one could modify the adoptContainer to take optional old cacheID to clean:
-              // mapURL2DPLCache[URL] = ctx.outputs().adoptContainer(output, std::move(outputBuffer), DataAllocator::CacheStrategy::Always, mapURL2DPLCache[URL]);
             }
             // cached object is fine
           }
