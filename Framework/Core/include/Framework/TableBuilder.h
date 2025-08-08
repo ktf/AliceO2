@@ -362,7 +362,6 @@ struct BuilderMaker<T[N]> {
   }
 };
 
-
 template <typename T, int N>
 struct BuilderMaker<std::array<T, N>> {
   using FillType = T*;

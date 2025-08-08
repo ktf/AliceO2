@@ -271,7 +271,6 @@ TEST_CASE("TestPodInjestion")
   }
 }
 
-
 TEST_CASE("TestColumnCount")
 {
   struct Foo {
