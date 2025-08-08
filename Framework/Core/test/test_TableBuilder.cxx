@@ -19,6 +19,9 @@
 #include <arrow/ipc/writer.h>
 #include <arrow/ipc/reader.h>
 
+#include <iostream>
+#include <string_view>
+
 using namespace o2::framework;
 
 // We use a different namespace to avoid clashes with the
@@ -27,10 +30,12 @@ namespace test2
 {
 DECLARE_SOA_COLUMN_FULL(X, x, uint64_t, "x");
 DECLARE_SOA_COLUMN_FULL(Y, y, uint64_t, "y");
+DECLARE_SOA_COLUMN_FULL(Blob, blob, std::span<std::byte>, "blob");
 DECLARE_SOA_COLUMN_FULL(Pos, pos, int[4], "pos");
 } // namespace test2
 
 using TestTable = o2::soa::InPlaceTable<0, test2::X, test2::Y>;
+using SpanTable = o2::soa::InPlaceTable<0, test2::Blob>;
 using ArrayTable = o2::soa::InPlaceTable<0, test2::Pos>;
 
 TEST_CASE("TestTableBuilder")
@@ -189,6 +194,32 @@ TEST_CASE("TestTableBuilderMore")
   REQUIRE(table->schema()->field(3)->type()->id() == arrow::boolean()->id());
 }
 
+TEST_CASE("TestSpan")
+{
+  TableBuilder builder;
+  std::vector<std::byte> buffer{10, std::byte{'c'}};
+  std::vector<std::byte> buffer1{10, std::byte{'a'}};
+
+  auto rowWriter = builder.persist<std::span<std::byte>>({"blob"});
+  rowWriter(0, std::span(buffer));
+  rowWriter(0, std::span(buffer));
+  rowWriter(0, std::span(buffer1.data(), 3));
+  rowWriter(0, std::span(buffer1.data(), 1));
+  auto table = builder.finalize();
+
+  REQUIRE(table->num_columns() == 1);
+  REQUIRE(table->num_rows() == 4);
+  REQUIRE(table->schema()->field(0)->name() == "blob");
+  REQUIRE(table->schema()->field(0)->type()->id() == arrow::binary_view()->id());
+
+  std::cout << table->ToString() << std::endl;
+
+  auto readBack = SpanTable{table};
+  for (auto& row : readBack) {
+    std::cout << row.blob().size() << std::endl;
+  }
+}
+
 TEST_CASE("TestSoAIntegration")
 {
   TableBuilder builder;
@@ -239,6 +270,7 @@ TEST_CASE("TestPodInjestion")
     ++i;
   }
 }
+
 
 TEST_CASE("TestColumnCount")
 {
