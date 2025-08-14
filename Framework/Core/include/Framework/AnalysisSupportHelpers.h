@@ -43,10 +43,13 @@ struct AnalysisSupportHelpers {
                                          std::vector<InputSpec>& requestedAODs,
                                          std::vector<InputSpec>& requestedDYNs,
                                          DataProcessorSpec& publisher);
+  static void addMissingOutputsToAnalysisCCDBFetcher(std::vector<OutputSpec> const& providedTimestampedCCDBObjecs,
+                                                     std::vector<InputSpec> const& requestedTimestampedCCDBObjects,
+                                                     DataProcessorSpec& publisher);
 
-  /// Match all inputs of kind ATSK and write them to a ROOT file,
-  /// one root file per originating task.
-  static DataProcessorSpec getOutputObjHistSink(ConfigContext const&);
+    /// Match all inputs of kind ATSK and write them to a ROOT file,
+    /// one root file per originating task.
+    static DataProcessorSpec getOutputObjHistSink(ConfigContext const&);
   /// writes inputs of kind AOD to file
   static DataProcessorSpec getGlobalAODSink(ConfigContext const&);
   /// Get the data director
