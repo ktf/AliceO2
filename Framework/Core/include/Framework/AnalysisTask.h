@@ -26,6 +26,7 @@
 #include "Framework/TypeIdHelpers.h"
 #include "Framework/ArrowTableSlicingCache.h"
 #include "Framework/AnalysisDataModel.h"
+#include <iostream>
 
 #include <arrow/compute/kernel.h>
 #include <arrow/table.h>
@@ -133,6 +134,7 @@ struct AnalysisDataProcessorBuilder {
   template <soa::is_table... As>
   static void addInputsAndExpressions(uint32_t hash, const char* name, bool value, std::vector<InputSpec>& inputs, std::vector<ExpressionInfo>& eInfos)
   {
+    std::cout << "name: " << name << std::endl;
     int ai = -1;
     ([&ai, &hash, &eInfos, &name, &value, &inputs]() mutable {
       ++ai;
