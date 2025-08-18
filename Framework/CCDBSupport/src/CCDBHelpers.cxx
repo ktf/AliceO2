@@ -28,55 +28,22 @@ O2_DECLARE_DYNAMIC_LOG(ccdb);
 namespace o2::framework
 {
 
-struct CCDBFetcherHelper {
-  struct CCDBCacheInfo {
-    std::string etag;
-    size_t cacheValidUntil = 0;
-    size_t cachePopulatedAt = 0;
-    size_t cacheMiss = 0;
-    size_t cacheHit = 0;
-    size_t minSize = -1ULL;
-    size_t maxSize = 0;
-    int lastCheckedTF = 0;
-  };
-
-  struct RemapMatcher {
-    std::string path;
-  };
-
-  struct RemapTarget {
-    std::string url;
-  };
-
-  std::unordered_map<std::string, CCDBCacheInfo> mapURL2UUID;
-  std::unordered_map<std::string, DataAllocator::CacheId> mapURL2DPLCache;
-  std::string createdNotBefore = "0";
-  std::string createdNotAfter = "3385078236000";
-  std::unordered_map<std::string, o2::ccdb::CcdbApi> apis;
-  std::vector<OutputRoute> routes;
-  std::unordered_map<std::string, std::string> remappings;
-  uint32_t lastCheckedTFCounterOrbReset = 0; // last checkecked TFcounter for bulk check
-  int queryPeriodGlo = 1;
-  int queryPeriodFactor = 1;
-  int64_t timeToleranceMS = 5000;
-
-  o2::ccdb::CcdbApi& getAPI(const std::string& path)
-  {
-    // find the first = sign in the string. If present drop everything after it
-    // and between it and the previous /.
-    auto pos = path.find('=');
-    if (pos == std::string::npos) {
-      auto entry = remappings.find(path);
-      return apis[entry == remappings.end() ? "" : entry->second];
-    }
-    auto pos2 = path.rfind('/', pos);
-    if (pos2 == std::string::npos || pos2 == pos - 1 || pos2 == 0) {
-      throw runtime_error_f("Malformed path %s", path.c_str());
-    }
-    auto entry = remappings.find(path.substr(0, pos2));
+o2::ccdb::CcdbApi& CCDBFetcherHelper::getAPI(const std::string& path)
+{
+  // find the first = sign in the string. If present drop everything after it
+  // and between it and the previous /.
+  auto pos = path.find('=');
+  if (pos == std::string::npos) {
+    auto entry = remappings.find(path);
     return apis[entry == remappings.end() ? "" : entry->second];
   }
-};
+  auto pos2 = path.rfind('/', pos);
+  if (pos2 == std::string::npos || pos2 == pos - 1 || pos2 == 0) {
+    throw runtime_error_f("Malformed path %s", path.c_str());
+  }
+  auto entry = remappings.find(path.substr(0, pos2));
+  return apis[entry == remappings.end() ? "" : entry->second];
+}
 
 bool isPrefix(std::string_view prefix, std::string_view full)
 {
