@@ -45,6 +45,7 @@ struct DummyTimestampsTable {
     timestamps(1747442464000); // c2b3d801393540b7bddb949d600b199f, ecacb915-3d70-11f0-ac6f-808de0f5250c
     timestamps(1747442764000); // 0262dbd9d50aa79c3d4dcd5ec3ca67c3, ed5471c5-3d70-11f0-b0a3-808de0f524ee
     control->readyToQuit(QuitRequest::Me);
+    control->endOfStream();
     std::cout << "Executed " << std::endl;
   }
 };

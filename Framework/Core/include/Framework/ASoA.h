@@ -35,6 +35,7 @@
 #include <cstring>
 #include <gsl/span> // IWYU pragma: export
 #include <limits>
+#include <iostream>
 
 namespace o2::framework
 {
@@ -44,13 +45,17 @@ std::string cutString(std::string&& str);
 std::string strToUpper(std::string&& str);
 } // namespace o2::framework
 
+struct TClass;
+
 namespace o2::soa
 {
 void accessingInvalidIndexFor(const char* getter);
 void dereferenceWithWrongType(const char* getter, const char* target);
 void missingFilterDeclaration(int hash, int ai);
 void notBoundTable(const char* tableName);
+void* extractCCDBPayload(char *payload, size_t size, TClass const* cl, const char* what);
 } // namespace o2::soa
+
 
 namespace o2::soa
 {
