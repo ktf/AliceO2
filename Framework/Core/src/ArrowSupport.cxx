@@ -455,7 +455,6 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
       ac.providedTIMs.clear();
       ac.requestedTIMs.clear();
 
-
       auto inputSpecLessThan = [](InputSpec const& lhs, InputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
       auto outputSpecLessThan = [](OutputSpec const& lhs, OutputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
 
@@ -564,8 +563,6 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
           workflow.erase(reader);
         }
       }
-
-
 
       // replace writer as some outputs may have become dangling and some are now consumed
       auto [outputsInputs, isDangling] = WorkflowHelpers::analyzeOutputs(workflow);

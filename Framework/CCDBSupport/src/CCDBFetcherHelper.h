@@ -56,7 +56,7 @@ struct CCDBFetcherHelper {
   // A fetch operation.
   struct FetchOp {
     // Where to put the blob
-    OutputSpec &spec;
+    OutputSpec& spec;
     // The url to fetch
     std::string url = "";
     // The timestamp to use
@@ -78,7 +78,7 @@ struct CCDBFetcherHelper {
     // The size of the buffer
     size_t size = 0;
     // Where to actually
-    FetchOp *request = nullptr;
+    FetchOp* request = nullptr;
   };
 
   static ParserResult parseRemappings(char const*);
@@ -98,7 +98,7 @@ struct CCDBFetcherHelper {
   o2::ccdb::CcdbApi& getAPI(const std::string& path);
   static void initialiseHelper(CCDBFetcherHelper& helper, ConfigParamRegistry const& options);
   static auto populateCacheWith(std::shared_ptr<CCDBFetcherHelper> const& helper,
-                                std::vector<FetchOp> const &ops,
+                                std::vector<FetchOp> const& ops,
                                 TimingInfo& timingInfo,
                                 DataTakingContext& dtc,
                                 DataAllocator& allocator) -> std::vector<Response>;

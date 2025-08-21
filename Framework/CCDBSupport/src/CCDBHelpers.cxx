@@ -184,7 +184,7 @@ AlgorithmSpec CCDBHelpers::fetchFromCCDB()
         std::vector<CCDBFetcherHelper::FetchOp> ops;
         int runNumber = 0;
         std::string ccdbMetadataPrefix = "ccdb-metadata-";
-        for (auto &route : helper->routes) {
+        for (auto& route : helper->routes) {
           CCDBFetcherHelper::FetchOp op{.spec = route.matcher, .timestamp = timestamp, .runNumber = std::stoi(dtc.runNumber)};
           for (auto& meta : route.matcher.metadata) {
             if (meta.name == "ccdb-path") {

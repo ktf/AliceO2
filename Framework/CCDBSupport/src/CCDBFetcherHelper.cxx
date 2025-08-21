@@ -38,12 +38,13 @@ o2::ccdb::CcdbApi& CCDBFetcherHelper::getAPI(const std::string& path)
   return apis[entry == remappings.end() ? "" : entry->second];
 }
 
-namespace {
+namespace
+{
 bool isOnlineRun(DataTakingContext const& dtc)
 {
   return dtc.deploymentMode == DeploymentMode::OnlineAUX || dtc.deploymentMode == DeploymentMode::OnlineDDS || dtc.deploymentMode == DeploymentMode::OnlineECS;
 }
-}
+} // namespace
 
 void CCDBFetcherHelper::initialiseHelper(CCDBFetcherHelper& helper, ConfigParamRegistry const& options)
 {

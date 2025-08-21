@@ -140,7 +140,7 @@ AlgorithmSpec AnalysisCCDBHelpers::fetchFromCCDB(ConfigContext const& ctx)
         std::cout << " Index for output is " << outputRouteIndex << std::endl;
         auto& spec = helper->routes[outputRouteIndex].matcher;
         std::vector<std::shared_ptr<arrow::BinaryViewBuilder>> builders;
-        for (auto &_ : schema->fields()) {
+        for (auto& _ : schema->fields()) {
           builders.emplace_back(std::make_shared<arrow::BinaryViewBuilder>());
         }
 
@@ -166,15 +166,15 @@ AlgorithmSpec AnalysisCCDBHelpers::fetchFromCCDB(ConfigContext const& ctx)
             }
             auto responses = CCDBFetcherHelper::populateCacheWith(helper, ops, timingInfo, dtc, allocator);
             O2_SIGNPOST_START(ccdb, sid, "handlingResponses",
-                                        "Got %zu responses from server.",
-                                        responses.size());
+                              "Got %zu responses from server.",
+                              responses.size());
             if (builders.size() != responses.size()) {
               LOGP(fatal, "Not enough responses (expected {}, found {})", builders.size(), responses.size());
             }
             arrow::Status result;
             for (size_t bi = 0; bi < responses.size(); bi++) {
-              auto &builder = builders[bi];
-              auto &response = responses[bi];
+              auto& builder = builders[bi];
+              auto& response = responses[bi];
               char const* address = reinterpret_cast<char const*>(response.id.value);
               std::cout << "Inserting view (" << (void*)address << "," << response.size << ")" << std::endl;
               result &= builder->Append(std::string_view(address, response.size));
@@ -186,7 +186,7 @@ AlgorithmSpec AnalysisCCDBHelpers::fetchFromCCDB(ConfigContext const& ctx)
           }
         }
         arrow::ArrayVector arrays;
-        for (auto &builder : builders) {
+        for (auto& builder : builders) {
           arrays.push_back(*builder->Finish());
         }
         auto outTable = arrow::Table::Make(schema, arrays);

@@ -177,7 +177,7 @@ void missingOptionalPreslice(const char* label, const char* key)
   throw o2::framework::runtime_error_f(R"(Optional Preslice with missing binding used: table "%s" (or join based on it) does not have column "%s")", label, key);
 }
 
-void* extractCCDBPayload(char *payload, size_t size, TClass const* cl, const char* what)
+void* extractCCDBPayload(char* payload, size_t size, TClass const* cl, const char* what)
 {
   Int_t previousErrorLevel = gErrorIgnoreLevel;
   gErrorIgnoreLevel = kFatal;
