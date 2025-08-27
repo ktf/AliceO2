@@ -73,7 +73,7 @@ struct EtaAndClsHistogramsIUSimple {
     }
   }
 
-  void process(soa::Filtered<aod::TracksIU> const& tracks, aod::FT0s const&, aod::TracksIUFrom<o2::aod::Hash<"EMB"_h>> const &otherTracks)
+  void process(soa::Filtered<aod::TracksIU> const& tracks, aod::FT0s const&, aod::TracksIUFrom<o2::aod::Hash<"EMB"_h>> const& otherTracks)
   {
     LOGP(info, "Invoking the simple one IU");
     for (auto& track : tracks) {
