@@ -28,7 +28,8 @@ O2_DECLARE_DYNAMIC_LOG(ccdb);
 namespace o2::framework
 {
 
-namespace {
+namespace
+{
 struct CCDBFetcherHelper {
   struct CCDBCacheInfo {
     std::string etag;
@@ -78,7 +79,7 @@ struct CCDBFetcherHelper {
     return apis[entry == remappings.end() ? "" : entry->second];
   }
 };
-}
+} // namespace
 
 bool isPrefix(std::string_view prefix, std::string_view full)
 {
