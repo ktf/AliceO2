@@ -9,33 +9,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifndef O2_MID_ALICE3_BASEPARAM_H
-#define O2_MID_ALICE3_BASEPARAM_H
+#include "TRKSimulation/ChipDigitsContainer.h"
 
-#include "CommonUtils/ConfigurableParam.h"
-#include "CommonUtils/ConfigurableParamHelper.h"
+using namespace o2::trk;
 
-namespace o2
-{
-namespace mi3
-{
-
-// **
-// ** Parameters for MID base configuration
-// **
-
-enum MIDLayout : int {
-  StandardRadius = 0,
-  ReducedRadius = 1
-};
-
-struct MIDBaseParam : public o2::conf::ConfigurableParamHelper<MIDBaseParam> {
-  int mLayout = MIDLayout::StandardRadius;
-
-  O2ParamDef(MIDBaseParam, "MIDBase");
-};
-
-} // namespace mi3
-} // end namespace o2
-
-#endif
+ChipDigitsContainer::ChipDigitsContainer(UShort_t idx)
+  : o2::itsmft::ChipDigitsContainer(idx) {}
