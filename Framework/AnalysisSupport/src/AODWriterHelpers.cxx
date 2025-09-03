@@ -24,12 +24,14 @@
 #include "Framework/Monitoring.h"
 
 #include <Monitoring/Monitoring.h>
+#include <TDirectory.h>
 #include <TFile.h>
 #include <TFile.h>
 #include <TTree.h>
 #include <TMap.h>
 #include <TObjString.h>
 #include <arrow/table.h>
+#include <chrono>
 
 namespace o2::framework::writers
 {
@@ -46,6 +48,7 @@ struct InputObjectRoute {
 struct InputObject {
   TClass* kind = nullptr;
   void* obj = nullptr;
+  std::string container;
   std::string name;
   int count = -1;
 };
@@ -312,6 +315,13 @@ AlgorithmSpec AODWriterHelpers::getOutputObjHistWriter(ConfigContext const& ctx)
         obj.obj = tm.ReadObjectAny(obj.kind);
         auto* named = static_cast<TNamed*>(obj.obj);
         obj.name = named->GetName();
+        // If we have a folder, we assume the first element of the path
+        // to be the name of the registry.
+        if (sourceType == HistogramRegistrySource) {
+          obj.container = objh->containerName;
+        } else {
+          obj.container = obj.name;
+        }
         auto hpos = std::find_if(tskmap.begin(), tskmap.end(), [&](auto&& x) { return x.id == hash; });
         if (hpos == tskmap.end()) {
           LOG(error) << "No task found for hash " << hash;
@@ -324,8 +334,8 @@ AlgorithmSpec AODWriterHelpers::getOutputObjHistWriter(ConfigContext const& ctx)
           return;
         }
         auto objects = opos->bindings;
-        if (std::find(objects.begin(), objects.end(), obj.name) == objects.end()) {
-          LOG(error) << "No object " << obj.name << " in map for task " << taskname;
+        if (std::find(objects.begin(), objects.end(), obj.container) == objects.end()) {
+          LOG(error) << "No container " << obj.container << " in map for task " << taskname;
           return;
         }
         auto nameHash = runtime_hash(obj.name.c_str());
@@ -334,7 +344,7 @@ AlgorithmSpec AODWriterHelpers::getOutputObjHistWriter(ConfigContext const& ctx)
         // If it's the first one, we just add it to the list.
         if (existing == inputObjects->end()) {
           obj.count = objh->mPipelineSize;
-          inputObjects->push_back(std::make_pair(key, obj));
+          inputObjects->emplace_back(key, obj);
           existing = inputObjects->end() - 1;
         } else {
           obj.count = existing->second.count;
@@ -375,43 +385,23 @@ AlgorithmSpec AODWriterHelpers::getOutputObjHistWriter(ConfigContext const& ctx)
           currentFile = filename;
         }
 
-        // translate the list-structure created by the registry into a directory structure within the file
-        std::function<void(TList*, TDirectory*)> writeListToFile;
-        writeListToFile = [&](TList* list, TDirectory* parentDir) {
-          TIter next(list);
-          TObject* object = nullptr;
-          while ((object = next())) {
-            if (object->InheritsFrom(TList::Class())) {
-              writeListToFile(static_cast<TList*>(object), parentDir->mkdir(object->GetName(), object->GetName(), true));
-            } else {
-              int objSize = parentDir->WriteObjectAny(object, object->Class(), object->GetName());
-              static int maxSizeWritten = 0;
-              if (objSize > maxSizeWritten) {
-                auto& monitoring = pc.services().get<Monitoring>();
-                maxSizeWritten = objSize;
-                monitoring.send(Metric{fmt::format("{}/{}:{}", object->ClassName(), object->GetName(), objSize), "aod-largest-object-written"}.addTag(tags::Key::Subsystem, tags::Value::DPL));
-              }
-              auto* written = list->Remove(object);
-              delete written;
-            }
+        // FIXME: handle folders
+        auto* currentDir = f[route.policy]->GetDirectory(currentDirectory.c_str());
+        // The name contains a path...
+        if (sourceType == HistogramRegistrySource) {
+          TDirectory* currentFolder = currentDir;
+          std::string objName = entry.name;
+          auto lastSlash = entry.name.rfind('/');
+          auto containerName = obj.container;
+          if (lastSlash != std::string::npos) {
+            auto dirname = entry.name.substr(0, lastSlash);
+            objName = entry.name.substr(lastSlash + 1);
+            containerName += "/" + dirname;
+            currentFolder = currentDir->mkdir(containerName.c_str(), "", kTRUE);
           }
-        };
-
-        TDirectory* currentDir = f[route.policy]->GetDirectory(currentDirectory.c_str());
-        if (route.sourceType == OutputObjSourceType::HistogramRegistrySource) {
-          auto* outputList = static_cast<TList*>(entry.obj);
-          outputList->SetOwner(false);
-
-          // if registry should live in dedicated folder a TNamed object is appended to the list
-          if (outputList->Last() && outputList->Last()->IsA() == TNamed::Class()) {
-            delete outputList->Last();
-            outputList->RemoveLast();
-            currentDir = currentDir->mkdir(outputList->GetName(), outputList->GetName(), true);
-          }
-
-          writeListToFile(outputList, currentDir);
-          outputList->SetOwner();
-          delete outputList;
+          currentFolder = currentDir->GetDirectory(containerName.c_str());
+          currentFolder->WriteObjectAny(entry.obj, entry.kind, objName.c_str());
+          delete (TObject*)entry.obj;
           entry.obj = nullptr;
         } else {
           currentDir->WriteObjectAny(entry.obj, entry.kind, entry.name.c_str());
