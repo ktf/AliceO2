@@ -22,7 +22,7 @@
 #pragma link C++ class o2::tpc::ClusterHardwareContainerFixedSize < 8192> + ;
 #pragma link C++ class o2::tpc::ClusterNativeContainer + ;
 #pragma link C++ class o2::tpc::Digit + ;
-#pragma link C++ enum o2::tpc::PadFlags +;                // enum itself
+#pragma link C++ enum o2::tpc::PadFlags + ; // enum itself
 #pragma link C++ class o2::tpc::ZeroSuppressedContainer8kb + ;
 #pragma link C++ class std::vector < o2::tpc::ClusterNative> + ;
 #pragma link C++ class std::vector < o2::tpc::ClusterNativeContainer> + ;

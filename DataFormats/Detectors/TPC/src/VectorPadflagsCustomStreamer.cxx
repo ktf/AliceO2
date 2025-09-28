@@ -38,15 +38,16 @@ void VectorPadFlagsStreamer(TBuffer& R__b, void* objp)
   }
 }
 
-#define RootStreamerLocal(name,STREAMER)                                 \
-namespace ROOT {                                                         \
-   \
-   /** \cond HIDDEN_SYMBOLS */                                           \
-   static auto _R__UNIQUE_(R__dummyStreamer) =                        \
-           []() { TClass::GetClass<name>()->SetStreamerFunc(STREAMER); return 0; }();      \
-   /** \endcond */                                                       \
-   R__UseDummy(_R__UNIQUE_(R__dummyStreamer));                           \
-}
+#define RootStreamerLocal(name, STREAMER)     \
+  namespace ROOT                              \
+  {                                           \
+                                              \
+  /** \cond HIDDEN_SYMBOLS */                 \
+  static auto _R__UNIQUE_(R__dummyStreamer) = \
+    []() { TClass::GetClass<name>()->SetStreamerFunc(STREAMER); return 0; }();                               \
+  /** \endcond */                             \
+  R__UseDummy(_R__UNIQUE_(R__dummyStreamer)); \
+  }
 
 // Let's not try to fix the old ROOT version, so that we can build
 // the new ROOT with the patched code in the CI.
