@@ -97,7 +97,7 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
                         result.size(), totalOffer.cpu, totalOffer.memory, totalOffer.sharedMemory);
       for (auto& offer : result) {
         // We pretend each offer id is a pointer, to have a unique id.
-        O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(offer*8));
+        O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(offer * 8));
         O2_SIGNPOST_START(quota, oid, "offers", "Offer %d has been selected.", offer);
       }
       dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_SATISFACTORY), DataProcessingStats::Op::Add, 1});
@@ -224,7 +224,7 @@ void ComputingQuotaEvaluator::dispose(int taskId)
       continue;
     }
     if (offer.sharedMemory <= 0) {
-      O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(oi*8));
+      O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(oi * 8));
       O2_SIGNPOST_END(quota, oid, "offers", "Offer %d back to not needed.", oi);
       offer.valid = false;
       offer.score = OfferScore::Unneeded;
@@ -269,7 +269,7 @@ void ComputingQuotaEvaluator::handleExpired(std::function<void(ComputingQuotaOff
   /// to the driver.
   for (auto& ref : mExpiredOffers) {
     auto& offer = mOffers[ref.index];
-    O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(ref.index*8));
+    O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(ref.index * 8));
     if (offer.sharedMemory < 0) {
       O2_SIGNPOST_END(quota, oid, "handleExpired", "Offer %d does not have any more memory. Marking it as invalid.", ref.index);
       offer.valid = false;
