@@ -284,10 +284,10 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                          unchangedCount++;
                        }
                        changedCountMetric(driverMetrics, unchangedCount, timestamp);
-                       auto maxTimeframes = registry.get<RateLimitConfig>().maxTimeframes;
-                       if (maxTimeframes && (totalTimeframesRead - totalTimeframesConsumed) > maxTimeframes) {
-                         return;
-                       }
+                       //auto maxTimeframes = registry.get<RateLimitConfig>().maxTimeframes;
+                       //if (maxTimeframes && (totalTimeframesRead - totalTimeframesConsumed) > maxTimeframes) {
+                       //  return;
+                       //}
 
                        static int64_t MAX_SHARED_MEMORY = calculateAvailableSharedMemory(registry);
                        constexpr int64_t MAX_QUANTUM_SHARED_MEMORY = 100;
