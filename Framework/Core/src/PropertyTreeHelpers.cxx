@@ -399,7 +399,7 @@ void PropertyTreeHelpers::populate(std::vector<ConfigParamSpec> const& schema,
       provenance.put(key, provenanceLabel);
     } catch (std::runtime_error& re) {
       O2_SIGNPOST_END_WITH_ERROR(configuration, cid, "populate", "Aborting during processing of %{public}s because of runtime_error %{public}s",
-                      key.c_str(), re.what());
+                                 key.c_str(), re.what());
       throw;
     } catch (std::exception& e) {
       O2_SIGNPOST_END_WITH_ERROR(configuration, cid, "populate", "Missing option %{public}s (%{public}s)", key.c_str(), e.what());
