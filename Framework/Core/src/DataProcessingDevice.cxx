@@ -1589,7 +1589,7 @@ void DataProcessingDevice::Run()
     }
   }
 
-  O2_SIGNPOST_END(device, lid, "run_loop", "Run loop completed. Transition handling state %d.", state.transitionHandling);
+  O2_SIGNPOST_END(device, lid, "run_loop", "Run loop completed. Transition handling state %d.", (int)state.transitionHandling);
   auto& spec = ref.get<DeviceSpec const>();
   /// Cleanup messages which are still pending on exit.
   for (size_t ci = 0; ci < spec.inputChannels.size(); ++ci) {
