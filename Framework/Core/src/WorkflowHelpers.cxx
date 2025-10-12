@@ -699,7 +699,15 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
       ignoredInput.lifetime = Lifetime::Sporadic;
     }
 
-    extraSpecs.push_back(CommonDataProcessors::getDummySink(ignored, rateLimitingChannelConfigOutput));
+    // Use the new dummy sink when the AOD reader is there
+    O2_SIGNPOST_ID_GENERATE(sid, workflow_helpers);
+    if (aodReader.outputs.empty() == false) {
+      O2_SIGNPOST_EVENT_EMIT(workflow_helpers, sid, "injectServiceDevices", "Injecting scheduled dummy sink");
+      extraSpecs.push_back(CommonDataProcessors::getScheduledDummySink(ignored));
+    } else {
+      O2_SIGNPOST_EVENT_EMIT(workflow_helpers, sid, "injectServiceDevices", "Injecting rate limited dummy sink");
+      extraSpecs.push_back(CommonDataProcessors::getDummySink(ignored, rateLimitingChannelConfigOutput));
+    }
   }
 
   workflow.insert(workflow.end(), extraSpecs.begin(), extraSpecs.end());
