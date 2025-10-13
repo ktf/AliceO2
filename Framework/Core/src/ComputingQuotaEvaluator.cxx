@@ -40,6 +40,7 @@ ComputingQuotaEvaluator::ComputingQuotaEvaluator(ServiceRegistryRef ref)
     0,
     0,
     0,
+    0,
     -1,
     -1,
     OfferScore::Unneeded,
@@ -64,6 +65,7 @@ struct QuotaEvaluatorStats {
 
 bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const& selector, uint64_t now)
 {
+  O2_LOG_ENABLE(quota);
   O2_SIGNPOST_ID_GENERATE(qid, quota);
 
   auto selectOffer = [&offers = this->mOffers, &infos = this->mInfos, task](int ref, uint64_t now) {
@@ -97,7 +99,7 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
                         result.size(), totalOffer.cpu, totalOffer.memory, totalOffer.sharedMemory);
       for (auto& offer : result) {
         // We pretend each offer id is a pointer, to have a unique id.
-        O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(offer*8));
+        O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(offer * 8));
         O2_SIGNPOST_START(quota, oid, "offers", "Offer %d has been selected.", offer);
       }
       dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_SATISFACTORY), DataProcessingStats::Op::Add, 1});
@@ -132,6 +134,7 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
     auto& offer = mOffers[i];
     auto& info = mInfos[i];
     if (enough) {
+      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "We have enough offers. We can continue for computation.");
       break;
     }
     // Ignore:
@@ -139,24 +142,26 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
     // - Offers which belong to another task
     // - Expired offers
     if (offer.valid == false) {
+      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d is not valid. Skipping", i);
       stats.invalidOffers.push_back(i);
       continue;
     }
     if (offer.user != -1 && offer.user != task) {
+      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d already offered to some other user", i);
       stats.otherUser.push_back(i);
       continue;
     }
     if (offer.runtime < 0) {
       stats.unexpiring.push_back(i);
     } else if (offer.runtime + info.received < now) {
-      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d expired since %llu milliseconds and holds %llu MB",
-                             i, now - offer.runtime - info.received, offer.sharedMemory / 1000000);
+      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d expired since %llu milliseconds and holds %llu MB and %llu timeslices",
+                             i, now - offer.runtime - info.received, offer.sharedMemory / 1000000, offer.timeslices);
       mExpiredOffers.push_back(ComputingQuotaOfferRef{i});
       stats.expired.push_back(i);
       continue;
     } else {
-      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d still valid for %llu milliseconds, providing %llu MB",
-                             i, offer.runtime + info.received - now, offer.sharedMemory / 1000000);
+      O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d still valid for %llu milliseconds, providing %llu MB and %llu timeslices",
+                             i, offer.runtime + info.received - now, offer.sharedMemory / 1000000, offer.timeslices);
       if (minValidity == 0) {
         minValidity = offer.runtime + info.received - now;
       }
@@ -168,22 +173,29 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
     tmp.cpu += offer.cpu;
     tmp.memory += offer.memory;
     tmp.sharedMemory += offer.sharedMemory;
-    offer.score = selector(offer, tmp);
+    tmp.timeslices += offer.timeslices;
+    offer.score = selector(offer, accumulated);
     switch (offer.score) {
       case OfferScore::Unneeded:
+        O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d considered not needed. Skipping", i);
         continue;
       case OfferScore::Unsuitable:
+        O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d considered Unsuitable. Skipping", i);
         continue;
       case OfferScore::More:
         selectOffer(i, now);
         accumulated = tmp;
         stats.selectedOffers.push_back(i);
+        O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Offer %d selected but not enough. %llu MB, %d cores and %llu timeslices are not enough.",
+                               i, tmp.sharedMemory / 1000000, tmp.cpu, tmp.timeslices);
         continue;
       case OfferScore::Enough:
         selectOffer(i, now);
         accumulated = tmp;
         stats.selectedOffers.push_back(i);
         enough = true;
+        O2_SIGNPOST_EVENT_EMIT(quota, qid, "select", "Selected %zu offers providing %llu MB, %d cores and %llu timeslices are deemed enough.",
+                               stats.selectedOffers.size(), tmp.sharedMemory / 1000000, tmp.cpu, tmp.timeslices);
         break;
     };
   }
@@ -224,7 +236,7 @@ void ComputingQuotaEvaluator::dispose(int taskId)
       continue;
     }
     if (offer.sharedMemory <= 0) {
-      O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(oi*8));
+      O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(oi * 8));
       O2_SIGNPOST_END(quota, oid, "offers", "Offer %d back to not needed.", oi);
       offer.valid = false;
       offer.score = OfferScore::Unneeded;
@@ -269,7 +281,7 @@ void ComputingQuotaEvaluator::handleExpired(std::function<void(ComputingQuotaOff
   /// to the driver.
   for (auto& ref : mExpiredOffers) {
     auto& offer = mOffers[ref.index];
-    O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(ref.index*8));
+    O2_SIGNPOST_ID_FROM_POINTER(oid, quota, (void*)(int64_t)(ref.index * 8));
     if (offer.sharedMemory < 0) {
       O2_SIGNPOST_END(quota, oid, "handleExpired", "Offer %d does not have any more memory. Marking it as invalid.", ref.index);
       offer.valid = false;
@@ -278,8 +290,8 @@ void ComputingQuotaEvaluator::handleExpired(std::function<void(ComputingQuotaOff
     }
     // FIXME: offers should go through the driver client, not the monitoring
     // api.
-    O2_SIGNPOST_END(quota, oid, "handleExpired", "Offer %d expired. Giving back %llu MB and %d cores",
-                    ref.index, offer.sharedMemory / 1000000, offer.cpu);
+    O2_SIGNPOST_END(quota, oid, "handleExpired", "Offer %d expired. Giving back %llu MB, %d cores and %llu timeslices",
+                    ref.index, offer.sharedMemory / 1000000, offer.cpu, offer.timeslices);
     assert(offer.sharedMemory >= 0);
     mStats.totalExpiredBytes += offer.sharedMemory;
     mStats.totalExpiredOffers++;

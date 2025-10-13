@@ -44,6 +44,8 @@ struct ComputingQuotaOffer {
   int64_t memory = 0;
   /// How much shared memory it can allocate
   int64_t sharedMemory = 0;
+  /// How many timeslices it can process without giving back control
+  int64_t timeslices = 0;
   /// How much runtime it can use before giving back the resource
   /// in milliseconds.
   int64_t runtime = 0;
