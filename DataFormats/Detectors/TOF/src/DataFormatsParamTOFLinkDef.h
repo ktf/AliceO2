@@ -9,21 +9,9 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file GPUReconstructionHIPIncludesSystem.h
-/// \author David Rohr
+#ifdef __CLING__
 
-#ifndef O2_GPU_RECONSTRUCTIONHIPINCLUDESSYSTEM_H
-#define O2_GPU_RECONSTRUCTIONHIPINCLUDESSYSTEM_H
+#pragma link C++ class o2::tof::Parameters < 5> + ;
+#pragma link C++ class o2::tof::ParameterCollection + ;
 
-#ifndef GPUCA_GPUCODE_GENRTC
-#include "GPUStdSystemHeaders.h"
 #endif
-
-#include <hip/hip_runtime.h>
-#include <hip/hip_ext.h>
-#include <hipcub/hipcub.hpp>
-#include <thrust/sort.h>
-#include <thrust/execution_policy.h>
-#include <thrust/device_ptr.h>
-
-#endif // O2_GPU_RECONSTRUCTIONHIPINCLUDESSYSTEM_H
