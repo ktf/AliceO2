@@ -77,7 +77,7 @@ struct DeviceConfigurationHelpers {
 class DataProcessingDevice : public fair::mq::Device
 {
  public:
-  DataProcessingDevice(RunningDeviceRef ref, ServiceRegistry&, ProcessingPolicies& policies);
+  DataProcessingDevice(RunningDeviceRef ref, ServiceRegistry&);
   void Init() final;
   void InitTask() final;
   void PreRun() final;
