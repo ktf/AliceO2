@@ -453,8 +453,7 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        };
                        static ResourceStats timesliceResourceStats{
                          .enoughCount = shmResourceState.available - shmResourceSpec.minQuantum > 0 ? 1 : 0,
-                         .lowCount = shmResourceState.available - shmResourceSpec.minQuantum > 0 ? 0 : 1
-                       };
+                         .lowCount = shmResourceState.available - shmResourceSpec.minQuantum > 0 ? 0 : 1};
 
                        offerResources(timesliceResourceState, timesliceResourceSpec, timesliceResourceStats,
                                       specs, infos, manager, totalTimeframesConsumed, totalTimeframesExpired,
