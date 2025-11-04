@@ -19,6 +19,7 @@ target_link_libraries(
           O2::FDDWorkflow
           O2::FV0Workflow
           O2::Framework
+          O2::FrameworkAnalysisSupport
           O2::GlobalTracking
           O2::GlobalTrackingWorkflow
           O2::ITSMFTWorkflow
