@@ -76,6 +76,7 @@ o2_add_executable(
         O2::DataFormatsFT0
         O2::Steer
         O2::ZDCBase
+        O2::FrameworkAnalysisSupport
         nlohmann_json::nlohmann_json
         )
 
