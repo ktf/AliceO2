@@ -28,10 +28,9 @@ struct ResourcesMonitoringHelper {
                                 DeviceMetricsInfo const& driverMetrics,
                                 std::vector<DeviceSpec> const& specs,
                                 std::vector<std::regex> const& metricsToDump,
-                                std::ostream &out) noexcept;
+                                std::ostream& out) noexcept;
   static bool isResourcesMonitoringEnabled(unsigned short interval) noexcept { return interval > 0; }
 };
-
 
 } // namespace o2::framework
 

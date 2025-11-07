@@ -56,7 +56,7 @@ bool ResourcesMonitoringHelper::dumpMetricsToJSON(const std::vector<DeviceMetric
                                                   const DeviceMetricsInfo& driverMetrics,
                                                   const std::vector<DeviceSpec>& specs,
                                                   std::vector<std::regex> const& performanceMetricsRegex,
-                                                  std::ostream &out) noexcept
+                                                  std::ostream& out) noexcept
 {
 
   assert(metrics.size() == specs.size());
