@@ -287,11 +287,11 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        auto &infos = sm.deviceInfos;
 
                        // Aggregated driver metrics for timeslice rate limiting
-                       auto createUint64DriverMetric = [&driverMetrics](char const*name) -> auto {
-                          return DeviceMetricsHelper::createNumericMetric<uint64_t>(driverMetrics, name);
+                       auto createUint64DriverMetric = [&driverMetrics](char const* name) -> auto {
+                         return DeviceMetricsHelper::createNumericMetric<uint64_t>(driverMetrics, name);
                        };
-                       auto createIntDriverMetric = [&driverMetrics](char const*name) -> auto {
-                          return DeviceMetricsHelper::createNumericMetric<int>(driverMetrics, name);
+                       auto createIntDriverMetric = [&driverMetrics](char const* name) -> auto {
+                         return DeviceMetricsHelper::createNumericMetric<int>(driverMetrics, name);
                        };
 
                        static auto stateMetric = DeviceMetricsHelper::createNumericMetric<uint64_t>(driverMetrics, "rate-limit-state");
