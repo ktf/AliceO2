@@ -9,19 +9,18 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file GPUMemoryResource.cxx
+/// \file GPUO2ExternalUser.h
 /// \author David Rohr
 
-#include "GPUMemoryResource.h"
-#include "GPUProcessor.h"
-using namespace o2::gpu;
+#ifndef GPUO2EXTERNALUSER_H
+#define GPUO2EXTERNALUSER_H
 
-void* GPUMemoryResource::SetPointers(void* ptr) const
-{
-  return (mProcessor->*mSetPointers)(ptr);
-}
+// Some defines denoting that we are compiling for O2
+#ifndef GPUCA_TPC_GEOMETRY_O2
+#define GPUCA_TPC_GEOMETRY_O2
+#endif
+#ifndef GPUCA_O2_INTERFACE
+#define GPUCA_O2_INTERFACE
+#endif
 
-void* GPUMemoryResource::SetDevicePointers(void* ptr) const
-{
-  return (mProcessor->mLinkedProcessor->*mSetPointers)(ptr);
-}
+#endif

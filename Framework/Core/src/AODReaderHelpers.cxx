@@ -156,6 +156,9 @@ struct Maker {
       originals.push_back(pc.inputs().get<TableConsumer>(label)->asArrowTable());
     }
     auto fullTable = soa::ArrowHelpers::joinTables(std::move(originals), std::span{labels.begin(), labels.size()});
+    if (fullTable->num_rows() == 0) {
+      return arrow::Table::MakeEmpty(schema).ValueOrDie();
+    }
     if (projector == nullptr) {
       auto s = gandiva::Projector::Make(
         fullTable->schema(),
@@ -237,6 +240,7 @@ struct Spawnable {
 
   Maker createMaker()
   {
+    o2::framework::addLabelToSchema(outputSchema, binding.c_str());
     return {
       binding,
       labels,

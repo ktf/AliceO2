@@ -14,6 +14,8 @@
 /// @since  2017-09-21
 /// @brief  An allocator for static sequences of object types
 
+#include <memory>
+
 namespace o2
 {
 namespace algorithm
@@ -145,7 +147,7 @@ struct StaticSequenceAllocator {
   StaticSequenceAllocator() = delete;
 
   template <typename... Targs>
-  StaticSequenceAllocator(Targs... args)
+  explicit StaticSequenceAllocator(Targs... args)
   {
     bufferSize = sequenceLength(args...);
     buffer = std::make_unique<value_type[]>(bufferSize);
