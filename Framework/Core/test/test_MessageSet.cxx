@@ -15,7 +15,8 @@
 
 using namespace o2::framework;
 
-TEST_CASE("MessageSet") {
+TEST_CASE("MessageSet")
+{
   o2::framework::MessageSet msgSet;
   std::vector<fair::mq::MessagePtr> ptrs;
   std::unique_ptr<fair::mq::Message> msg(nullptr);
@@ -34,7 +35,8 @@ TEST_CASE("MessageSet") {
   REQUIRE(msgSet.pairMap[0].payloadIndex == 0);
 }
 
-TEST_CASE("MessageSetWithFunction") {
+TEST_CASE("MessageSetWithFunction")
+{
   std::vector<fair::mq::MessagePtr> ptrs;
   std::unique_ptr<fair::mq::Message> msg(nullptr);
   std::unique_ptr<fair::mq::Message> msg2(nullptr);
@@ -52,7 +54,8 @@ TEST_CASE("MessageSetWithFunction") {
   REQUIRE(msgSet.pairMap[0].payloadIndex == 0);
 }
 
-TEST_CASE("MessageSetWithMultipart") {
+TEST_CASE("MessageSetWithMultipart")
+{
   std::vector<fair::mq::MessagePtr> ptrs;
   std::unique_ptr<fair::mq::Message> msg(nullptr);
   std::unique_ptr<fair::mq::Message> msg2(nullptr);
@@ -74,13 +77,14 @@ TEST_CASE("MessageSetWithMultipart") {
   REQUIRE(msgSet.pairMap[1].payloadIndex == 1);
 }
 
-TEST_CASE("MessageSetAddPartRef") {
+TEST_CASE("MessageSetAddPartRef")
+{
   std::vector<fair::mq::MessagePtr> ptrs;
   std::unique_ptr<fair::mq::Message> msg(nullptr);
   std::unique_ptr<fair::mq::Message> msg2(nullptr);
   ptrs.emplace_back(std::move(msg));
   ptrs.emplace_back(std::move(msg2));
-  PartRef ref {std::move(msg), std::move(msg2)};
+  PartRef ref{std::move(msg), std::move(msg2)};
   o2::framework::MessageSet msgSet;
   msgSet.add(std::move(ref));
 
