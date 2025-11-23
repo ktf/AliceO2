@@ -112,7 +112,8 @@ TEST_CASE("MessageSetAddMultiple")
   msgs.push_back(std::unique_ptr<fair::mq::Message>(nullptr));
   msgSet.add([&msgs](size_t i) {
     return std::move(msgs[i]);
-  }, 3);
+  },
+             3);
 
   REQUIRE(msgSet.messages.size() == 7);
   REQUIRE(msgSet.messageMap.size() == 3);
