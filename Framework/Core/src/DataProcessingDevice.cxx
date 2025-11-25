@@ -2559,7 +2559,7 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
 
   // If messages got up to here, it means they are transient ones which need to be
   // destroyed. Cleaning them up.
-  for (auto &set : currentSetOfInputs) {
+  for (auto& set : currentSetOfInputs) {
     set.clear(MessageSet::destroy_message);
   }
   return true;
