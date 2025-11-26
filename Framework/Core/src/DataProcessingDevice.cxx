@@ -615,6 +615,7 @@ static auto toBeforwardedMessageSet = [](std::vector<ChannelIndex>& cachedForwar
   // part of a split payload. All the others will use the same.
   // but always check if we have a sequence of multiple payloads
   if (fdh->splitPayloadIndex == 0 || fdh->splitPayloadParts <= 1 || total > 1) {
+    cachedForwardingChoices.clear();
     proxy.getMatchingForwardChannelIndexes(cachedForwardingChoices, *fdh, fdph->startTime);
   }
   return cachedForwardingChoices.empty() == false;
@@ -658,7 +659,7 @@ auto decongestionCallbackLate = [](AsyncTask& task, size_t aid) -> void {
 // to the next one in the daisy chain.
 // FIXME: do it in a smarter way than O(N^2)
 static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, std::vector<MessageSet>& currentSetOfInputs,
-                               TimesliceIndex::OldestOutputInfo oldestTimeslice, bool copy, bool consume = true) {
+                               TimesliceIndex::OldestOutputInfo oldestTimeslice, const bool copyByDefault, bool consume = true) {
   auto& proxy = registry.get<FairMQDeviceProxy>();
   // we collect all messages per forward in a map and send them together
   std::vector<fair::mq::Parts> forwardedParts;
@@ -666,7 +667,7 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
   std::vector<ChannelIndex> cachedForwardingChoices{};
   O2_SIGNPOST_ID_GENERATE(sid, forwarding);
   O2_SIGNPOST_START(forwarding, sid, "forwardInputs", "Starting forwarding for slot %zu with oldestTimeslice %zu %{public}s%{public}s%{public}s",
-                    slot.index, oldestTimeslice.timeslice.value, copy ? "with copy" : "", copy && consume ? " and " : "", consume ? "with consume" : "");
+                    slot.index, oldestTimeslice.timeslice.value, copyByDefault ? "with copy" : "", copyByDefault && consume ? " and " : "", consume ? "with consume" : "");
 
   for (size_t ii = 0, ie = currentSetOfInputs.size(); ii < ie; ++ii) {
     auto& messageSet = currentSetOfInputs[ii];
@@ -679,8 +680,7 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
     }
     cachedForwardingChoices.clear();
 
-    for (size_t pi = 0; pi < currentSetOfInputs[ii].size(); ++pi) {
-      auto& messageSet = currentSetOfInputs[ii];
+    for (size_t pi = 0; pi < messageSet.size(); ++pi) {
       auto& header = messageSet.header(pi);
       auto& payload = messageSet.payload(pi);
       auto total = messageSet.getNumberOfPayloads(pi);
@@ -691,9 +691,8 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
 
       // In case of more than one forward route, we need to copy the message.
       // This will eventually use the same mamory if running with the same backend.
-      if (cachedForwardingChoices.size() > 1) {
-        copy = true;
-      }
+      bool copy = copyByDefault || cachedForwardingChoices.size();
+
       auto* dh = o2::header::get<DataHeader*>(header->GetData());
       auto* dph = o2::header::get<DataProcessingHeader*>(header->GetData());
 
