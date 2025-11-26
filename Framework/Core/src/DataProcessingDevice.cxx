@@ -658,7 +658,7 @@ auto decongestionCallbackLate = [](AsyncTask& task, size_t aid) -> void {
 // to the next one in the daisy chain.
 // FIXME: do it in a smarter way than O(N^2)
 static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, std::vector<MessageSet>& currentSetOfInputs,
-                               TimesliceIndex::OldestOutputInfo oldestTimeslice, bool copy, bool consume = true) {
+                               TimesliceIndex::OldestOutputInfo oldestTimeslice, const bool copyByDefault, bool consume = true) {
   auto& proxy = registry.get<FairMQDeviceProxy>();
   // we collect all messages per forward in a map and send them together
   std::vector<fair::mq::Parts> forwardedParts;
@@ -666,7 +666,7 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
   std::vector<ChannelIndex> cachedForwardingChoices{};
   O2_SIGNPOST_ID_GENERATE(sid, forwarding);
   O2_SIGNPOST_START(forwarding, sid, "forwardInputs", "Starting forwarding for slot %zu with oldestTimeslice %zu %{public}s%{public}s%{public}s",
-                    slot.index, oldestTimeslice.timeslice.value, copy ? "with copy" : "", copy && consume ? " and " : "", consume ? "with consume" : "");
+                    slot.index, oldestTimeslice.timeslice.value, copyByDefault ? "with copy" : "", copyByDefault && consume ? " and " : "", consume ? "with consume" : "");
 
   for (size_t ii = 0, ie = currentSetOfInputs.size(); ii < ie; ++ii) {
     auto& messageSet = currentSetOfInputs[ii];
@@ -677,10 +677,10 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
     if (!toBeForwardedHeader(messageSet.header(0)->GetData())) {
       continue;
     }
+    bool copy = copyByDefault;
     cachedForwardingChoices.clear();
 
-    for (size_t pi = 0; pi < currentSetOfInputs[ii].size(); ++pi) {
-      auto& messageSet = currentSetOfInputs[ii];
+    for (size_t pi = 0; pi < messageSet.size(); ++pi) {
       auto& header = messageSet.header(pi);
       auto& payload = messageSet.payload(pi);
       auto total = messageSet.getNumberOfPayloads(pi);
