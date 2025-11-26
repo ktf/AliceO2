@@ -615,6 +615,7 @@ static auto toBeforwardedMessageSet = [](std::vector<ChannelIndex>& cachedForwar
   // part of a split payload. All the others will use the same.
   // but always check if we have a sequence of multiple payloads
   if (fdh->splitPayloadIndex == 0 || fdh->splitPayloadParts <= 1 || total > 1) {
+    cachedForwardingChoices.clear();
     proxy.getMatchingForwardChannelIndexes(cachedForwardingChoices, *fdh, fdph->startTime);
   }
   return cachedForwardingChoices.empty() == false;
@@ -691,9 +692,8 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
 
       // In case of more than one forward route, we need to copy the message.
       // This will eventually use the same mamory if running with the same backend.
-      if (cachedForwardingChoices.size() > 1) {
-        copy = true;
-      }
+      bool copy = copyByDefault || cachedForwardingChoices.size();
+
       auto* dh = o2::header::get<DataHeader*>(header->GetData());
       auto* dph = o2::header::get<DataProcessingHeader*>(header->GetData());
 
