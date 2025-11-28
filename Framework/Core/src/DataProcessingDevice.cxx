@@ -550,76 +550,6 @@ void on_signal_callback(uv_signal_t* handle, int signum)
   O2_SIGNPOST_END(device, sid, "signal_state", "Done processing signals.");
 }
 
-static auto toBeForwardedHeader = [](void* header) -> bool {
-  // If is now possible that the record is not complete when
-  // we forward it, because of a custom completion policy.
-  // this means that we need to skip the empty entries in the
-  // record for being forwarded.
-  if (header == nullptr) {
-    return false;
-  }
-  auto sih = o2::header::get<SourceInfoHeader*>(header);
-  if (sih) {
-    return false;
-  }
-
-  auto dih = o2::header::get<DomainInfoHeader*>(header);
-  if (dih) {
-    return false;
-  }
-
-  auto dh = o2::header::get<DataHeader*>(header);
-  if (!dh) {
-    return false;
-  }
-  auto dph = o2::header::get<DataProcessingHeader*>(header);
-  if (!dph) {
-    return false;
-  }
-  return true;
-};
-
-static auto toBeforwardedMessageSet = [](std::vector<ChannelIndex>& cachedForwardingChoices,
-                                         FairMQDeviceProxy& proxy,
-                                         std::unique_ptr<fair::mq::Message>& header,
-                                         std::unique_ptr<fair::mq::Message>& payload,
-                                         size_t total,
-                                         bool consume) {
-  if (header.get() == nullptr) {
-    // Missing an header is not an error anymore.
-    // it simply means that we did not receive the
-    // given input, but we were asked to
-    // consume existing, so we skip it.
-    return false;
-  }
-  if (payload.get() == nullptr && consume == true) {
-    // If the payload is not there, it means we already
-    // processed it with ConsumeExisiting. Therefore we
-    // need to do something only if this is the last consume.
-    header.reset(nullptr);
-    return false;
-  }
-
-  auto fdph = o2::header::get<DataProcessingHeader*>(header->GetData());
-  if (fdph == nullptr) {
-    LOG(error) << "Data is missing DataProcessingHeader";
-    return false;
-  }
-  auto fdh = o2::header::get<DataHeader*>(header->GetData());
-  if (fdh == nullptr) {
-    LOG(error) << "Data is missing DataHeader";
-    return false;
-  }
-
-  // We need to find the forward route only for the first
-  // part of a split payload. All the others will use the same.
-  // but always check if we have a sequence of multiple payloads
-  if (fdh->splitPayloadIndex == 0 || fdh->splitPayloadParts <= 1 || total > 1) {
-    proxy.getMatchingForwardChannelIndexes(cachedForwardingChoices, *fdh, fdph->startTime);
-  }
-  return cachedForwardingChoices.empty() == false;
-};
-
 struct DecongestionContext {
   ServiceRegistryRef ref;
   TimesliceIndex::OldestOutputInfo oldestTimeslice;
@@ -658,7 +588,7 @@ auto decongestionCallbackLate = [](AsyncTask& task, size_t aid) -> void {
 // to the next one in the daisy chain.
 // FIXME: do it in a smarter way than O(N^2)
 static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, std::vector<MessageSet>& currentSetOfInputs,
-                               TimesliceIndex::OldestOutputInfo oldestTimeslice, bool copy, bool consume = true) {
+                               TimesliceIndex::OldestOutputInfo oldestTimeslice, const bool copyByDefault, bool consume = true) {
   auto& proxy = registry.get<FairMQDeviceProxy>();
   // we collect all messages per forward in a map and send them together
   std::vector<fair::mq::Parts> forwardedParts;
@@ -666,38 +596,60 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
   std::vector<ChannelIndex> cachedForwardingChoices{};
   O2_SIGNPOST_ID_GENERATE(sid, forwarding);
   O2_SIGNPOST_START(forwarding, sid, "forwardInputs", "Starting forwarding for slot %zu with oldestTimeslice %zu %{public}s%{public}s%{public}s",
-                    slot.index, oldestTimeslice.timeslice.value, copy ? "with copy" : "", copy && consume ? " and " : "", consume ? "with consume" : "");
+                    slot.index, oldestTimeslice.timeslice.value, copyByDefault ? "with copy" : "", copyByDefault && consume ? " and " : "", consume ? "with consume" : "");
 
   for (size_t ii = 0, ie = currentSetOfInputs.size(); ii < ie; ++ii) {
     auto& messageSet = currentSetOfInputs[ii];
-    // In case the messageSet is empty, there is nothing to be done.
-    if (messageSet.size() == 0) {
-      continue;
-    }
-    if (!toBeForwardedHeader(messageSet.header(0)->GetData())) {
-      continue;
-    }
-    cachedForwardingChoices.clear();
 
-    for (size_t pi = 0; pi < currentSetOfInputs[ii].size(); ++pi) {
-      auto& messageSet = currentSetOfInputs[ii];
+    for (size_t pi = 0; pi < messageSet.size(); ++pi) {
       auto& header = messageSet.header(pi);
-      auto& payload = messageSet.payload(pi);
-      auto total = messageSet.getNumberOfPayloads(pi);
 
-      if (!toBeforwardedMessageSet(cachedForwardingChoices, proxy, header, payload, total, consume)) {
+      // If is now possible that the record is not complete when
+      // we forward it, because of a custom completion policy.
+      // this means that we need to skip the empty entries in the
+      // record for being forwarded.
+      if (header->GetData() == nullptr) {
+        continue;
+      }
+
+      auto dph = o2::header::get<DataProcessingHeader*>(header->GetData());
+      auto dh = o2::header::get<DataHeader*>(header->GetData());
+
+      if (dph == nullptr || dh == nullptr) {
+        // Complain only if this is not an out-of-band message
+        auto dih = o2::header::get<DomainInfoHeader*>(header->GetData());
+        auto sih = o2::header::get<SourceInfoHeader*>(header->GetData());
+        if (dih == nullptr || sih == nullptr) {
+          LOGP(error, "Data is missing {}{}{}",
+               dph ? "DataProcessingHeader" : "", dph || dh ? "and" : "", dh ? "DataHeader" : "");
+        }
+        continue;
+      }
+
+      auto& payload = messageSet.payload(pi);
+
+      if (payload.get() == nullptr && consume == true) {
+        // If the payload is not there, it means we already
+        // processed it with ConsumeExisiting. Therefore we
+        // need to do something only if this is the last consume.
+        header.reset(nullptr);
+        continue;
+      }
+
+      // We need to find the forward route only for the first
+      // part of a split payload. All the others will use the same.
+      // but always check if we have a sequence of multiple payloads
+      cachedForwardingChoices.clear();
+      proxy.getMatchingForwardChannelIndexes(cachedForwardingChoices, *dh, dph->startTime);
+
+      if (cachedForwardingChoices.empty()) {
+        // Nothing to forward
         continue;
       }
 
       // In case of more than one forward route, we need to copy the message.
-      // This will eventually use the same mamory if running with the same backend.
-      if (cachedForwardingChoices.size() > 1) {
-        copy = true;
-      }
-      auto* dh = o2::header::get<DataHeader*>(header->GetData());
-      auto* dph = o2::header::get<DataProcessingHeader*>(header->GetData());
-
-      if (copy) {
+      // This will eventually use the same memory if running with the same backend.
+      if (copyByDefault || cachedForwardingChoices.size()) {
         for (auto& cachedForwardingChoice : cachedForwardingChoices) {
           auto&& newHeader = header->GetTransport()->CreateMessage();
           O2_SIGNPOST_EVENT_EMIT(forwarding, sid, "forwardInputs", "Forwarding a copy of %{public}s to route %d.",
@@ -721,6 +673,7 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
       }
     }
   }
+
   O2_SIGNPOST_EVENT_EMIT(forwarding, sid, "forwardInputs", "Forwarding %zu messages", forwardedParts.size());
   for (int fi = 0; fi < proxy.getNumForwardChannels(); fi++) {
     if (forwardedParts[fi].Size() == 0) {
