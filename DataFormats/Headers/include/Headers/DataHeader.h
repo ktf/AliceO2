@@ -373,7 +373,8 @@ struct BaseHeader {
     uint32_t flags;
     struct {
       uint32_t flagsNextHeader : 1, // do we have a next header after this one?
-        flagsReserved : 15,         // reserved for future use
+        flagsReserved : 14,         // reserved for future use. MUST be filled with 0s.
+        flagsDisabled : 1,          // header should be ignored if this is 1
         flagsDerivedHeader : 16;    // reserved for usage by the derived header
     };
   };
@@ -467,7 +468,9 @@ auto get(const std::byte* buffer, size_t /*len*/ = 0)
     // otherwise, we keep the code related to the exception outside the header file.
     // Note: Can not check on size because the O2 data model requires variable size headers
     // to be supported.
-    if (current->sanityCheck(HeaderValueType::sVersion)) {
+    if (current->sanityCheck(HeaderValueType::sVersion) && current->flagsDisabled == 0) {
+      // If the first header matches and it's enabled, we return it
+      // otherwise we look for more.
       return reinterpret_cast<HeaderConstPtrType>(current);
     }
   }
@@ -475,7 +478,10 @@ auto get(const std::byte* buffer, size_t /*len*/ = 0)
   while ((current = current->next())) {
     prev = current;
     if (current->description == HeaderValueType::sHeaderType) {
-      if (current->sanityCheck(HeaderValueType::sVersion)) {
+      // This is needed to allow disabling some headers from being picked up
+      // even if they are matching. This is handy to have a quick
+      // way to disable a sub headers without having to drop them.
+      if (current->sanityCheck(HeaderValueType::sVersion) && current->flagsDisabled == 0) {
         return reinterpret_cast<HeaderConstPtrType>(current);
       }
     }
