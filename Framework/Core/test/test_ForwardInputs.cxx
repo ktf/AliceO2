@@ -162,7 +162,7 @@ TEST_CASE("ForwardInputsSingleMessageSingleRouteAtEOS")
 
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
   REQUIRE(result.size() == 1); // One route
-  REQUIRE(result[0].Size() == 0); // FIXME: this is an actual error. It should be 2
+  REQUIRE(result[0].Size() == 2);
   // Correct behavior below:
   // REQUIRE(result[0].Size() == 2);
   // REQUIRE(o2::header::get<SourceInfoHeader*>(result[0].At(0)->GetData()) == nullptr);
@@ -223,10 +223,8 @@ TEST_CASE("ForwardInputsSingleMessageSingleRouteWithOldestPossible")
 
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
   REQUIRE(result.size() == 1); // One route
-  REQUIRE(result[0].Size() == 0); // FIXME: this is actually wrong
-  // FIXME: actually correct behavior below
-  // REQUIRE(result[0].Size() == 2);                                                     // Two messages
-  // REQUIRE(o2::header::get<DomainInfoHeader*>(result[0].At(0)->GetData()) == nullptr); // it should not have the end of stream
+  REQUIRE(result[0].Size() == 2);
+  REQUIRE(o2::header::get<DomainInfoHeader*>(result[0].At(0)->GetData()) == nullptr); // it should not have the end of stream
 }
 
 TEST_CASE("ForwardInputsSingleMessageMultipleRoutes")
@@ -590,8 +588,7 @@ TEST_CASE("ForwardInputsSplitPayload")
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
   REQUIRE(result.size() == 2);    // Two routes
   CHECK(result[0].Size() == 2); // No messages on this route
-  CHECK(result[1].Size() == 5); // FIXME: Multipart matching has side effects also for the elements
-  // CHECK(result[1].Size() == 3); // FIXME: the correct forwarding is that only the multipart goes to the same route
+  CHECK(result[1].Size() == 3);
 }
 
 TEST_CASE("ForwardInputEOSSingleRoute")
