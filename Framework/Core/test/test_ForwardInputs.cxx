@@ -586,7 +586,7 @@ TEST_CASE("ForwardInputsSplitPayload")
   TimesliceSlot slot{0};
 
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
-  REQUIRE(result.size() == 2);    // Two routes
+  REQUIRE(result.size() == 2);  // Two routes
   CHECK(result[0].Size() == 2); // No messages on this route
   CHECK(result[1].Size() == 3);
 }
