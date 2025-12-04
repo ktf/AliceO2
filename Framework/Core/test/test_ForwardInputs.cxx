@@ -161,7 +161,7 @@ TEST_CASE("ForwardInputsSingleMessageSingleRouteAtEOS")
   TimesliceSlot slot{0};
 
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
-  REQUIRE(result.size() == 1); // One route
+  REQUIRE(result.size() == 1);    // One route
   REQUIRE(result[0].Size() == 0); // FIXME: this is an actual error. It should be 2
   // Correct behavior below:
   // REQUIRE(result[0].Size() == 2);
@@ -222,7 +222,7 @@ TEST_CASE("ForwardInputsSingleMessageSingleRouteWithOldestPossible")
   TimesliceSlot slot{0};
 
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
-  REQUIRE(result.size() == 1); // One route
+  REQUIRE(result.size() == 1);    // One route
   REQUIRE(result[0].Size() == 0); // FIXME: this is actually wrong
   // FIXME: actually correct behavior below
   // REQUIRE(result[0].Size() == 2);                                                     // Two messages
@@ -588,7 +588,7 @@ TEST_CASE("ForwardInputsSplitPayload")
   TimesliceSlot slot{0};
 
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, slot, currentSetOfInputs, oldestTimeslice, copyByDefault, consume);
-  REQUIRE(result.size() == 2);    // Two routes
+  REQUIRE(result.size() == 2);  // Two routes
   CHECK(result[0].Size() == 2); // No messages on this route
   CHECK(result[1].Size() == 5); // FIXME: Multipart matching has side effects also for the elements
   // CHECK(result[1].Size() == 3); // FIXME: the correct forwarding is that only the multipart goes to the same route
