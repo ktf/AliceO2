@@ -398,7 +398,7 @@ getNumberOfPhysicalCPUCores() {
     CORESPERSOCKET=`lscpu | grep "Core(s) per socket" | awk '{print $4}'`
     SOCKETS=`lscpu | grep "Socket(s)" | awk '{print $2}'`
   fi
-  N=`bc <<< "${CORESPERSOCKET}*${SOCKETS}"`
+  N=$((${CORESPERSOCKET}*${SOCKETS}))
   echo "${N}"
 }
 
