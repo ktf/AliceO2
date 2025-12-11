@@ -345,6 +345,46 @@ auto DataProcessingHelpers::routeForwardedMessageSet(FairMQDeviceProxy& proxy,
     routeForwardedMessages(proxy, span, forwardedParts, copyByDefault, consume);
   }
   return forwardedParts;
-};
+}
+
+void DataProcessingHelpers::cleanForwardedMessageSet(std::vector<MessageSet>& currentSetOfInputs)
+{
+  for (size_t ii = 0, ie = currentSetOfInputs.size(); ii < ie; ++ii) {
+    auto messages = std::span<fair::mq::MessagePtr>(currentSetOfInputs[ii].messages);
+    size_t pi = 0;
+    while (pi < messages.size()) {
+      auto& header = messages[pi];
+      auto dih = o2::header::get<DomainInfoHeader*>(header->GetData());
+      auto sih = o2::header::get<SourceInfoHeader*>(header->GetData());
+      auto dph = o2::header::get<DataProcessingHeader*>(header->GetData());
+      auto dh = o2::header::get<o2::header::DataHeader*>(header->GetData());
+      if (header->GetData() == nullptr || sih || dih || dph == nullptr || dh == nullptr) {
+        pi += 2;
+        continue;
+      }
+
+      // At least one payload.
+      auto& payload = messages[pi + 1];
+
+      if (payload.get() == nullptr) {
+        // If the payload is not there, it means we already
+        // processed it with ConsumeExisiting. Therefore we
+        // need to do something only if this is the last consume.
+        header.reset(nullptr);
+      }
+
+      // Calculate the number of messages which should be handled together
+      // all in one go.
+      if (dh->splitPayloadParts > 0 && dh->splitPayloadParts == dh->splitPayloadIndex) {
+        // Sequence of (header, payload[0], ... , payload[splitPayloadParts - 2]) pairs belonging together.
+        pi += dh->splitPayloadParts + 1;
+      } else {
+        // Sequence of splitPayloadParts (header, payload) pairs belonging together.
+        // In case splitPayloadParts = 0, we consider this as a single message pair
+        pi += (dh->splitPayloadParts > 0 ? dh->splitPayloadParts : 1) * 2;
+      }
+    }
+  }
+}
 
 } // namespace o2::framework
