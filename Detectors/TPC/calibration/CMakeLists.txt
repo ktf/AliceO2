@@ -58,7 +58,7 @@ o2_add_library(TPCCalibration
                        src/DigitAdd.cxx
                        src/CorrectdEdxDistortions.cxx
                        src/PressureTemperatureHelper.cxx
-               PUBLIC_LINK_LIBRARIES O2::DataFormatsTPC O2::TPCBase
+               PUBLIC_LINK_LIBRARIES O2::DataFormatsTPC O2::TPCCore
                                      O2::TPCReconstruction ROOT::Minuit
                                      Microsoft.GSL::GSL
                                      O2::DetectorsCalibration
