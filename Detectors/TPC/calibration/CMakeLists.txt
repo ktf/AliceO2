@@ -118,16 +118,16 @@ o2_target_root_dictionary(TPCCalibration
                                   include/TPCCalibration/PressureTemperatureHelper.h)
 
 o2_add_test_root_macro(macro/comparePedestalsAndNoise.C
-                       PUBLIC_LINK_LIBRARIES O2::TPCBase
+                       PUBLIC_LINK_LIBRARIES O2::TPCCore
                        LABELS tpc)
 o2_add_test_root_macro(macro/drawNoiseAndPedestal.C
-                       PUBLIC_LINK_LIBRARIES O2::TPCBase
+                       PUBLIC_LINK_LIBRARIES O2::TPCCore
                        LABELS tpc)
 o2_add_test_root_macro(macro/drawPulser.C
-                       PUBLIC_LINK_LIBRARIES O2::TPCBase
+                       PUBLIC_LINK_LIBRARIES O2::TPCCore
                        LABELS tpc)
 o2_add_test_root_macro(macro/mergeNoiseAndPedestal.C
-                       PUBLIC_LINK_LIBRARIES O2::TPCBase
+                       PUBLIC_LINK_LIBRARIES O2::TPCCore
                        LABELS tpc)
 o2_add_test_root_macro(macro/runPedestal.C
                        PUBLIC_LINK_LIBRARIES O2::TPCCalibration
