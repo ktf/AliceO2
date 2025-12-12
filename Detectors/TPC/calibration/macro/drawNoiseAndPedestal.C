@@ -19,7 +19,7 @@
 #include "TH2.h"
 #include "TFile.h"
 #include "TPCBase/CalDet.h"
-#include "TPCBase/Painter.h"
+#include "TPCCore/Painter.h"
 #include "TPCBase/Utils.h"
 #include "TPCCore/CDBInterface.h"
 #include "TPad.h"

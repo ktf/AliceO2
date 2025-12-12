@@ -18,7 +18,7 @@
 #include "SimulationDataFormat/MCTruthContainer.h"
 #include "DataFormatsTPC/Constants.h"
 #include "TPCQC/Clusters.h"
-#include "TPCBase/Painter.h"
+#include "TPCCore/Painter.h"
 #endif
 
 using namespace o2::tpc;
