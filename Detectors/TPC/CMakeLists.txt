@@ -10,6 +10,7 @@
 # or submit itself to any jurisdiction.
 
 add_subdirectory(base)
+add_subdirectory(core)
 add_subdirectory(reconstruction)
 add_subdirectory(calibration)
 add_subdirectory(simulation)

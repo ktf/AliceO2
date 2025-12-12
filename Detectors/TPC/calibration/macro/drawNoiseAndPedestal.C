@@ -21,7 +21,7 @@
 #include "TPCBase/CalDet.h"
 #include "TPCBase/Painter.h"
 #include "TPCBase/Utils.h"
-#include "TPCBase/CDBInterface.h"
+#include "TPCCore/CDBInterface.h"
 #include "TPad.h"
 #include "TCanvas.h"
 #include "TH1F.h"

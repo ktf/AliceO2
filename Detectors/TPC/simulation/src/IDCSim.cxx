@@ -16,7 +16,7 @@
 #include "TPCBase/Mapper.h"
 #include <fmt/format.h>
 #include "Framework/Logger.h"
-#include "TPCBase/Painter.h"
+#include "TPCCore/Painter.h"
 #include "TH2Poly.h"
 #include "TCanvas.h"
 #include "TLatex.h"

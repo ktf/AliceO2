@@ -21,7 +21,7 @@
 #include "TFile.h"
 
 #include "Framework/Logger.h"
-#include "TPCBase/CDBInterface.h"
+#include "TPCCore/CDBInterface.h"
 #include "TPCBase/Mapper.h"
 #include "TPCBase/CalDet.h"
 #include "TPCBase/Utils.h"

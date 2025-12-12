@@ -71,14 +71,14 @@ namespace ROOT
 {
 static __attribute__((used)) int _R__dummyStreamer_3 =
   ([]() {
-    auto cl = TClass::GetClass<o2::tpc::CalArray<o2::tpc::PadFlags>>();
-    if (cl) {
-      if (!getenv("TPC_PADFLAGS_STREAMER_OFF")) {
+    if (getenv("TPC_PADFLAGS_STREAMER_OFF") != nullptr) {
+      auto cl = TClass::GetClass<o2::tpc::CalArray<o2::tpc::PadFlags>>();
+      if (cl) {
         cl->AdoptMemberStreamer("mData", new TMemberStreamer(MemberVectorPadFlagsStreamer));
+      } else {
+        // we should never come here ... and if we do we should assert/fail
+        assert(false);
       }
-    } else {
-      // we should never come here ... and if we do we should assert/fail
-      assert(false);
     }
     return 0;
   })();
