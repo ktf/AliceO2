@@ -41,7 +41,8 @@
 #include "TPCBase/Mapper.h"
 #include "TPCBase/CalDet.h"
 #include "TPCBase/CalArray.h"
-#include "TPCBase/Painter.h"
+#include "TPCCore/Painter.h"
+#include "TPCCore/PadFlags.h"
 #include "TPCBase/Utils.h"
 #include "DataFormatsTPC/LaserTrack.h"
 

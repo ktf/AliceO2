@@ -35,7 +35,7 @@
 #include "TPCBase/CRU.h"
 #include "CommonUtils/NameConf.h"
 #include "TPCWorkflow/ProcessingHelpers.h"
-#include "TPCBase/CDBInterface.h"
+#include "TPCCore/CDBInterface.h"
 #include "DetectorsCalibration/Utils.h"
 #include "TPCCalibration/IDCCCDBHelper.h"
 
