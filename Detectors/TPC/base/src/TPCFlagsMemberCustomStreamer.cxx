@@ -72,7 +72,7 @@ namespace ROOT
 static __attribute__((used)) int _R__dummyStreamer_3 =
   ([]() {
     if (!getenv("TPC_PADFLAGS_STREAMER_OFF")) {
-      ROOT::GenerateInitInstance((o2::tpc::CalArray<o2::tpc::PadFlags> *)nullptr)->AdoptMemberStreamer("mData", new TMemberStreamer(MemberVectorPadFlagsStreamer));
+      ROOT::GenerateInitInstance((o2::tpc::CalArray<o2::tpc::PadFlags>*)nullptr)->AdoptMemberStreamer("mData", new TMemberStreamer(MemberVectorPadFlagsStreamer));
     }
     return 0;
   })();
