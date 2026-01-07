@@ -201,7 +201,6 @@ TEST_CASE("ForwardInputsSingleMessageSingleRouteAtEOS")
   REQUIRE(messageSet.size() == 1);
   currentSetOfInputs.emplace_back(std::move(messageSet));
 
-
   auto result = o2::framework::DataProcessingHelpers::routeForwardedMessages(proxy, currentSetOfInputs, copyByDefault, consume);
   REQUIRE(result.size() == 1);    // One route
   REQUIRE(result[0].Size() == 0); // FIXME: this is an actual error. It should be 2. However it cannot really happen.
