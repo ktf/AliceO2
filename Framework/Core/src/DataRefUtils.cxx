@@ -72,6 +72,7 @@ void* extractFromTFile(TFile& file, TClass const* cl, const char* what)
   return result;
 }
 } // namespace
+
 // Adapted from CcdbApi private method interpretAsTMemFileAndExtract
 // If the former is moved to public, throws on error and could be changed to
 // not require a mutex we could use it.
