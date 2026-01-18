@@ -618,7 +618,7 @@ static auto forwardInputs = [](ServiceRegistryRef registry, TimesliceSlot slot, 
 };
 
 static auto cleanEarlyForward = [](ServiceRegistryRef registry, TimesliceSlot slot, std::vector<MessageSet>& currentSetOfInputs,
-                                    TimesliceIndex::OldestOutputInfo oldestTimeslice, bool copy, bool consume = true) {
+                                   TimesliceIndex::OldestOutputInfo oldestTimeslice, bool copy, bool consume = true) {
   auto& proxy = registry.get<FairMQDeviceProxy>();
 
   O2_SIGNPOST_ID_GENERATE(sid, forwarding);
