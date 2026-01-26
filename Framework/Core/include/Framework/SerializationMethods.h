@@ -15,6 +15,7 @@
 /// @brief Type wrappers for enfording a specific serialization method
 
 #include "Framework/TypeTraits.h"
+#include <TClass.h>
 
 namespace o2::framework
 {
@@ -43,6 +44,9 @@ namespace o2::framework
 ///     - or -
 ///   ROOTSerialized<decltype(object), const char>(object, "classname"));
 template <typename T, typename HintType = void>
+  requires(std::same_as<HintType, const char> ||
+           std::same_as<HintType, TClass> ||
+           std::is_void_v<HintType>)
 class ROOTSerialized
 {
  public:
