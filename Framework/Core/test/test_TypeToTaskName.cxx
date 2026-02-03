@@ -25,13 +25,13 @@ TEST_CASE("TypeIdHelpers_BasicConversion")
 
 TEST_CASE("TypeIdHelpers_AbbreviationConsolidation")
 {
-// Test ALICE detector abbreviations
-//  REQUIRE(type_to_task_name(std::string_view("ITSQA")) == "its-qa");
-//  REQUIRE(type_to_task_name(std::string_view("TPCQCTask")) == "tpc-qc-task");
-//  REQUIRE(type_to_task_name(std::string_view("EMCALQATask")) == "emcal-qa-task");
-//  REQUIRE(type_to_task_name(std::string_view("HMPIDTask")) == "hmpid-task");
-// REQUIRE(type_to_task_name(std::string_view("ITSTPCTask")) == "its-tpc-task");
-// REQUIRE(type_to_task_name(std::string_view("QCFV0Task")) == "qc-fv0-task");
+  // Test ALICE detector abbreviations
+  //  REQUIRE(type_to_task_name(std::string_view("ITSQA")) == "its-qa");
+  //  REQUIRE(type_to_task_name(std::string_view("TPCQCTask")) == "tpc-qc-task");
+  //  REQUIRE(type_to_task_name(std::string_view("EMCALQATask")) == "emcal-qa-task");
+  //  REQUIRE(type_to_task_name(std::string_view("HMPIDTask")) == "hmpid-task");
+  // REQUIRE(type_to_task_name(std::string_view("ITSTPCTask")) == "its-tpc-task");
+  // REQUIRE(type_to_task_name(std::string_view("QCFV0Task")) == "qc-fv0-task");
 }
 
 //TEST_CASE("TypeIdHelpers_QualityControlAbbreviations")
@@ -42,13 +42,13 @@ TEST_CASE("TypeIdHelpers_AbbreviationConsolidation")
 //  REQUIRE(type_to_task_name(std::string_view("QCDAnalysis")) == "qcd-analysis");
 //}
 
-//TEST_CASE("TypeIdHelpers_ComplexNames")
+// TEST_CASE("TypeIdHelpers_ComplexNames")
 //{
-// Test complex combinations
-//  REQUIRE(type_to_task_name(std::string_view("ITSQAAnalysisTask")) == "its-qa-analysis-task");
-//  REQUIRE(type_to_task_name(std::string_view("TPCEMCQCTask")) == "tpc-emc-qc-task");
-//  REQUIRE(type_to_task_name(std::string_view("MyITSTask")) == "my-its-task");
-//}
+//  Test complex combinations
+//   REQUIRE(type_to_task_name(std::string_view("ITSQAAnalysisTask")) == "its-qa-analysis-task");
+//   REQUIRE(type_to_task_name(std::string_view("TPCEMCQCTask")) == "tpc-emc-qc-task");
+//   REQUIRE(type_to_task_name(std::string_view("MyITSTask")) == "my-its-task");
+// }
 
 //TEST_CASE("TypeIdHelpers_EdgeCases")
 //{
