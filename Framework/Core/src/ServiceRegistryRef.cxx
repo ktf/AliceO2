@@ -9,12 +9,13 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-
 #include "Framework/ServiceRegistryRef.h"
-namespace o2::framework {
+namespace o2::framework
+{
 
-ServiceRegistryRef *ServiceRegistryRef::globalDeviceRef(ServiceRegistryRef *ref) {
-  static ServiceRegistryRef *globalRef = nullptr;
+ServiceRegistryRef* ServiceRegistryRef::globalDeviceRef(ServiceRegistryRef* ref)
+{
+  static ServiceRegistryRef* globalRef = nullptr;
   if (!globalRef) {
     globalRef = ref;
   }
@@ -22,4 +23,4 @@ ServiceRegistryRef *ServiceRegistryRef::globalDeviceRef(ServiceRegistryRef *ref)
   return globalRef;
 }
 
-}
+} // namespace o2::framework

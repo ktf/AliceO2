@@ -342,7 +342,7 @@ T* CCDBManagerInstance::getForTimeStamp(std::string const& path, long timestamp,
   }
   auto end = std::chrono::system_clock::now();
   mTimerMS += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-  auto *ref = o2::framework::ServiceRegistryRef::globalDeviceRef();
+  auto* ref = o2::framework::ServiceRegistryRef::globalDeviceRef();
   if (ref && ref->active<framework::DataProcessingStats>()) {
     auto& stats = ref->get<o2::framework::DataProcessingStats>();
     stats.updateStats({(int)o2::framework::ProcessingStatsId::CCDB_CACHE_HIT, o2::framework::DataProcessingStats::Op::Set, (int64_t)mQueries - mFailures - mFetches});
