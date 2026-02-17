@@ -9,22 +9,21 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   MIDWorkflow/RawDumpSpec.h
-/// \brief  Device to dump decoded raw data
-/// \author Diego Stocco <Diego.Stocco at cern.ch>
-/// \date   17 February 2022
+/// @file   ClusterWriterSpec.h
 
-#ifndef O2_MID_RAWDUMPSPEC_H
-#define O2_MID_RAWDUMPSPEC_H
+#ifndef O2_ITSMFT_CLUSTERWRITER
+#define O2_ITSMFT_CLUSTERWRITER
 
 #include "Framework/DataProcessorSpec.h"
 
-namespace o2
+namespace o2::itsmft
 {
-namespace mid
-{
-framework::DataProcessorSpec getRawDumpSpec();
-} // namespace mid
-} // namespace o2
 
-#endif // O2_MID_RAWDUMPSPEC_H
+template <int N>
+framework::DataProcessorSpec getClusterWriterSpec(bool useMC);
+framework::DataProcessorSpec getITSClusterWriterSpec(bool useMC);
+framework::DataProcessorSpec getMFTClusterWriterSpec(bool useMC);
+
+} // namespace o2::itsmft
+
+#endif /* O2_ITS_CLUSTERWRITER */

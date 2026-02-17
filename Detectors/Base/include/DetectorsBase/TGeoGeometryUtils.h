@@ -9,23 +9,30 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// @file   ClusterWriterSpec.h
+/// \file TGeoGeometryUtils.h
+/// \author Sandro Wenzel (CERN)
+/// \brief Collection of utility functions for TGeo
 
-#ifndef O2_MFT_CLUSTERWRITER_H_
-#define O2_MFT_CLUSTERWRITER_H_
+#ifndef ALICEO2_BASE_TGEOGEOMETRYUTILS_H_
+#define ALICEO2_BASE_TGEOGEOMETRYUTILS_H_
 
-#include "Framework/DataProcessorSpec.h"
+class TGeoShape;
+class TGeoTessellated;
 
 namespace o2
 {
-namespace mft
+namespace base
 {
 
-/// create a processor spec
-/// write MFT clusters a root file
-framework::DataProcessorSpec getClusterWriterSpec(bool useMC);
+/// A few utility functions to operate on TGeo geometries (transformations, printing, ...)
+class TGeoGeometryUtils
+{
+ public:
+  ///< Transform any (primitive) TGeoShape to a tessellated representation
+  static TGeoTessellated* TGeoShapeToTGeoTessellated(TGeoShape const*);
+};
 
-} // namespace mft
+} // namespace base
 } // namespace o2
 
-#endif /* O2_MFT_CLUSTERWRITER_H */
+#endif

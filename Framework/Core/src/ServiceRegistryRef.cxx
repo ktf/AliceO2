@@ -1,4 +1,4 @@
-// Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+// Copyright 2019-2026 CERN and copyright holders of ALICE O2.
 // See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
 // All rights not expressly granted are reserved.
 //
@@ -9,23 +9,17 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// @file   ClusterWriterSpec.h
 
-#ifndef O2_ITS_CLUSTERWRITER
-#define O2_ITS_CLUSTERWRITER
+#include "Framework/ServiceRegistryRef.h"
+namespace o2::framework {
 
-#include "Framework/DataProcessorSpec.h"
+ServiceRegistryRef ServiceRegistryRef::globalDeviceRef(ServiceRegistryRef *ref) {
+  static ServiceRegistryRef *globalRef = nullptr;
+  if (!globalRef) {
+    globalRef = ref;
+  }
+  // We return a copy, so that it can be cache
+  return *globalRef;
+}
 
-namespace o2
-{
-namespace its
-{
-
-/// create a processor spec
-/// write ITS clusters to ROOT file
-framework::DataProcessorSpec getClusterWriterSpec(bool useMC);
-
-} // namespace its
-} // namespace o2
-
-#endif /* O2_ITS_CLUSTERWRITER */
+}

@@ -9,22 +9,17 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-/// \file   MIDWorkflow/RawAggregatorSpec.h
-/// \brief  Data processor spec for MID raw data aggregator devices
-/// \author Diego Stocco <Diego.Stocco at cern.ch>
-/// \date   26 February 2020
+#ifndef _FT0_EVENTS_PER_BC_CALIB_OBJECT
+#define _FT0_EVENTS_PER_BC_CALIB_OBJECT
 
-#ifndef O2_MID_RAWAGGREGATORSPEC_H
-#define O2_MID_RAWAGGREGATORSPEC_H
+#include "CommonConstants/LHCConstants.h"
+#include <Rtypes.h>
 
-#include "Framework/DataProcessorSpec.h"
-
-namespace o2
+namespace o2::ft0
 {
-namespace mid
-{
-framework::DataProcessorSpec getRawAggregatorSpec();
-} // namespace mid
-} // namespace o2
-
-#endif //O2_MID_RAWAGGREGATORSPEC_H
+struct EventsPerBc {
+  std::array<double, o2::constants::lhc::LHCMaxBunches> histogram;
+  ClassDefNV(EventsPerBc, 1);
+};
+} // namespace o2::ft0
+#endif
