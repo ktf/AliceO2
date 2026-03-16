@@ -21,6 +21,7 @@
 #include <arrow/dataset/dataset.h>
 
 #include <regex>
+#include <vector>
 #include "rapidjson/fwd.h"
 
 namespace o2::monitoring
@@ -44,6 +45,7 @@ struct DataInputDirectorContext {
   o2::monitoring::Monitoring* monitoring = nullptr;
   int allowedParentLevel = 0;
   std::string parentFileReplacement = "";
+  std::vector<std::pair<std::string, int>> parentLevelToOrigin = {};
 };
 
 class DataInputDescriptor
@@ -71,7 +73,7 @@ class DataInputDescriptor
 
   void addFileNameHolder(FileNameHolder* fn);
   int fillInputfiles();
-  bool setFile(int counter, std::string_view origin);
+  bool setFile(int counter, int wantedParentLevel, std::string_view wantedOrigin);
 
   // getters
   std::string getInputfilesFilename();
@@ -81,9 +83,9 @@ class DataInputDescriptor
   int getNumberTimeFrames() { return mtotalNumberTimeFrames; }
   int findDFNumber(int file, std::string dfName);
 
-  uint64_t getTimeFrameNumber(int counter, int numTF, std::string_view origin);
-  arrow::dataset::FileSource getFileFolder(int counter, int numTF, std::string_view origin);
-  DataInputDescriptor* getParentFile(int counter, int numTF, std::string treename, std::string_view origin);
+  uint64_t getTimeFrameNumber(int counter, int numTF, int wantedParentLevel, std::string_view wantedOrigin);
+  arrow::dataset::FileSource getFileFolder(int counter, int numTF, int wantedParentLevel, std::string_view wantedOrigin);
+  DataInputDescriptor* getParentFile(int counter, int numTF, std::string treename, int wantedParentLevel, std::string_view wantedOrigin);
   int getTimeFramesInFile(int counter);
   int getReadTimeFramesInFile(int counter);
 

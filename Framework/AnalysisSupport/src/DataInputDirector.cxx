@@ -122,7 +122,7 @@ void DataInputDescriptor::addFileNameHolder(FileNameHolder* fn)
   mfilenames.emplace_back(fn);
 }
 
-bool DataInputDescriptor::setFile(int counter, std::string_view origin)
+bool DataInputDescriptor::setFile(int counter, int wantedParentLevel, std::string_view origin)
 {
   // no files left
   if (counter >= getNumberInputfiles()) {
@@ -133,7 +133,9 @@ bool DataInputDescriptor::setFile(int counter, std::string_view origin)
   // of the filename. In the future we might expand this for proper rewriting of the
   // filename based on the origin and the original file information.
   std::string filename = mfilenames[counter]->fileName;
-  if (!origin.starts_with("AOD")) {
+  // In case we do not need to remap parent levels, the requested origin is what
+  // drives the filename.
+  if (wantedParentLevel == -1 && !origin.starts_with("AOD")) {
     filename = std::regex_replace(filename, std::regex("[.]root$"), fmt::format("_{}.root", origin));
   }
 
@@ -218,11 +220,11 @@ bool DataInputDescriptor::setFile(int counter, std::string_view origin)
   return true;
 }
 
-uint64_t DataInputDescriptor::getTimeFrameNumber(int counter, int numTF, std::string_view origin)
+uint64_t DataInputDescriptor::getTimeFrameNumber(int counter, int numTF, int wantedParentLevel, std::string_view wantedOrigin)
 {
 
   // open file
-  if (!setFile(counter, origin)) {
+  if (!setFile(counter, wantedParentLevel, wantedOrigin)) {
     return 0ul;
   }
 
@@ -234,10 +236,27 @@ uint64_t DataInputDescriptor::getTimeFrameNumber(int counter, int numTF, std::st
   return (mfilenames[counter]->listOfTimeFrameNumbers)[numTF];
 }
 
-arrow::dataset::FileSource DataInputDescriptor::getFileFolder(int counter, int numTF, std::string_view origin)
+arrow::dataset::FileSource DataInputDescriptor::getFileFolder(int counter, int numTF, int wantedParentLevel, std::string_view wantedOrigin)
 {
+  // If mapped to a parent level deeper than current, skip directly to the right level.
+  if (wantedParentLevel != -1 && mLevel < wantedParentLevel) {
+    if (!setFile(counter, wantedParentLevel, wantedOrigin)) {
+      return {};
+    }
+    auto folderName = fmt::format("DF_{}", mfilenames[counter]->listOfTimeFrameNumbers[numTF]);
+    auto parentFile = getParentFile(counter, numTF, "", wantedParentLevel, wantedOrigin);
+    if (parentFile == nullptr) {
+      return {};
+    }
+    int parentNumTF = parentFile->findDFNumber(0, folderName);
+    if (parentNumTF == -1) {
+      return {};
+    }
+    return parentFile->getFileFolder(0, parentNumTF, wantedParentLevel, wantedOrigin);
+  }
+
   // open file
-  if (!setFile(counter, origin)) {
+  if (!setFile(counter, wantedParentLevel, wantedOrigin)) {
     return {};
   }
 
@@ -251,7 +270,7 @@ arrow::dataset::FileSource DataInputDescriptor::getFileFolder(int counter, int n
   return {fmt::format("DF_{}", mfilenames[counter]->listOfTimeFrameNumbers[numTF]), mCurrentFilesystem};
 }
 
-DataInputDescriptor* DataInputDescriptor::getParentFile(int counter, int numTF, std::string treename, std::string_view origin)
+DataInputDescriptor* DataInputDescriptor::getParentFile(int counter, int numTF, std::string treename, int wantedParentLevel, std::string_view wantedOrigin)
 {
   if (!mParentFileMap) {
     // This file has no parent map
@@ -288,7 +307,7 @@ DataInputDescriptor* DataInputDescriptor::getParentFile(int counter, int numTF, 
   mParentFile->mdefaultFilenamesPtr = new std::vector<FileNameHolder*>;
   mParentFile->mdefaultFilenamesPtr->emplace_back(makeFileNameHolder(parentFileName->GetString().Data()));
   mParentFile->fillInputfiles();
-  mParentFile->setFile(0, origin);
+  mParentFile->setFile(0, wantedParentLevel, wantedOrigin);
   return mParentFile;
 }
 
@@ -446,8 +465,38 @@ struct CalculateDelta {
 bool DataInputDescriptor::readTree(DataAllocator& outputs, header::DataHeader dh, int counter, int numTF, std::string treename, size_t& totalSizeCompressed, size_t& totalSizeUncompressed)
 {
   CalculateDelta t(mIOTime);
-  std::string origin = dh.dataOrigin.as<std::string>();
-  auto folder = getFileFolder(counter, numTF, origin);
+  std::string wantedOrigin = dh.dataOrigin.as<std::string>();
+  int wantedLevel = -1;
+  for (auto& [origin, level] : mContext.parentLevelToOrigin) {
+    if (origin == wantedOrigin) {
+      wantedLevel = level;
+      break;
+    }
+  }
+
+  // If this origin is mapped to a parent level deeper than current, skip directly without
+  // attempting to read from this level.
+  if (wantedLevel != -1 && mLevel < wantedLevel) {
+    if (!setFile(counter, wantedLevel, wantedOrigin)) {
+      t.deactivate();
+      return false;
+    }
+    auto folderName = fmt::format("DF_{}", mfilenames[counter]->listOfTimeFrameNumbers[numTF]);
+    auto parentFile = getParentFile(counter, numTF, treename, wantedLevel, wantedOrigin);
+    if (parentFile == nullptr) {
+      auto rootFS = std::dynamic_pointer_cast<TFileFileSystem>(mCurrentFilesystem);
+      throw std::runtime_error(fmt::format(R"(No parent file found for "{}" while looking for level {} in "{}")", treename, wantedLevel, rootFS->GetFile()->GetName()));
+    }
+    int parentNumTF = parentFile->findDFNumber(0, folderName);
+    if (parentNumTF == -1) {
+      auto parentRootFS = std::dynamic_pointer_cast<TFileFileSystem>(parentFile->mCurrentFilesystem);
+      throw std::runtime_error(fmt::format(R"(DF {} listed in parent file map but not found in the corresponding file "{}")", folderName, parentRootFS->GetFile()->GetName()));
+    }
+    t.deactivate();
+    return parentFile->readTree(outputs, dh, 0, parentNumTF, treename, totalSizeCompressed, totalSizeUncompressed);
+  }
+
+  auto folder = getFileFolder(counter, numTF, wantedLevel, wantedOrigin);
   if (!folder.filesystem()) {
     t.deactivate();
     return false;
@@ -480,7 +529,7 @@ bool DataInputDescriptor::readTree(DataAllocator& outputs, header::DataHeader dh
   if (!format) {
     t.deactivate();
     LOGP(debug, "Could not find tree {}. Trying in parent file.", fullpath.path());
-    auto parentFile = getParentFile(counter, numTF, treename, origin);
+    auto parentFile = getParentFile(counter, numTF, treename, wantedLevel, wantedOrigin);
     if (parentFile != nullptr) {
       int parentNumTF = parentFile->findDFNumber(0, folder.path());
       if (parentNumTF == -1) {
@@ -813,8 +862,15 @@ arrow::dataset::FileSource DataInputDirector::getFileFolder(header::DataHeader d
     didesc = mdefaultDataInputDescriptor;
   }
   std::string origin = dh.dataOrigin.as<std::string>();
+  int wantedLevel = -1;
+  for (auto& [o, level] : mContext.parentLevelToOrigin) {
+    if (o == origin) {
+      wantedLevel = level;
+      break;
+    }
+  }
 
-  return didesc->getFileFolder(counter, numTF, origin);
+  return didesc->getFileFolder(counter, numTF, wantedLevel, origin);
 }
 
 int DataInputDirector::getTimeFramesInFile(header::DataHeader dh, int counter)
@@ -836,8 +892,15 @@ uint64_t DataInputDirector::getTimeFrameNumber(header::DataHeader dh, int counte
     didesc = mdefaultDataInputDescriptor;
   }
   std::string origin = dh.dataOrigin.as<std::string>();
+  int wantedLevel = -1;
+  for (auto& [o, level] : mContext.parentLevelToOrigin) {
+    if (o == origin) {
+      wantedLevel = level;
+      break;
+    }
+  }
 
-  return didesc->getTimeFrameNumber(counter, numTF, origin);
+  return didesc->getTimeFrameNumber(counter, numTF, wantedLevel, origin);
 }
 
 bool DataInputDirector::readTree(DataAllocator& outputs, header::DataHeader dh, int counter, int numTF, size_t& totalSizeCompressed, size_t& totalSizeUncompressed)
