@@ -4,7 +4,7 @@
 
 LANG=C
 LC_ALL=C
-DELIM=$'\xFF'
+DELIM="@@@"
 set -o pipefail
 sed -E \
   ':loop
