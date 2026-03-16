@@ -2,8 +2,8 @@
 
 [[ -z $1 ]] && { echo "Usage: csv_to_json.sh CSV_FILE"; exit 1; }
 
-LANG=C
-LC_ALL=C
+export LANG=C
+export LC_ALL=C
 DELIM=$'\xFF'
 set -o pipefail
 sed -E \
