@@ -592,7 +592,7 @@ int CalibdEdx::minStackEntries() const
   // find the stack with the least number of entries
   // use explicit int comparator to avoid ambiguous operator< between accessor and unlimited_storage::reference (boost/clang issue)
   auto min_it = std::min_element(dEdxCounts.begin(), dEdxCounts.end(),
-      [](const auto& a, const auto& b) { return static_cast<int>(*a) < static_cast<int>(*b); });
+                                 [](const auto& a, const auto& b) { return static_cast<int>(*a) < static_cast<int>(*b); });
   return *min_it;
 }
 
