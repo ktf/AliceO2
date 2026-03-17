@@ -2140,8 +2140,10 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
         //   sequence is the header message
         // - each part has one or more payload messages
         // - InputRecord provides all payloads as header-payload pair
-        auto const& headerMsg = currentSetOfInputs[i].associatedHeader(partindex);
-        auto const& payloadMsg = currentSetOfInputs[i].associatedPayload(partindex);
+        //
+        auto const& [headerMsgIndex, payloadMsgIndex] = currentSetOfInputs[i].messages | get_pair{partindex};
+        auto const& headerMsg = currentSetOfInputs[i].messages[headerMsgIndex];
+        auto const& payloadMsg = currentSetOfInputs[i].messages[payloadMsgIndex];
         headerptr = static_cast<char const*>(headerMsg->GetData());
         payloadptr = payloadMsg ? static_cast<char const*>(payloadMsg->GetData()) : nullptr;
         payloadSize = payloadMsg ? payloadMsg->GetSize() : 0;
