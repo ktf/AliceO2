@@ -206,11 +206,6 @@ struct get_num_payloads {
 
 struct MessageSet;
 
-struct MessageStore {
-  std::span<MessageSet> sets;
-  size_t inputsPerSlot = 0;
-};
-
 struct inputs_for_slot {
   TimesliceSlot slot;
   template <typename R>
