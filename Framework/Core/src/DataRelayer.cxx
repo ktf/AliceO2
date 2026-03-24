@@ -184,11 +184,11 @@ DataRelayer::ActivityStats DataRelayer::processDanglingInputs(std::vector<Expira
       // We check that no data is already there for the given cell
       // it is enough to check the first element
       auto& part = mCache[ti * mDistinctRoutesIndex.size() + expirator.routeIndex.value];
-      if (!part.messages.empty() && part.header(0) != nullptr) {
+      if (!part.messages.empty() && (part.messages | get_header{0}) != nullptr) {
         headerPresent++;
         continue;
       }
-      if (!part.messages.empty() && part.payload(0) != nullptr) {
+      if (!part.messages.empty() && (part.messages | get_payload{0, 0}) != nullptr) {
         payloadPresent++;
         continue;
       }
@@ -213,9 +213,9 @@ DataRelayer::ActivityStats DataRelayer::processDanglingInputs(std::vector<Expira
       auto partial = getPartialRecord(ti);
       // TODO: get the data ref from message model
       auto getter = [&partial](size_t idx, size_t part) {
-        if (!partial[idx].messages.empty() && partial[idx].header(part).get()) {
-          auto header = partial[idx].header(part).get();
-          auto payload = partial[idx].payload(part).get();
+        if (!partial[idx].messages.empty() && (partial[idx].messages | get_header{part}).get()) {
+          auto header = (partial[idx].messages | get_header{part}).get();
+          auto payload = (partial[idx].messages | get_payload{part, 0}).get();
           return DataRef{nullptr,
                          reinterpret_cast<const char*>(header->GetData()),
                          reinterpret_cast<char const*>(payload ? payload->GetData() : nullptr),
@@ -227,7 +227,7 @@ DataRelayer::ActivityStats DataRelayer::processDanglingInputs(std::vector<Expira
         return partial[idx].messages | count_parts{};
       };
       auto refCountGetter = [&partial](size_t idx) -> int {
-        auto& header = static_cast<const fair::mq::shmem::Message&>(*partial[idx].header(0));
+        auto& header = static_cast<const fair::mq::shmem::Message&>(*(partial[idx].messages | get_header{0}));
         return header.GetRefCount();
       };
       InputSpan span{getter, nPartsGetter, refCountGetter, static_cast<size_t>(partial.size())};
@@ -246,8 +246,8 @@ DataRelayer::ActivityStats DataRelayer::processDanglingInputs(std::vector<Expira
       activity.expiredSlots++;
 
       mTimesliceIndex.markAsDirty(slot, true);
-      assert(part.header(0) != nullptr);
-      assert(part.payload(0) != nullptr);
+      assert((part.messages | get_header{0}) != nullptr);
+      assert((part.messages | get_payload{0, 0}) != nullptr);
     }
   }
   LOGP(debug, "DataRelayer::processDanglingInputs headerPresent:{}, payloadPresent:{}, noCheckers:{}, badSlot:{}, checkerDenied:{}",
@@ -786,9 +786,9 @@ void DataRelayer::getReadyToProcess(std::vector<DataRelayer::RecordAction>& comp
     auto partial = getPartialRecord(li);
     // TODO: get the data ref from message model
     auto getter = [&partial](size_t idx, size_t part) {
-      if (!partial[idx].messages.empty() && partial[idx].header(part).get()) {
-        auto header = partial[idx].header(part).get();
-        auto payload = partial[idx].payload(part).get();
+      if (!partial[idx].messages.empty() && (partial[idx].messages | get_header{part}).get()) {
+        auto header = (partial[idx].messages | get_header{part}).get();
+        auto payload = (partial[idx].messages | get_payload{part, 0}).get();
         return DataRef{nullptr,
                        reinterpret_cast<const char*>(header->GetData()),
                        reinterpret_cast<char const*>(payload ? payload->GetData() : nullptr),
@@ -800,7 +800,7 @@ void DataRelayer::getReadyToProcess(std::vector<DataRelayer::RecordAction>& comp
       return partial[idx].messages | count_parts{};
     };
     auto refCountGetter = [&partial](size_t idx) -> int {
-      auto& header = static_cast<const fair::mq::shmem::Message&>(*partial[idx].header(0));
+      auto& header = static_cast<const fair::mq::shmem::Message&>(*(partial[idx].messages | get_header{0}));
       return header.GetRefCount();
     };
     InputSpan span{getter, nPartsGetter, refCountGetter, static_cast<size_t>(partial.size())};
@@ -952,10 +952,10 @@ std::vector<o2::framework::MessageSet> DataRelayer::consumeExistingInputsForTime
     // TODO: in the original implementation of the cache, there have been only two messages per entry,
     // check if the 2 above corresponds to the number of messages.
     for (size_t pi = 0; pi < (cache[cacheId].messages | count_parts{}); pi++) {
-      auto& header = cache[cacheId].header(pi);
+      auto& header = cache[cacheId].messages | get_header{pi};
       auto&& newHeader = header->GetTransport()->CreateMessage();
       newHeader->Copy(*header);
-      messages[arg].add(PartRef{std::move(newHeader), std::move(cache[cacheId].payload(pi))});
+      messages[arg].add(PartRef{std::move(newHeader), std::move(cache[cacheId].messages | get_payload{pi, 0})});
     }
   };
 
