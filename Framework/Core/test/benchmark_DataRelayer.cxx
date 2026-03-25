@@ -41,7 +41,8 @@ struct BenchmarkServices {
     TimingHelpers::defaultCPUTimeConfigurator(uv_default_loop())};
   DataProcessingStats stats{
     TimingHelpers::defaultRealtimeBaseConfigurator(0, uv_default_loop()),
-    TimingHelpers::defaultCPUTimeConfigurator(uv_default_loop()), {}};
+    TimingHelpers::defaultCPUTimeConfigurator(uv_default_loop()),
+    {}};
   DeviceState deviceState;
   ServiceRegistry registry;
 
