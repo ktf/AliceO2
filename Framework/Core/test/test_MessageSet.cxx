@@ -14,6 +14,7 @@
 #include "Framework/MessageSet.h"
 #include "Framework/DataModelViews.h"
 #include "Framework/DataProcessingHeader.h"
+#include "Framework/PartRef.h"
 #include "Headers/Stack.h"
 #include "Headers/DataHeader.h"
 #include "MemoryResources/MemoryResources.h"
@@ -23,7 +24,7 @@ using namespace o2::framework;
 
 TEST_CASE("MessageSet")
 {
-  o2::framework::MessageSet msgSet;
+  std::vector<fair::mq::MessagePtr> messages;
   o2::header::DataHeader dh{};
   dh.splitPayloadParts = 0;
   dh.splitPayloadIndex = 0;
@@ -36,7 +37,9 @@ TEST_CASE("MessageSet")
   std::vector<fair::mq::MessagePtr> ptrs;
   ptrs.emplace_back(std::move(header));
   ptrs.emplace_back(std::move(msg2));
-  msgSet.add([&ptrs](size_t i) -> fair::mq::MessagePtr& { return ptrs[i]; }, 2);
+  for (size_t i = 0; i < 2; ++i) {
+    messages.emplace_back(std::move(ptrs[i]));
+  }
 
   REQUIRE(msgSet.messages.size() == 2);
   REQUIRE((msgSet.messages | count_payloads{}) == 1);
@@ -45,12 +48,11 @@ TEST_CASE("MessageSet")
   REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
   REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
   CHECK_THROWS((msgSet.messages | get_pair{1}));
-  // Validate pipe operators match old API
-  REQUIRE(&(msgSet.messages | get_header{0}) == &msgSet.header(0));
-  REQUIRE(&(msgSet.messages | get_payload{0, 0}) == &msgSet.payload(0));
-  REQUIRE((msgSet.messages | get_num_payloads{0}) == msgSet.messageMap[0].size);
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | get_num_payloads{0}) == 1);
+  REQUIRE((msgSet.messages | count_parts{}) == 1);
+  // messages: [hdr, pl] — one pair
+  REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
+  REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
 }
 
 TEST_CASE("MessageSetWithFunction")
@@ -67,7 +69,10 @@ TEST_CASE("MessageSetWithFunction")
   std::unique_ptr<fair::mq::Message> msg2(nullptr);
   ptrs.emplace_back(std::move(header));
   ptrs.emplace_back(std::move(msg2));
-  o2::framework::MessageSet msgSet([&ptrs](size_t i) -> fair::mq::MessagePtr& { return ptrs[i]; }, 2);
+  std::vector<fair::mq::MessagePtr> messages;
+  for (size_t i = 0; i < 2; ++i) {
+    messages.emplace_back(std::move(ptrs[i]));
+  }
 
   REQUIRE(msgSet.messages.size() == 2);
   REQUIRE((msgSet.messages | count_payloads{}) == 1);
@@ -76,11 +81,8 @@ TEST_CASE("MessageSetWithFunction")
   REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
   REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
   CHECK_THROWS((msgSet.messages | get_pair{1}));
-  REQUIRE(&(msgSet.messages | get_header{0}) == &msgSet.header(0));
-  REQUIRE(&(msgSet.messages | get_payload{0, 0}) == &msgSet.payload(0));
-  REQUIRE((msgSet.messages | get_num_payloads{0}) == msgSet.messageMap[0].size);
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | get_num_payloads{0}) == 1);
+  REQUIRE((msgSet.messages | count_parts{}) == 1);
 }
 
 TEST_CASE("MessageSetWithMultipart")
@@ -99,7 +101,10 @@ TEST_CASE("MessageSetWithMultipart")
   ptrs.emplace_back(std::move(header));
   ptrs.emplace_back(std::move(msg2));
   ptrs.emplace_back(std::move(msg3));
-  o2::framework::MessageSet msgSet([&ptrs](size_t i) -> fair::mq::MessagePtr& { return ptrs[i]; }, 3);
+  std::vector<fair::mq::MessagePtr> messages;
+  for (size_t i = 0; i < 3; ++i) {
+    messages.emplace_back(std::move(ptrs[i]));
+  }
 
   REQUIRE(msgSet.messages.size() == 3);
   REQUIRE((msgSet.messages | count_payloads{}) == 2);
@@ -112,13 +117,13 @@ TEST_CASE("MessageSetWithMultipart")
   REQUIRE((msgSet.messages | get_pair{1}).headerIdx == 0);
   REQUIRE((msgSet.messages | get_pair{1}).payloadIdx == 2);
   CHECK_THROWS((msgSet.messages | get_pair{2}));
-  // Validate pipe operators match old API for multi-payload
-  REQUIRE(&(msgSet.messages | get_header{0}) == &msgSet.header(0));
-  REQUIRE(&(msgSet.messages | get_payload{0, 0}) == &msgSet.payload(0, 0));
-  REQUIRE(&(msgSet.messages | get_payload{0, 1}) == &msgSet.payload(0, 1));
-  REQUIRE((msgSet.messages | get_num_payloads{0}) == msgSet.messageMap[0].size);
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | get_num_payloads{0}) == 2);
+  REQUIRE((msgSet.messages | count_parts{}) == 1);
+  // messages: [hdr, pl0, pl1] — one header, two payloads
+  REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
+  REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
+  REQUIRE((msgSet.messages | get_pair{1}).headerIdx == 0);
+  REQUIRE((msgSet.messages | get_pair{1}).payloadIdx == 2);
 }
 
 TEST_CASE("MessageSetAddPartRef")
@@ -129,10 +134,11 @@ TEST_CASE("MessageSetAddPartRef")
   ptrs.emplace_back(std::move(msg));
   ptrs.emplace_back(std::move(msg2));
   PartRef ref{std::move(msg), std::move(msg2)};
-  o2::framework::MessageSet msgSet;
-  msgSet.add(std::move(ref));
+  std::vector<fair::mq::MessagePtr> messages;
+  messages.emplace_back(std::move(ref.header));
+  messages.emplace_back(std::move(ref.payload));
 
-  REQUIRE(msgSet.messages.size() == 2);
+  REQUIRE(messages.size() == 2);
 }
 
 TEST_CASE("MessageSetAddMultiple")
@@ -158,20 +164,21 @@ TEST_CASE("MessageSetAddMultiple")
   std::unique_ptr<fair::mq::Message> msg2(nullptr);
   std::unique_ptr<fair::mq::Message> msg3(nullptr);
   PartRef ref{std::move(header1), std::move(msg2)};
-  o2::framework::MessageSet msgSet;
-  msgSet.add(std::move(ref));
+  std::vector<fair::mq::MessagePtr> messages;
+  messages.emplace_back(std::move(ref.header));
+  messages.emplace_back(std::move(ref.payload));
   PartRef ref2{std::move(header2), std::move(msg2)};
-  msgSet.add(std::move(ref2));
+  messages.emplace_back(std::move(ref2.header));
+  messages.emplace_back(std::move(ref2.payload));
   std::vector<fair::mq::MessagePtr> msgs;
   msgs.push_back(std::move(header3));
   msgs.push_back(std::unique_ptr<fair::mq::Message>(nullptr));
   msgs.push_back(std::unique_ptr<fair::mq::Message>(nullptr));
-  msgSet.add([&msgs](size_t i) {
-    return std::move(msgs[i]);
-  },
-             3);
+  for (size_t i = 0; i < 3; ++i) {
+    messages.emplace_back(std::move(msgs[i]));
+  }
 
-  REQUIRE(msgSet.messages.size() == 7);
+  REQUIRE(messages.size() == 7);
 
   REQUIRE((msgSet.messages | count_payloads{}) == 4);
   REQUIRE((msgSet.messages | get_dataref_indices{0, 0}).headerIdx == 0);
@@ -190,18 +197,11 @@ TEST_CASE("MessageSetAddMultiple")
   REQUIRE((msgSet.messages | get_pair{2}).payloadIdx == 5);
   REQUIRE((msgSet.messages | get_pair{3}).headerIdx == 4);
   REQUIRE((msgSet.messages | get_pair{3}).payloadIdx == 6);
-  // Validate pipe operators match old API for mixed modes
-  for (size_t i = 0; i < 3; ++i) {
-    REQUIRE(&(msgSet.messages | get_header{i}) == &msgSet.header(i));
-    REQUIRE(&(msgSet.messages | get_payload{i, 0}) == &msgSet.payload(i, 0));
-  }
-  // Part 2 has a second payload (multi-payload with splitPayloadParts=2, splitPayloadIndex=2)
-  REQUIRE(&(msgSet.messages | get_payload{2, 1}) == &msgSet.payload(2, 1));
-  for (size_t i = 0; i < 3; ++i) {
-    REQUIRE((msgSet.messages | get_num_payloads{i}) == msgSet.messageMap[i].size);
-  }
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | get_num_payloads{0}) == 1);
+  REQUIRE((msgSet.messages | get_num_payloads{1}) == 1);
+  REQUIRE((msgSet.messages | get_num_payloads{2}) == 2);
+  REQUIRE((msgSet.messages | count_parts{}) == 3);
+  REQUIRE((msgSet.messages | count_payloads{}) == 4);
 }
 
 TEST_CASE("GetHeaderPayloadOperators")
@@ -251,13 +251,13 @@ TEST_CASE("GetHeaderPayloadOperators")
   REQUIRE(pl1.get() != nullptr);
   REQUIRE(pl1->GetSize() == 200);
 
-  // Validate pipe operators match old API
-  for (size_t i = 0; i < 2; ++i) {
-    REQUIRE(&(msgSet.messages | get_header{i}) == &msgSet.header(i));
-    REQUIRE(&(msgSet.messages | get_payload{i, 0}) == &msgSet.payload(i, 0));
-  }
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | count_parts{}) == 2);
+  REQUIRE((msgSet.messages | count_payloads{}) == 2);
+  // messages: [hdr0, pl0, hdr1, pl1] — two standard pairs
+  REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
+  REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
+  REQUIRE((msgSet.messages | get_pair{1}).headerIdx == 2);
+  REQUIRE((msgSet.messages | get_pair{1}).payloadIdx == 3);
 }
 
 TEST_CASE("GetHeaderPayloadMultiPayload")
@@ -343,18 +343,19 @@ TEST_CASE("GetHeaderPayloadMultiPayload")
   // get_num_payloads for part 1 should be 3
   REQUIRE((msgSet.messages | get_num_payloads{1}) == 3);
 
-  // Validate pipe operators match old API for multi-payload (header, pl, pl, pl)
-  REQUIRE(&(msgSet.messages | get_header{0}) == &msgSet.header(0));
-  REQUIRE(&(msgSet.messages | get_header{1}) == &msgSet.header(1));
-  REQUIRE(&(msgSet.messages | get_payload{0, 0}) == &msgSet.payload(0, 0));
-  REQUIRE(&(msgSet.messages | get_payload{1, 0}) == &msgSet.payload(1, 0));
-  REQUIRE(&(msgSet.messages | get_payload{1, 1}) == &msgSet.payload(1, 1));
-  REQUIRE(&(msgSet.messages | get_payload{1, 2}) == &msgSet.payload(1, 2));
-  for (size_t i = 0; i < 2; ++i) {
-    REQUIRE((msgSet.messages | get_num_payloads{i}) == msgSet.messageMap[i].size);
-  }
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | get_num_payloads{0}) == 1);
+  REQUIRE((msgSet.messages | get_num_payloads{1}) == 3);
+  REQUIRE((msgSet.messages | count_parts{}) == 2);
+  REQUIRE((msgSet.messages | count_payloads{}) == 4);
+  // messages: [hdr0, pl0, hdr1, pl1_0, pl1_1, pl1_2]
+  REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
+  REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
+  REQUIRE((msgSet.messages | get_pair{1}).headerIdx == 2);
+  REQUIRE((msgSet.messages | get_pair{1}).payloadIdx == 3);
+  REQUIRE((msgSet.messages | get_pair{2}).headerIdx == 2);
+  REQUIRE((msgSet.messages | get_pair{2}).payloadIdx == 4);
+  REQUIRE((msgSet.messages | get_pair{3}).headerIdx == 2);
+  REQUIRE((msgSet.messages | get_pair{3}).payloadIdx == 5);
 }
 
 TEST_CASE("TraditionalSplitParts")
@@ -418,14 +419,15 @@ TEST_CASE("TraditionalSplitParts")
 
   // get_num_payloads: each traditional split pair has 1 payload
   for (size_t i = 0; i < 3; ++i) {
-    REQUIRE((msgSet.messages | get_num_payloads{i}) == msgSet.messageMap[i].size);
+    REQUIRE((msgSet.messages | get_num_payloads{i}) == 1);
   }
-
-  // Validate pipe operators match old MessageSet::header()/payload() API
-  for (size_t i = 0; i < 3; ++i) {
-    REQUIRE(&(msgSet.messages | get_header{i}) == &msgSet.header(i));
-    REQUIRE(&(msgSet.messages | get_payload{i, 0}) == &msgSet.payload(i));
-  }
-  REQUIRE((msgSet.messages | count_parts{}) == msgSet.messageMap.size());
-  REQUIRE((msgSet.messages | count_payloads{}) == msgSet.pairMap.size());
+  REQUIRE((msgSet.messages | count_parts{}) == 3);
+  REQUIRE((msgSet.messages | count_payloads{}) == 3);
+  // messages: [hdr0, pl0, hdr1, pl1, hdr2, pl2] — three traditional split pairs
+  REQUIRE((msgSet.messages | get_pair{0}).headerIdx == 0);
+  REQUIRE((msgSet.messages | get_pair{0}).payloadIdx == 1);
+  REQUIRE((msgSet.messages | get_pair{1}).headerIdx == 2);
+  REQUIRE((msgSet.messages | get_pair{1}).payloadIdx == 3);
+  REQUIRE((msgSet.messages | get_pair{2}).headerIdx == 4);
+  REQUIRE((msgSet.messages | get_pair{2}).payloadIdx == 5);
 }
