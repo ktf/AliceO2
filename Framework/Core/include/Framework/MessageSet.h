@@ -135,7 +135,6 @@ struct MessageSet {
       messages.emplace_back(std::move(getter(i)));
     }
   }
-
 };
 
 } // namespace o2::framework
