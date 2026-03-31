@@ -34,11 +34,21 @@ std::string jsonEscape(std::string_view s)
   out.reserve(s.size() + 4);
   for (unsigned char c : s) {
     switch (c) {
-      case '"': out += "\\\""; break;
-      case '\\': out += "\\\\"; break;
-      case '\n': out += "\\n"; break;
-      case '\r': out += "\\r"; break;
-      case '\t': out += "\\t"; break;
+      case '"':
+        out += "\\\"";
+        break;
+      case '\\':
+        out += "\\\\";
+        break;
+      case '\n':
+        out += "\\n";
+        break;
+      case '\r':
+        out += "\\r";
+        break;
+      case '\t':
+        out += "\\t";
+        break;
       default:
         if (c < 0x20) {
           char buf[8];
@@ -55,10 +65,14 @@ std::string jsonEscape(std::string_view s)
 char const* streamingStateName(StreamingState s)
 {
   switch (s) {
-    case StreamingState::Streaming: return "Streaming";
-    case StreamingState::EndOfStreaming: return "EndOfStreaming";
-    case StreamingState::Idle: return "Idle";
-    default: return "Unknown";
+    case StreamingState::Streaming:
+      return "Streaming";
+    case StreamingState::EndOfStreaming:
+      return "EndOfStreaming";
+    case StreamingState::Idle:
+      return "Idle";
+    default:
+      return "Unknown";
   }
 }
 
@@ -140,8 +154,14 @@ std::string_view extractArrayField(std::string_view json, std::string_view key)
   auto start = pos;
   size_t depth = 0;
   while (pos < json.size()) {
-    if (json[pos] == '[') { ++depth; }
-    else if (json[pos] == ']') { --depth; if (depth == 0) { return json.substr(start, pos - start + 1); } }
+    if (json[pos] == '[') {
+      ++depth;
+    } else if (json[pos] == ']') {
+      --depth;
+      if (depth == 0) {
+        return json.substr(start, pos - start + 1);
+      }
+    }
     ++pos;
   }
   return {};
@@ -156,9 +176,11 @@ void forEachStringInArray(std::string_view arr, F&& callback)
   size_t pos = 0;
   while (pos < arr.size()) {
     auto q = arr.find('"', pos);
-    if (q == std::string_view::npos) break;
+    if (q == std::string_view::npos)
+      break;
     auto end = arr.find('"', q + 1);
-    if (end == std::string_view::npos) break;
+    if (end == std::string_view::npos)
+      break;
     callback(arr.substr(q + 1, end - q - 1));
     pos = end + 1;
   }
