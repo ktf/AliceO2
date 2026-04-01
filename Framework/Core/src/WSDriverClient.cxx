@@ -203,7 +203,8 @@ void on_connect(uv_connect_t* connection, int status)
         return false;
       }
       return true;
-    }, &name);
+    },
+                 &name);
   });
 
   client->observe("/signpost:disable", [](std::string_view cmd) {
@@ -221,7 +222,8 @@ void on_connect(uv_connect_t* connection, int status)
         return false;
       }
       return true;
-    }, &name);
+    },
+                 &name);
   });
 
   // Client will be filled in the line after. I can probably have a single

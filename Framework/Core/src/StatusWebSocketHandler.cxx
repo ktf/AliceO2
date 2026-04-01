@@ -457,7 +457,8 @@ void StatusWebSocketHandler::handleEnableSignpost(std::string_view deviceName, s
           return false;
         }
         return true;
-      }, &target);
+      },
+                   &target);
     });
   } else {
     size_t di = findDeviceIndex(deviceName);
@@ -488,7 +489,8 @@ void StatusWebSocketHandler::handleDisableSignpost(std::string_view deviceName, 
           return false;
         }
         return true;
-      }, &target);
+      },
+                   &target);
     });
   } else {
     size_t di = findDeviceIndex(deviceName);
