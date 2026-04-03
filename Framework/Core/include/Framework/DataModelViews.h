@@ -16,6 +16,7 @@
 #include "DomainInfoHeader.h"
 #include "SourceInfoHeader.h"
 #include "Headers/DataHeader.h"
+#include "Framework/DataRef.h"
 #include "Framework/TimesliceSlot.h"
 #include <ranges>
 #include <span>
@@ -80,10 +81,7 @@ struct count_parts {
   }
 };
 
-struct DataRefIndices {
-  size_t headerIdx;
-  size_t payloadIdx;
-};
+// DataRefIndices is defined in Framework/DataRef.h
 
 struct get_pair {
   size_t pairId;
@@ -124,6 +122,43 @@ struct get_pair {
       }
     }
     throw std::runtime_error("Payload not found");
+  }
+};
+
+// Advance from a DataRefIndices to the next one in O(1), reading only the
+// current header.  Intended for use in iterators so that ++ is O(1) rather
+// than the O(n) while-loop that get_pair requires.
+//
+// New-style block  (splitPayloadIndex == splitPayloadParts > 1):
+//   layout: [header, payload_0, payload_1, ..., payload_{N-1}]
+//   advance within block while payloads remain, then jump to the next block.
+//
+// Old-style block  (splitPayloadIndex != splitPayloadParts, splitPayloadParts > 1)
+// or single pair   (splitPayloadParts == 0):
+//   layout: [header, payload]  – always advance by two messages.
+struct get_next_pair {
+  DataRefIndices current;
+  template <typename R>
+    requires std::ranges::random_access_range<R> && std::ranges::sized_range<R>
+  friend DataRefIndices operator|(R&& r, get_next_pair self)
+  {
+    size_t hIdx = self.current.headerIdx;
+    auto* header = o2::header::get<o2::header::DataHeader*>(r[hIdx]->GetData());
+    if (!header) {
+      throw std::runtime_error("Not a DataHeader");
+    }
+    if (header->splitPayloadParts > 1 && header->splitPayloadIndex == header->splitPayloadParts) {
+      // New-style block: one header followed by splitPayloadParts contiguous payloads.
+      if (self.current.payloadIdx < hIdx + header->splitPayloadParts) {
+        // More sub-payloads remain in this block.
+        return {hIdx, self.current.payloadIdx + 1};
+      }
+      // Last sub-payload consumed; move to the first pair of the next block.
+      size_t nextHIdx = hIdx + header->splitPayloadParts + 1;
+      return {nextHIdx, nextHIdx + 1};
+    }
+    // Old-style [header, payload] pairs or a single pair: advance by two messages.
+    return {hIdx + 2, hIdx + 3};
   }
 };
 
