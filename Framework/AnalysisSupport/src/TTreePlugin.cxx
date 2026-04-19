@@ -12,7 +12,7 @@
 #include "Framework/RootArrowFilesystem.h"
 #include "Framework/Plugins.h"
 #include "Framework/Signpost.h"
-#include "Framework/Endian.h"
+#include <bit>
 #include <TBufferFile.h>
 #include <TBufferIO.h>
 #include <arrow/buffer.h>
@@ -187,6 +187,32 @@ arrow::Result<std::shared_ptr<arrow::Buffer>> TTreeDeferredReadOutputStream::Fin
 
 arrow::Result<int64_t> TTreeDeferredReadOutputStream::Tell() const { return position_; }
 
+static void bigEndianCopy(uint8_t* dest, char* src, int count, size_t typeSize) noexcept
+{
+  if constexpr (std::endian::native == std::endian::big) {
+    std::memcpy(dest, src, count * typeSize);
+    return;
+  }
+  switch (typeSize) {
+    case 2:
+      for (int i = 0; i < count; ++i) {
+        reinterpret_cast<uint16_t*>(dest)[i] = __builtin_bswap16(reinterpret_cast<uint16_t*>(src)[i]);
+      }
+      return;
+    case 4:
+      for (int i = 0; i < count; ++i) {
+        reinterpret_cast<uint32_t*>(dest)[i] = __builtin_bswap32(reinterpret_cast<uint32_t*>(src)[i]);
+      }
+      return;
+    case 8:
+      for (int i = 0; i < count; ++i) {
+        reinterpret_cast<uint64_t*>(dest)[i] = __builtin_bswap64(reinterpret_cast<uint64_t*>(src)[i]);
+      }
+      return;
+  }
+  std::memcpy(dest, src, count * typeSize);
+}
+
 auto readValues = [](uint8_t* target, ReadOps& op, TBufferFile& rootBuffer) {
   int readEntries = 0;
   rootBuffer.Reset();
@@ -197,7 +223,7 @@ auto readValues = [](uint8_t* target, ReadOps& op, TBufferFile& rootBuffer) {
     }
     int size = readLast * op.listSize;
     readEntries += readLast;
-    swapCopy(target, rootBuffer.GetCurrent(), size, op.typeSize);
+    bigEndianCopy(target, rootBuffer.GetCurrent(), size, op.typeSize);
     target += (ptrdiff_t)(size * op.typeSize);
   }
 };
@@ -230,7 +256,7 @@ auto readVLAValues = [](uint8_t* target, ReadOps& op, ReadOps const& offsetOp, T
     auto readLast = op.branch->GetBulkRead().GetEntriesSerialized(readEntries, rootBuffer);
     int size = offsets[readEntries + readLast] - offsets[readEntries];
     readEntries += readLast;
-    swapCopy(target, rootBuffer.GetCurrent(), size, op.typeSize);
+    bigEndianCopy(target, rootBuffer.GetCurrent(), size, op.typeSize);
     target += (ptrdiff_t)(size * op.typeSize);
   }
 };
@@ -581,7 +607,8 @@ auto readOffsets = [](ReadOps& op, TBufferFile& rootBuffer) {
     readEntries += readLast;
     for (auto i = 0; i < readLast; ++i) {
       offsets[count++] = (int)offset;
-      offset += swap32_(reinterpret_cast<uint32_t*>(rootBuffer.GetCurrent())[i]);
+      uint32_t raw = reinterpret_cast<uint32_t*>(rootBuffer.GetCurrent())[i];
+      offset += (std::endian::native == std::endian::little) ? __builtin_bswap32(raw) : raw;
     }
   }
   offsets[count] = (int)offset;

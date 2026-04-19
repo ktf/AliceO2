@@ -188,7 +188,7 @@ taskwrapper digi.log o2-sim-digitizer-workflow -n $NEvents ${DIGIQED} ${NOMCLABE
 touch digiTRD.log_done
 
 if [[ "0$GENERATE_ITSMFT_DICTIONARIES" == "01" ]]; then
-  taskwrapper itsmftdict1.log o2-its-reco-workflow --trackerCA --disable-mc --configKeyValues '"fastMultConfig.cutMultClusLow=30000;fastMultConfig.cutMultClusHigh=2000000;fastMultConfig.cutMultVtxHigh=500;"'
+  taskwrapper itsmftdict1.log o2-its-reco-workflow --disable-mc --configKeyValues '"fastMultConfig.cutMultClusLow=30000;fastMultConfig.cutMultClusHigh=2000000;fastMultConfig.cutMultVtxHigh=500;"'
   cp ~/alice/O2/Detectors/ITSMFT/ITS/macros/test/CreateDictionaries.C .
   taskwrapper itsmftdict2.log root -b -q CreateDictionaries.C++
   rm -f CreateDictionaries_C* CreateDictionaries.C
@@ -321,10 +321,6 @@ for STAGE in $STAGES; do
     : ${CUT_MULT_MIN_ITS:=-1}
     : ${CUT_MULT_MAX_ITS:=-1}
     : ${CUT_MULT_VTX_ITS:=-1}
-    : ${CUT_TRACKLETSPERCLUSTER_MAX_ITS:=100}
-    : ${CUT_CELLSPERCLUSTER_MAX_ITS:=100}
-    export CUT_TRACKLETSPERCLUSTER_MAX_ITS
-    export CUT_CELLSPERCLUSTER_MAX_ITS
     export CUT_RANDOM_FRACTION_ITS
     export CUT_MULT_MIN_ITS
     export CUT_MULT_MAX_ITS

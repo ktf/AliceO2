@@ -30,6 +30,7 @@
 #include "Framework/CompletionPolicyHelpers.h"
 #include "DetectorsBase/DPLWorkflowUtils.h"
 #include "TPCCalibration/CorrectionMapsLoader.h"
+#include "DataFormatsITSMFT/DPLAlpideParamInitializer.h"
 
 using namespace o2::framework;
 using GID = o2::dataformats::GlobalTrackID;
@@ -62,6 +63,7 @@ void customize(std::vector<ConfigParamSpec>& workflowOptions)
     {"use-full-geometry", o2::framework::VariantType::Bool, false, {"use full geometry instead of the light-weight ITS part"}},
     {"configKeyValues", VariantType::String, "", {"Semicolon separated key=value strings ..."}},
     {"combine-source-devices", o2::framework::VariantType::Bool, false, {"merge DPL source devices"}}};
+  o2::itsmft::DPLAlpideParamInitializer::addITSConfigOption(options);
   o2::tpc::CorrectionMapsLoader::addGlobalOptions(options);
   o2::raw::HBFUtilsInitializer::addConfigOption(options);
   std::swap(workflowOptions, options);
@@ -94,9 +96,9 @@ WorkflowSpec defineDataProcessing(ConfigContext const& configcontext)
   }
   if (src[GID::TPC]) {
     srcClus |= GID::getSourceMask(GID::TPC);
-  }
-  if (sclOpt.requestCTPLumi) {
-    src = src | GID::getSourcesMask("CTP");
+    if (sclOpt.requestCTPLumi) {
+      src = src | GID::getSourcesMask("CTP");
+    }
   }
   WorkflowSpec specs;
   if (sclOpt.needTPCScalersWorkflow() && !configcontext.options().get<bool>("disable-root-input")) {
