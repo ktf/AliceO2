@@ -90,7 +90,7 @@ void encode_websocket_frames(std::vector<uv_buf_t>& outputs, char const* src, si
     WebSocketFrameHuge* header = (WebSocketFrameHuge*)buffer;
     memset(buffer, 0, headerSize);
     header->len = 127;
-    header->len64 = htonll(size);
+    header->len64 = (std::endian::native == std::endian::little) ? __builtin_bswap64(size) : size;
     outputs.push_back(uv_buf_init(buffer, size + maskSize + headerSize));
   }
   size_t fullHeaderSize = maskSize + headerSize;
@@ -165,7 +165,7 @@ void decode_websocket(char* start, size_t size, WebSocketHandler& handler)
       headerSize = 2 + 2 + (header->mask ? 4 : 0);
     } else if (header->len == 127) {
       WebSocketFrameHuge* headerSmall = (WebSocketFrameHuge*)cur;
-      payloadSize = ntohll(headerSmall->len64);
+      payloadSize = (std::endian::native == std::endian::little) ? __builtin_bswap64(headerSmall->len64) : headerSmall->len64;
       headerSize = 2 + 8 + (header->mask ? 4 : 0);
     }
     size_t availableSize = size - (cur - start);
