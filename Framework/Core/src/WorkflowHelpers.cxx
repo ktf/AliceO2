@@ -279,6 +279,24 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     bool hasConditionOption = false;
     for (size_t ii = 0; ii < processor.inputs.size(); ++ii) {
       auto& input = processor.inputs[ii];
+      bool hasProjectors = false;
+      bool hasIndexRecords = false;
+      bool hasCCDBURLs = false;
+      // all three options are exclusive
+      for (auto const& p : input.metadata) {
+        if (p.name.compare("projectors") == 0) {
+          hasProjectors = true;
+          break;
+        }
+        if (p.name.compare("index-records") == 0) {
+          hasIndexRecords = true;
+          break;
+        }
+        if (p.name.starts_with("ccdb:")) {
+          hasCCDBURLs = true;
+          break;
+        }
+      }
       switch (input.lifetime) {
         case Lifetime::Timer: {
           auto concrete = DataSpecUtils::asConcreteDataMatcher(input);
@@ -318,29 +336,46 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
         case Lifetime::Optional:
           break;
       }
-      if (DataSpecUtils::partialMatch(input, AODOrigins)) {
-        DataSpecUtils::updateInputList(dec.requestedAODs, InputSpec{input});
-      }
-      if (DataSpecUtils::partialMatch(input, header::DataOrigin{"DYN"})) {
+      if (hasProjectors) {
         DataSpecUtils::updateInputList(dec.requestedDYNs, InputSpec{input});
-      }
-      if (DataSpecUtils::partialMatch(input, header::DataOrigin{"IDX"})) {
+      } else if (hasIndexRecords) {
         DataSpecUtils::updateInputList(dec.requestedIDXs, InputSpec{input});
-      }
-      if (DataSpecUtils::partialMatch(input, header::DataOrigin{"ATIM"})) {
+      } else if (hasCCDBURLs) {
         DataSpecUtils::updateInputList(dec.requestedTIMs, InputSpec{input});
+      } else if (DataSpecUtils::partialMatch(input, AODOrigins)) {
+        DataSpecUtils::updateInputList(dec.requestedAODs, InputSpec{input});
       }
     }
 
     std::ranges::stable_sort(timer.outputs, [](OutputSpec const& a, OutputSpec const& b) { return *DataSpecUtils::getOptionalSubSpec(a) < *DataSpecUtils::getOptionalSubSpec(b); });
 
     for (auto& output : processor.outputs) {
-      if (DataSpecUtils::partialMatch(output, AODOrigins)) {
-        dec.providedAODs.emplace_back(output);
-      } else if (DataSpecUtils::partialMatch(output, header::DataOrigin{"DYN"})) {
+      bool hasProjectors = false;
+      bool hasIndexRecords = false;
+      bool hasCCDBURLs = false;
+      // all three options are exclusive
+      for (auto const& p : output.metadata) {
+        if (p.name.compare("projectors") == 0) {
+          hasProjectors = true;
+          break;
+        }
+        if (p.name.compare("index-records") == 0) {
+          hasIndexRecords = true;
+          break;
+        }
+        if (p.name.starts_with("ccdb:")) {
+          hasCCDBURLs = true;
+          break;
+        }
+      }
+      if (hasProjectors) {
         dec.providedDYNs.emplace_back(output);
-      } else if (DataSpecUtils::partialMatch(output, header::DataOrigin{"ATIM"})) {
+      } else if (hasCCDBURLs) {
         dec.providedTIMs.emplace_back(output);
+      } else if (hasIndexRecords) {
+        dec.providedIDXs.emplace_back(output);
+      } else if (DataSpecUtils::partialMatch(output, AODOrigins)) {
+        dec.providedAODs.emplace_back(output);
       } else if (DataSpecUtils::partialMatch(output, header::DataOrigin{"ATSK"})) {
         dec.providedOutputObjHist.emplace_back(output);
         auto it = std::ranges::find_if(dec.outObjHistMap, [&](auto&& x) { return x.id == hash; });
@@ -350,6 +385,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
           it->bindings.push_back(output.binding.value);
         }
       }
+
       if (output.lifetime == Lifetime::Condition) {
         providedCCDBs.push_back(output);
       }
@@ -358,10 +394,6 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
 
   auto inputSpecLessThan = [](InputSpec const& lhs, InputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
   auto outputSpecLessThan = [](OutputSpec const& lhs, OutputSpec const& rhs) { return DataSpecUtils::describe(lhs) < DataSpecUtils::describe(rhs); };
-  std::ranges::sort(dec.requestedDYNs, inputSpecLessThan);
-  std::ranges::sort(dec.requestedTIMs, inputSpecLessThan);
-  std::ranges::sort(dec.providedDYNs, outputSpecLessThan);
-  std::ranges::sort(dec.providedTIMs, outputSpecLessThan);
 
   DataProcessorSpec indexBuilder{
     "internal-dpl-aod-index-builder",
@@ -369,14 +401,18 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     {},
     AlgorithmSpec::dummyAlgorithm(), // real algorithm will be set in adjustTopology
     {}};
-  AnalysisSupportHelpers::addMissingOutputsToBuilder(dec.requestedIDXs, dec.requestedAODs, dec.requestedDYNs, indexBuilder);
+  std::ranges::sort(dec.requestedIDXs, inputSpecLessThan);
+  std::ranges::sort(dec.providedIDXs, outputSpecLessThan);
+  dec.requestedIDXs | views::filter_not_matching(dec.providedIDXs) | sinks::append_to{dec.builderInputs};
+  AnalysisSupportHelpers::addMissingOutputsToBuilder(dec.builderInputs, dec.requestedAODs, dec.requestedDYNs, indexBuilder);
 
+  std::ranges::sort(dec.requestedTIMs, inputSpecLessThan);
+  std::ranges::sort(dec.providedTIMs, outputSpecLessThan);
   dec.requestedTIMs | views::filter_not_matching(dec.providedTIMs) | sinks::append_to{dec.analysisCCDBInputs};
-  DeploymentMode deploymentMode = DefaultsHelpers::deploymentMode();
-  if (deploymentMode != DeploymentMode::OnlineDDS && deploymentMode != DeploymentMode::OnlineECS) {
-    AnalysisSupportHelpers::addMissingOutputsToBuilder(dec.analysisCCDBInputs, dec.requestedAODs, dec.requestedTIMs, analysisCCDBBackend);
-  }
+  AnalysisSupportHelpers::addMissingOutputsToBuilder(dec.analysisCCDBInputs, dec.requestedAODs, dec.requestedDYNs, analysisCCDBBackend);
 
+  std::ranges::sort(dec.requestedDYNs, inputSpecLessThan);
+  std::ranges::sort(dec.providedDYNs, outputSpecLessThan);
   dec.requestedDYNs | views::filter_not_matching(dec.providedDYNs) | sinks::append_to{dec.spawnerInputs};
 
   DataProcessorSpec aodSpawner{
@@ -386,6 +422,9 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     AlgorithmSpec::dummyAlgorithm(), // real algorithm will be set in adjustTopology
     {}};
   AnalysisSupportHelpers::addMissingOutputsToSpawner({}, dec.spawnerInputs, dec.requestedAODs, aodSpawner);
+
+  std::ranges::sort(dec.requestedAODs, inputSpecLessThan);
+  std::ranges::sort(dec.providedAODs, outputSpecLessThan);
   AnalysisSupportHelpers::addMissingOutputsToReader(dec.providedAODs, dec.requestedAODs, aodReader);
 
   std::ranges::sort(requestedCCDBs, inputSpecLessThan);
@@ -407,6 +446,14 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
 
   if (indexBuilder.outputs.empty() == false) {
     extraSpecs.push_back(indexBuilder);
+  }
+
+  // add the Analysys CCDB backend which reads CCDB objects using a provided table
+  DeploymentMode deploymentMode = DefaultsHelpers::deploymentMode();
+  if (deploymentMode != DeploymentMode::OnlineDDS && deploymentMode != DeploymentMode::OnlineECS) {
+    if (analysisCCDBBackend.outputs.empty() == false) {
+      extraSpecs.push_back(analysisCCDBBackend);
+    }
   }
 
   // add the reader
@@ -511,11 +558,6 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
     DataSpecUtils::updateOutputList(workflow[enumCandidate].outputs, OutputSpec{{"ccdb-diststf"}, dstf, Lifetime::Timeframe});
   }
 
-  // add the Analysys CCDB backend which reads CCDB objects using a provided table
-  if (analysisCCDBBackend.outputs.empty() == false) {
-    extraSpecs.push_back(analysisCCDBBackend);
-  }
-
   // add the timer
   if (timer.outputs.empty() == false) {
     extraSpecs.push_back(timer);
@@ -545,7 +587,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
       continue;
     }
     // AODs are skipped in any case.
-    if (DataSpecUtils::partialMatch(dec.outputsInputs[ii], extendedAODOrigins)) {
+    if (DataSpecUtils::partialMatch(dec.outputsInputs[ii], AODOrigins)) {
       continue;
     }
     redirectedOutputsInputs.emplace_back(dec.outputsInputs[ii]);
@@ -680,7 +722,7 @@ void WorkflowHelpers::injectAODWriter(WorkflowSpec& workflow, ConfigContext cons
   // select outputs of type AOD which need to be saved
   dec.outputsInputsAOD.clear();
   for (auto ii = 0u; ii < dec.outputsInputs.size(); ii++) {
-    if (DataSpecUtils::partialMatch(dec.outputsInputs[ii], extendedAODOrigins)) {
+    if (DataSpecUtils::partialMatch(dec.outputsInputs[ii], AODOrigins)) {
       auto ds = dod->getDataOutputDescriptors(dec.outputsInputs[ii]);
       if (ds.size() > 0 || dec.isDangling[ii]) {
         dec.outputsInputsAOD.emplace_back(dec.outputsInputs[ii]);
@@ -808,10 +850,8 @@ void WorkflowHelpers::constructGraph(const WorkflowSpec& workflow,
       if (forwards.empty()) {
         errorDueToMissingOutputFor(consumer, input);
       }
-      availableOutputsInfo.erase(std::remove_if(availableOutputsInfo.begin(), availableOutputsInfo.end(), [](auto& info) { return info.enabled == false; }), availableOutputsInfo.end());
-      for (auto& forward : forwards) {
-        availableOutputsInfo.push_back(forward);
-      }
+      availableOutputsInfo.erase(std::remove_if(availableOutputsInfo.begin(), availableOutputsInfo.end(), [](auto const& info) { return info.enabled == false; }), availableOutputsInfo.end());
+      std::ranges::copy(forwards, std::back_inserter(availableOutputsInfo));
     }
     O2_SIGNPOST_END(workflow_helpers, sid, "input matching", "");
   }
@@ -890,14 +930,14 @@ WorkflowParsingState WorkflowHelpers::verifyWorkflow(const o2::framework::Workfl
     return WorkflowParsingState::Empty;
   }
   std::set<std::string> validNames;
-  std::vector<OutputSpec> availableOutputs;
-  std::vector<InputSpec> requiredInputs;
+  // std::vector<OutputSpec> availableOutputs;
+  // std::vector<InputSpec> requiredInputs;
 
   // An index many to one index to go from a given input to the
   // associated spec
-  std::map<size_t, size_t> inputToSpec;
+  // std::map<size_t, size_t> inputToSpec;
   // A one to one index to go from a given output to the Spec emitting it
-  std::map<size_t, size_t> outputToSpec;
+  // std::map<size_t, size_t> outputToSpec;
 
   std::ostringstream ss;
 
@@ -1078,14 +1118,14 @@ void WorkflowHelpers::validateEdges(WorkflowSpec const& workflow,
   // Get the input lifetime and the output lifetime.
   // Output lifetime must be Timeframe if the input lifetime is Timeframe.
   bool hasErrors = false;
-  for (auto& edge : edges) {
+  for (auto const& edge : edges) {
     DataProcessorSpec const& producer = workflow[edge.producer];
     DataProcessorSpec const& consumer = workflow[edge.consumer];
     DataProcessorPoliciesInfo const& producerPolicies = policies[edge.producer];
     DataProcessorPoliciesInfo const& consumerPolicies = policies[edge.consumer];
     OutputSpec const& output = outputs[edge.outputGlobalIndex];
     InputSpec const& input = consumer.inputs[edge.consumerInputIndex];
-    for (auto& validator : defaultValidators) {
+    for (auto const& validator : defaultValidators) {
       hasErrors |= !validator(errors, producer, output, producerPolicies, consumer, input, consumerPolicies);
     }
   }
