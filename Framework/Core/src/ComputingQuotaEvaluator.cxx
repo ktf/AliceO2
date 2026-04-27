@@ -102,11 +102,14 @@ bool ComputingQuotaEvaluator::selectOffer(int task, ComputingQuotaRequest const&
       }
       dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_SATISFACTORY), DataProcessingStats::Op::Add, 1});
     } else {
-      O2_SIGNPOST_START(quota, sid, "summary", "Not enough resources to select offers.");
-      dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_MISSING), DataProcessingStats::Op::Add, 1});
       if (result.size()) {
+        O2_SIGNPOST_START(quota, sid, "summary", "Not enough resources: accumulated %zu partial offers providing cpu=%d, memory=%lld MB, shared memory=%lld MB, timeslices=%lld, but still insufficient.",
+                          result.size(), totalOffer.cpu, totalOffer.memory / 1000000, totalOffer.sharedMemory / 1000000, totalOffer.timeslices);
         dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_INSUFFICIENT), DataProcessingStats::Op::Add, 1});
+      } else {
+        O2_SIGNPOST_START(quota, sid, "summary", "Not enough resources: no suitable offers found (all offers were invalid, expired, or owned by other tasks).");
       }
+      dpStats.updateStats({static_cast<short>(ProcessingStatsId::RESOURCES_MISSING), DataProcessingStats::Op::Add, 1});
     }
     if (stats.invalidOffers.size()) {
       O2_SIGNPOST_EVENT_EMIT(quota, sid, "summary", "The following offers were invalid: %s", fmt::format("{}", fmt::join(stats.invalidOffers, ", ")).c_str());
