@@ -21,7 +21,8 @@
 #include "Framework/Signpost.h"
 #include "Framework/DanglingEdgesContext.h"
 #include "Framework/ConfigContext.h"
-#include "Framework/ConfigContext.h"
+#include "Framework/RunningWorkflowInfo.h"
+#include "Framework/ConfigParamsHelper.h"
 #include <arrow/array/builder_binary.h>
 #include <arrow/type.h>
 #include <arrow/type_fwd.h>
@@ -72,6 +73,45 @@ AlgorithmSpec AnalysisCCDBHelpers::fetchFromCCDB(ConfigContext const& /*ctx*/)
 {
   return adaptStateful([](ConfigParamRegistry const& options, DeviceSpec const& spec, InitContext& ic) {
     auto& dec = ic.services().get<DanglingEdgesContext>();
+    auto& rwi = ic.services().get<RunningWorkflowInfo const>();
+
+    // Build a map from ccdb: option name -> URL, consulting the RunningWorkflow
+    // so that a Configurable<std::string>{"ccdb:fXxx", ...} declared in any
+    // analysis task is honoured. The CCDB device's own option (registered via
+    // ArrowSupport topology adjustment) takes precedence as the runtime override,
+    // falling back to the task device's declared value, then to the compile-time
+    // default stored in the InputSpec metadata.
+    std::unordered_map<std::string, std::string> ccdbUrls;
+    for (auto& input : dec.analysisCCDBInputs) {
+      for (auto& m : input.metadata) {
+        if (!m.name.starts_with("ccdb:") || ccdbUrls.count(m.name)) {
+          continue;
+        }
+        // Start with the compile-time default from the column declaration macro
+        std::string url = m.defaultValue.asString();
+        // Prefer the value from whichever task device has this option registered
+        // (i.e. declared a Configurable<std::string>{"ccdb:fXxx", ...})
+        for (auto& device : rwi.devices) {
+          if (device.name == spec.name) {
+            continue; // skip the CCDB device itself
+          }
+          for (auto& opt : device.options) {
+            if (opt.name == m.name) {
+              url = opt.defaultValue.asString();
+              break;
+            }
+          }
+        }
+        // Allow runtime override via the CCDB device's own registered option
+        // (set with --internal-dpl-aod-ccdb.ccdb:fXxx or JSON config)
+        if (ConfigParamsHelper::hasOption(spec.options, m.name)) {
+          url = options.get<std::string>(m.name.c_str());
+        }
+        LOGP(info, "CCDB path resolved for {}: {}", m.name, url);
+        ccdbUrls.emplace(m.name, std::move(url));
+      }
+    }
+
     std::vector<std::shared_ptr<arrow::Schema>> schemas;
     auto schemaMetadata = std::make_shared<arrow::KeyValueMetadata>();
 
@@ -92,9 +132,9 @@ AlgorithmSpec AnalysisCCDBHelpers::fetchFromCCDB(ConfigContext const& /*ctx*/)
         if (!m.name.starts_with("ccdb:")) {
           continue;
         }
-        // Create the schema of the output
+        // Create the schema of the output using the resolved URL
         auto metadata = std::make_shared<arrow::KeyValueMetadata>();
-        metadata->Append("url", m.defaultValue.asString());
+        metadata->Append("url", ccdbUrls.at(m.name));
         auto columnName = m.name.substr(strlen("ccdb:"));
         fields.emplace_back(std::make_shared<arrow::Field>(columnName, arrow::binary_view(), false, metadata));
       }
