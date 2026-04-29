@@ -654,8 +654,9 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                     effective = opt; // first task Configurable wins
                     foundFirst = true;
                   } else if (opt.defaultValue.asString() != effective.defaultValue.asString()) {
-                    LOGP(warn, "Task '{}' declares Configurable '{}' = '{}' which conflicts "
-                               "with an earlier value '{}'; earlier value will be used.",
+                    LOGP(warn,
+                         "Task '{}' declares Configurable '{}' = '{}' which conflicts "
+                         "with an earlier value '{}'; earlier value will be used.",
                          d.name, opt.name, opt.defaultValue.asString(),
                          effective.defaultValue.asString());
                   }
