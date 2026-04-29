@@ -1631,7 +1631,7 @@ int runStateMachine(DataProcessorSpecs const& workflow,
         dataProcessorInfos = previousDataProcessorInfos;
         for (auto const& device : runningWorkflow.devices) {
           auto exists = std::ranges::find_if(dataProcessorInfos,
-                                     [id = device.id](DataProcessorInfo const& info) -> bool { return info.name == id; });
+                                             [id = device.id](DataProcessorInfo const& info) -> bool { return info.name == id; });
           if (exists != dataProcessorInfos.end()) {
             if (exists->name.starts_with("internal-")) {
               exists->executable = workflowInfo.executable;
