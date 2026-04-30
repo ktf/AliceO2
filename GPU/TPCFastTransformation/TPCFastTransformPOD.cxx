@@ -68,7 +68,7 @@ size_t TPCFastTransformPOD::estimateSize(const TPCFastSpaceChargeCorrection& ori
   // space for splines data
   for (int is = 0; is < 3; is++) {
     nextDynOffs = FlatObject::alignSize(nextDynOffs, SplineType::getParameterAlignmentBytes());
-    nextDynOffs += origCorr.mSectorDataSizeBytes[is] * TPCFastTransformGeo::getNumberOfSectors();
+    nextDynOffs += FlatObject::alignSize(origCorr.mSectorDataSizeBytes[is], SplineType::getParameterAlignmentBytes()) * TPCFastTransformGeo::getNumberOfSectors();
   }
   nextDynOffs = alignOffset(nextDynOffs);
   return nextDynOffs;
@@ -165,7 +165,8 @@ TPCFastTransformPOD* TPCFastTransformPOD::create(char* buff, size_t buffSize, co
     LOGP(debug, "splinID={} start offset {} -> {}", is, nextDynOffs, (void*)data);
 
     // metadata
-    size_t sectorDataSizeBytes = origCorr.mSectorDataSizeBytes[is];
+    size_t origSectorDataSizeBytes = origCorr.mSectorDataSizeBytes[is];
+    size_t sectorDataSizeBytes = FlatObject::alignSize(origSectorDataSizeBytes, SplineType::getParameterAlignmentBytes());
 
     for (int sector = 0; sector < TPCFastTransformGeo::getNumberOfSectors(); sector++) {
       podMap.mSplineDataOffsets[sector][is] = nextDynOffs + sectorDataSizeBytes * sector;
@@ -175,7 +176,11 @@ TPCFastTransformPOD* TPCFastTransformPOD::create(char* buff, size_t buffSize, co
       throw std::runtime_error(fmt::format("attempt to copy {} bytes of data for spline{} to {}, overflowing the buffer of size {}", sectorDataSizeBytes, is, nextDynOffs, buffSize));
     }
     const char* dataOr = origCorr.mCorrectionData[is];
-    std::memcpy(data, dataOr, dataSize);
+    // Copy sector-by-sector: sectorDataSizeBytes may be larger than origSectorDataSizeBytes due to
+    // alignment padding, so a single bulk memcpy would overread the source buffer.
+    for (int sector = 0; sector < TPCFastTransformGeo::getNumberOfSectors(); sector++) {
+      std::memcpy(buff + podMap.mSplineDataOffsets[sector][is], dataOr + origSectorDataSizeBytes * sector, origSectorDataSizeBytes);
+    }
     nextDynOffs += dataSize;
   }
   nextDynOffs = alignOffset(nextDynOffs);
