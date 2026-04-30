@@ -880,9 +880,13 @@ void MatchTPCITS::doMatching(int sec)
   int idxMinTPC = timeStartTPC[minROFITS];                             // index of 1st cached TPC track within cached ITS ROFrames
   auto t2nbs = tpcTimeBin2MUS(mZ2TPCBin * mParams->tpcTimeICMatchingNSigma);
   bool checkInteractionCandidates = mUseFT0 && mParams->validateMatchByFIT != MatchTPCITSParams::Disable;
+  LOGP(alarm, "doMatching sec={} nTPC={} nITS={} idxMinTPC={} mTPCWork.size={} mITSWork.size={}", sec, nTracksTPC, nTracksITS, idxMinTPC, mTPCWork.size(), mITSWork.size());
 
   int itsROBin = 0;
   for (int itpc = idxMinTPC; itpc < nTracksTPC; itpc++) {
+    if (cacheTPC[itpc] >= (int)mTPCWork.size()) {
+      LOGP(alarm, "OOB TPC: itpc={} cacheTPC[itpc]={} mTPCWork.size={}", itpc, cacheTPC[itpc], mTPCWork.size());
+    }
     auto& trefTPC = mTPCWork[cacheTPC[itpc]];
     // estimate ITS 1st ROframe bin this track may match to: TPC track are sorted according to their
     // timeMax, hence the timeMax - MaxmNTPCBinsFullDrift are non-decreasing
@@ -895,6 +899,9 @@ void MatchTPCITS::doMatching(int sec)
     int iits0 = timeStartITS[itsROBin];
     nCheckTPCControl++;
     for (auto iits = iits0; iits < nTracksITS; iits++) {
+      if (cacheITS[iits] >= (int)mITSWork.size()) {
+        LOGP(alarm, "OOB ITS: iits={} cacheITS[iits]={} mITSWork.size={}", iits, cacheITS[iits], mITSWork.size());
+      }
       auto& trefITS = mITSWork[cacheITS[iits]];
       // compare if the ITS and TPC tracks may overlap in time
       LOG(debug) << "TPC bracket: " << trefTPC.tBracket.asString() << " ITS bracket: " << trefITS.tBracket.asString() << " TPCtgl: " << trefTPC.getTgl() << " ITStgl: " << trefITS.getTgl();
@@ -934,6 +941,9 @@ void MatchTPCITS::doMatching(int sec)
       }
 
       nCheckITSControl++;
+      if (nCheckITSControl <= 3) {
+        LOGP(alarm, "doMatching sec={} itpc={} iits={} nCheckITS={}", sec, itpc, iits, nCheckITSControl);
+      }
       float chi2 = -1;
       int rejFlag = compareTPCITSTracks(trefITS, trefTPC, chi2);
 
@@ -1006,6 +1016,7 @@ void MatchTPCITS::doMatching(int sec)
               << " N TPC tracks checked: " << nCheckTPCControl << " (starting from " << idxMinTPC
               << "), checks: " << nCheckITSControl << ", matches:" << nMatchesControl;
   }
+  LOGP(alarm, "doMatching sec={} done: nCheckTPC={} nCheckITS={} nMatches={}", sec, nCheckTPCControl, nCheckITSControl, nMatchesControl);
   mNMatchesControl += nMatchesControl;
 }
 
