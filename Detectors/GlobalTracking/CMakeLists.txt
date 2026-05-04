@@ -55,6 +55,9 @@ o2_add_library(GlobalTracking
                                      O2::Steer
                                      $<$<BOOL:${ENABLE_UPGRADES}>:O2::ITS3Reconstruction>)
 
+target_compile_options(${targetName} PRIVATE -fsanitize=address -fno-omit-frame-pointer)
+target_link_options(${targetName} PRIVATE -fsanitize=address)
+
 o2_target_root_dictionary(GlobalTracking
                           HEADERS include/GlobalTracking/MatchTPCITSParams.h
                                   include/GlobalTracking/MatchGlobalFwd.h
