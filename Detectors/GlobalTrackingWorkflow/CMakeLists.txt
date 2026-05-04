@@ -11,7 +11,8 @@
 
 # FIXME: do we actually need a library here, or is the executable enough ?
 
-#add_compile_options(-O0 -g -fPIC -fno-omit-frame-pointer)
+add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+add_link_options(-fsanitize=address)
 
 o2_add_library(GlobalTrackingWorkflow
                SOURCES src/TrackWriterTPCITSSpec.cxx
