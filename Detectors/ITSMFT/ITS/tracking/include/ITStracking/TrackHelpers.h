@@ -29,19 +29,22 @@
 namespace o2::its::track
 {
 
-GPUdi() int selectReseedMidLayer(int minLayer, int maxLayer, int nLayers, const float* layerRadii)
+// Find the populated interior layer closest to the radial midpoint.
+// If no layer can be found, return constants::UnusedIndex.
+// Should minimize the sagitta bias.
+template <int NLayers>
+GPUdi() int selectReseedMidLayer(int minLayer, int maxLayer, const float* layerRadii, const TrackSeed<NLayers>& seed)
 {
-  if (maxLayer - minLayer == nLayers - 1) {
-    return (minLayer + maxLayer) / 2;
-  }
-  int midLayer = minLayer + 1;
+  int midLayer = constants::UnusedIndex;
+  float distanceToMidR = layerRadii[NLayers - 1]; // midpoint cannot be last layer
   const float midR = 0.5f * (layerRadii[maxLayer] + layerRadii[minLayer]);
-  float distanceToMidR = o2::gpu::CAMath::Abs(midR - layerRadii[midLayer]);
-  for (int iLayer = midLayer + 1; iLayer < maxLayer; ++iLayer) { // find the midpoint as closest to the midR
-    const float distance = o2::gpu::CAMath::Abs(midR - layerRadii[iLayer]);
-    if (distance < distanceToMidR) {
-      midLayer = iLayer;
-      distanceToMidR = distance;
+  for (int iLayer = minLayer + 1; iLayer < maxLayer; ++iLayer) {
+    if (seed.getCluster(iLayer) != constants::UnusedIndex) {
+      const float distance = o2::gpu::CAMath::Abs(midR - layerRadii[iLayer]);
+      if (distance < distanceToMidR) { // keep the smaller-radius layer on ties
+        midLayer = iLayer;
+        distanceToMidR = distance;
+      }
     }
   }
   return midLayer;
@@ -59,7 +62,7 @@ GPUdi() o2::track::TrackParCov buildTrackSeed(const Cluster& cluster1,
                                               const float bz,
                                               const bool reverse = false)
 {
-  float ca = NAN, sa = NAN, snp = NAN, q2pt = NAN, q2pt2 = NAN;
+  float ca = constants::UnsetValue, sa = constants::UnsetValue, snp = constants::UnsetValue, q2pt = constants::UnsetValue, q2pt2 = constants::UnsetValue;
   o2::gpu::CAMath::SinCos(tf3.alphaTrackingFrame, sa, ca);
   const float sign = reverse ? -1.f : 1.f;
   const float x1 = (cluster1.xCoordinate * ca) + (cluster1.yCoordinate * sa);
@@ -106,12 +109,14 @@ GPUdi() TrackITSExt seedTrackForRefit(const TrackSeed<NLayers>& seed,
   }
 
   const int ncl = temporaryTrack.getNClusters();
-  if (ncl < reseedIfShorter && ncl > 1) {
-    const int lrMid = selectReseedMidLayer(lrMin, lrMax, NLayers, layerRadii);
-    const auto& cluster0TF = foundTrackingFrameInfo[lrMin][seed.getCluster(lrMin)];
-    const auto& cluster1GL = unsortedClusters[lrMid][seed.getCluster(lrMid)];
-    const auto& cluster2GL = unsortedClusters[lrMax][seed.getCluster(lrMax)];
-    temporaryTrack.getParamIn() = buildTrackSeed(cluster2GL, cluster1GL, cluster0TF, bz, true);
+  if (ncl < reseedIfShorter && ncl > 2) {
+    const int lrMid = selectReseedMidLayer<NLayers>(lrMin, lrMax, layerRadii, seed);
+    if (lrMid != constants::UnusedIndex) {
+      const auto& cluster0TF = foundTrackingFrameInfo[lrMin][seed.getCluster(lrMin)];
+      const auto& cluster1GL = unsortedClusters[lrMid][seed.getCluster(lrMid)];
+      const auto& cluster2GL = unsortedClusters[lrMax][seed.getCluster(lrMax)];
+      temporaryTrack.getParamIn() = buildTrackSeed(cluster2GL, cluster1GL, cluster0TF, bz, true);
+    }
   }
 
   resetTrackCovariance(temporaryTrack);
