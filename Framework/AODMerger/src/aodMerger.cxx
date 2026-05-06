@@ -286,6 +286,21 @@ int main(int argc, char* argv[])
           }
           outputDir->cd();
           auto outputTree = inputTree->CloneTree(-1, (fastCopy) ? "fast" : "");
+          // Validate that all branches have the same number of entries after CloneTree.
+          // Fast copy from remote (xrootd) sources can silently produce corrupt trees
+          // if a read fails mid-transfer.
+          {
+            auto expectedEntries = outputTree->GetEntries();
+            TObjArray* clonedBranches = outputTree->GetListOfBranches();
+            for (int ib = 0; ib < clonedBranches->GetEntriesFast(); ++ib) {
+              auto* br = (TBranch*)clonedBranches->UncheckedAt(ib);
+              if (br->GetEntries() != expectedEntries) {
+                printf("      *** FATAL ***: After CloneTree, branch %s has %lld entries but tree has %lld\n",
+                       br->GetName(), br->GetEntries(), expectedEntries);
+                exitCode = 7;
+              }
+            }
+          }
           currentDirSize += inputTree->GetTotBytes(); // NOTE outputTree->GetTotBytes() is 0, so we use the inputTree here
           alreadyCopied = true;
           outputTree->SetAutoFlush(0);
@@ -307,7 +322,30 @@ int main(int argc, char* argv[])
 
           // detect VLA
           if (((TLeaf*)br->GetListOfLeaves()->First())->GetLeafCount() != nullptr) {
-            int maximum = ((TLeaf*)br->GetListOfLeaves()->First())->GetLeafCount()->GetMaximum();
+            auto* sizeLeaf = ((TLeaf*)br->GetListOfLeaves()->First())->GetLeafCount();
+            // GetMaximum() can be unreliable (may return 0 or a stale value).
+            // Scan the size branch to find the true maximum.
+            int maximum = sizeLeaf->GetMaximum();
+            auto* sizeBranch = sizeLeaf->GetBranch();
+            if (sizeBranch) {
+              for (Long64_t e = 0, n = sizeBranch->GetEntries(); e < n; ++e) {
+                sizeBranch->GetEntry(e);
+                int val = sizeLeaf->GetValue();
+                if (val > maximum) {
+                  printf(" *** WARNING ***: VLA size branch %s has a cached maximum %d which is smaller than the actual one (%d).",
+                         sizeLeaf->GetName(), maximum, val);
+                  maximum = val;
+                }
+              }
+            }
+            if (maximum < 0) {
+              printf("      *** FATAL ***: VLA size branch %s has negative maximum %d\n", sizeLeaf->GetName(), maximum);
+              exitCode = 6;
+              break;
+            }
+            if (maximum == 0) {
+              maximum = 1; // all entries are empty arrays, but we still need a valid buffer
+            }
 
             // get type
             static TClass* cls;
@@ -351,6 +389,9 @@ int main(int argc, char* argv[])
           }
         }
 
+        if (exitCode > 0) {
+          break;
+        }
         if (indexList.size() > 0) {
           auto entries = inputTree->GetEntries();
           int minIndexOffset = unassignedIndexOffset[treeName];
