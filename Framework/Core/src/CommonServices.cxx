@@ -701,9 +701,16 @@ o2::framework::ServiceSpec
       O2_SIGNPOST_ID_FROM_POINTER(cid, data_processor_context, &decongestion);
       O2_SIGNPOST_EVENT_EMIT(data_processor_context, cid, "oldest_possible_timeslice", "Received oldest possible timeframe %" PRIu64 " from channel %d",
                              (uint64_t)oldestPossibleTimeslice, channel.value);
+      auto previousOldestPossibleInput = timesliceIndex.getOldestPossibleInput();
       relayer.setOldestPossibleInput({oldestPossibleTimeslice}, channel);
       timesliceIndex.updateOldestPossibleOutput(decongestion.nextEnumerationTimesliceRewinded);
       auto oldestPossibleOutput = relayer.getOldestPossibleOutput();
+      // If the oldest possible input changed, we need to rescan all slots
+      // so that completion policies which depend on it (e.g.
+      // consumeWhenPastOldestPossibleTimeframe) get re-evaluated.
+      if (previousOldestPossibleInput.timeslice.value != timesliceIndex.getOldestPossibleInput().timeslice.value) {
+        timesliceIndex.rescan();
+      }
 
       if (oldestPossibleOutput.timeslice.value == decongestion.lastTimeslice) {
         O2_SIGNPOST_EVENT_EMIT(data_processor_context, cid, "oldest_possible_timeslice", "Synchronous: Not sending already sent value: %" PRIu64, (uint64_t)oldestPossibleOutput.timeslice.value);
