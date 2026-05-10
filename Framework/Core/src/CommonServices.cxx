@@ -768,6 +768,22 @@ o2::framework::ServiceSpec
                    .user<DecongestionContext>({.ref = services, .oldestPossibleOutput = oldestPossibleOutput}));
       }
 
+      // When consumeWhenPastOldestPossibleTimeframe is active, we always
+      // schedule the callback even when oldestPossibleOutput has not changed
+      // yet. Retry slots held by this policy will be consumed after this
+      // domainInfoUpdated call (once getReadyToProcess re-checks them), and
+      // the callback — running in the next iteration — will recompute
+      // oldestPossibleOutput and forward the updated value downstream.
+      if (decongestion.consumeWhenPastOldestPossibleTimeframeActive) {
+        auto& queue = services.get<AsyncQueue>();
+        AsyncQueueHelpers::post(
+          queue, AsyncTask{.timeslice = TimesliceId{oldestPossibleTimeslice},
+                           .id = decongestion.oldestPossibleTimesliceTask,
+                           .debounce = -1,
+                           .callback = decongestionCallbackPastOldest}
+                   .user<DecongestionContext>({.ref = services, .oldestPossibleOutput = oldestPossibleOutput}));
+      }
+
       if (oldestPossibleOutput.timeslice.value == decongestion.lastTimeslice) {
         O2_SIGNPOST_EVENT_EMIT(data_processor_context, cid, "oldest_possible_timeslice", "Synchronous: Not sending already sent value: %" PRIu64, (uint64_t)oldestPossibleOutput.timeslice.value);
         return;
