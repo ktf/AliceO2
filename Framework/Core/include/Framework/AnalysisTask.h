@@ -16,6 +16,7 @@
 #include "Framework/AlgorithmSpec.h"
 #include "Framework/CallbackService.h"
 #include "Framework/ConfigContext.h"
+#include "Framework/ConfigParamsHelper.h"
 #include "Framework/ControlService.h"
 #include "Framework/DataProcessorSpec.h"
 #include "Framework/Expressions.h"
