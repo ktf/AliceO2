@@ -557,6 +557,17 @@ DataProcessorSpec adaptAnalysisTask(ConfigContext const& ctx, Args&&... args)
     LOG(warn) << "Task " << name_str << " has no inputs";
   }
 
+  // Auto-register default ccdb: path options from subscribed timestamped-table inputs.
+  // This allows tasks to accept --ccdb:fXxx overrides without requiring an explicit
+  // ConfigurableCCDBPath<> member for every column in the subscribed table.
+  for (auto& input : inputs) {
+    for (auto& meta : input.metadata) {
+      if (meta.name.starts_with("ccdb:") && meta.name != "ccdb:") {
+        ConfigParamsHelper::addOptionIfMissing(options, meta);
+      }
+    }
+  }
+
   homogeneous_apply_refs_sized<numElements>([&outputs, &hash](auto& element) { return analysis_task_parsers::appendOutput(outputs, element, hash); }, *task.get());
 
   auto requiredServices = CommonServices::defaultServices();
