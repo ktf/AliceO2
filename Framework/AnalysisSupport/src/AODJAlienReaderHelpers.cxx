@@ -121,6 +121,25 @@ void reportNonColocatedAndStop(DataInputDirector& didir, Monitoring& monitoring,
 
 namespace o2::framework::readers
 {
+
+namespace
+{
+void reportNonColocatedAndStop(DataInputDirector& didir, Monitoring& monitoring, ControlService& control, int readerId)
+{
+  LOGP(info, "No input files left to read for reader {}!", readerId);
+  didir.closeInputFiles();
+  monitoring.flushBuffer();
+  if (!didir.getNonColocatedFiles().empty()) {
+    LOGP(error, "The following top-level files are not colocated with their parent files and should be moved:");
+    for (auto const& entry : didir.getNonColocatedFiles()) {
+      LOGP(error, "  {} is not on the same SE as parent {}", entry.mainFile, entry.parentFile);
+    }
+    throw std::runtime_error("Aborting due to non-colocated files.");
+  }
+  control.endOfStream();
+  control.readyToQuit(QuitRequest::Me);
+}
+} // namespace
 AlgorithmSpec AODJAlienReaderHelpers::rootFileReaderCallback(ConfigContext const& ctx)
 {
   // aod-parent-base-path-replacement is now a workflow option, so it needs to be
