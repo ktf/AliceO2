@@ -81,10 +81,7 @@ class InputRecordWalker
     Iterator() = delete;
 
     Iterator(input_iterator it, input_iterator end, std::vector<InputSpec> const& filterSpecs)
-      : mInputIterator(it), mEnd(end),
-        mCurrentRange(it.parts()),
-        mCurrent(mCurrentRange.begin()),
-        mFilterSpecs(filterSpecs)
+      : mInputIterator(it), mEnd(end), mCurrentRange(it.parts()), mCurrent(mCurrentRange.begin()), mFilterSpecs(filterSpecs)
     {
       next(true);
     }

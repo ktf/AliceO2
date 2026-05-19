@@ -706,7 +706,6 @@ class InputRecord
       }
       return false;
     }
-
   };
 
   using iterator = InputRecordIterator<DataRef>;
