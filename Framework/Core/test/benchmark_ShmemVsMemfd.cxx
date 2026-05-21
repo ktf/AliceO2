@@ -451,15 +451,15 @@ static bool recvFdAndManifest(int sockFd, int& shmFd, Manifest& manifest)
 }
 
 struct ApproachBResult {
-  double memfdCreateMs;  // memfd_create + ftruncate
-  double senderMmapMs;   // mmap on sender
-  double fillMs;         // fill pattern
-  double sendMs;         // sendmsg (fd + manifest)
-  double senderUnmapMs;  // munmap + close on sender
-  double recvMs;         // recvmsg (fd + manifest)
-  double receiverMmapMs; // mmap on receiver
-  double verifyMs;       // verify pattern
-  double receiverUnmapMs;// munmap + close on receiver
+  double memfdCreateMs;   // memfd_create + ftruncate
+  double senderMmapMs;    // mmap on sender
+  double fillMs;          // fill pattern
+  double sendMs;          // sendmsg (fd + manifest)
+  double senderUnmapMs;   // munmap + close on sender
+  double recvMs;          // recvmsg (fd + manifest)
+  double receiverMmapMs;  // mmap on receiver
+  double verifyMs;        // verify pattern
+  double receiverUnmapMs; // munmap + close on receiver
 };
 
 static ApproachBResult benchmarkMemfdUDS(const std::vector<size_t>& sizes)
@@ -726,10 +726,8 @@ static void runScenario(const Scenario& scenario)
   double totalA = resultA.allocFillMs + resultA.sendMs + resultA.receiveMs;
   double throughputA = totalMB / (totalA / 1000.0);
 
-  double senderB = resultB.memfdCreateMs + resultB.senderMmapMs + resultB.fillMs
-                   + resultB.sendMs + resultB.senderUnmapMs;
-  double receiverB = resultB.recvMs + resultB.receiverMmapMs + resultB.verifyMs
-                     + resultB.receiverUnmapMs;
+  double senderB = resultB.memfdCreateMs + resultB.senderMmapMs + resultB.fillMs + resultB.sendMs + resultB.senderUnmapMs;
+  double receiverB = resultB.recvMs + resultB.receiverMmapMs + resultB.verifyMs + resultB.receiverUnmapMs;
   double totalB = senderB + receiverB;
   double throughputB = totalMB / (totalB / 1000.0);
 
