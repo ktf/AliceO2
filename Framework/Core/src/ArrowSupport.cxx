@@ -120,31 +120,37 @@ struct ResourceStats {
 struct ResourceSpec {
   char const* name;
   char const* unit;
-  char const* api;                /// The callback to give resources to a device
   int64_t maxAvailable;           /// Maximum available quantity for a resource
   int64_t maxQuantum;             /// Largest offer which can be given
   int64_t minQuantum;             /// Smallest offer which can be given
   int64_t metricOfferScaleFactor; /// The scale factor between the metric accounting and offers accounting
 };
+struct PendingResourceOffer {
+  int64_t amount = 0;
+  int64_t candidate = -1;
+};
 
-auto offerResources(ResourceState& resourceState,
-                    ResourceSpec const& resourceSpec,
-                    ResourceStats& resourceStats,
-                    std::vector<DeviceSpec> const& specs,
-                    std::vector<DeviceInfo> const& infos,
-                    DevicesManager& manager,
-                    int64_t offerConsumedCurrentValue,
-                    int64_t offerExpiredCurrentValue,
-                    int64_t acquiredResourceCurrentValue,
-                    int64_t disposedResourceCurrentValue,
-                    size_t timestamp,
-                    DeviceMetricsInfo& driverMetrics,
-                    std::function<void(DeviceMetricsInfo&, int value, size_t timestamp)>& availableResourceMetric,
-                    std::function<void(DeviceMetricsInfo&, int value, size_t timestamp)>& unusedOfferedResourceMetric,
-                    std::function<void(DeviceMetricsInfo&, int value, size_t timestamp)>& offeredResourceMetric,
-                    void* signpostId) -> void
+/// Compute how much of a resource can be offered and to which device,
+/// update accounting, but do NOT send the message yet.
+/// Returns the candidate device index and offer amount.
+auto computeResourceOffer(ResourceState& resourceState,
+                          ResourceSpec const& resourceSpec,
+                          ResourceStats& resourceStats,
+                          std::vector<DeviceSpec> const& specs,
+                          std::vector<DeviceInfo> const& infos,
+                          int64_t offerConsumedCurrentValue,
+                          int64_t offerExpiredCurrentValue,
+                          int64_t acquiredResourceCurrentValue,
+                          int64_t disposedResourceCurrentValue,
+                          size_t timestamp,
+                          DeviceMetricsInfo& driverMetrics,
+                          std::function<void(DeviceMetricsInfo&, int value, size_t timestamp)>& availableResourceMetric,
+                          std::function<void(DeviceMetricsInfo&, int value, size_t timestamp)>& unusedOfferedResourceMetric,
+                          std::function<void(DeviceMetricsInfo&, int value, size_t timestamp)>& offeredResourceMetric,
+                          void* signpostId) -> PendingResourceOffer
 {
   O2_SIGNPOST_ID_FROM_POINTER(sid, rate_limiting, signpostId);
+  PendingResourceOffer result;
   /// We loop over the devices, starting from where we stopped last time
   /// offering the minimum offer to each one
   int64_t lastCandidate = -1;
@@ -196,10 +202,11 @@ auto offerResources(ResourceState& resourceState,
     O2_SIGNPOST_EVENT_EMIT(rate_limiting, sid, "offer",
                            "Offering %llu %{public}s out of %llu to %{public}s",
                            possibleOffer, resourceSpec.unit, resourceState.available, specs[candidate].id.c_str());
-    manager.queueMessage(specs[candidate].id.c_str(), fmt::format(fmt::runtime(resourceSpec.api), possibleOffer).data());
     resourceState.available -= possibleOffer;
     resourceState.offered += possibleOffer;
     lastCandidate = candidate;
+    result.amount = possibleOffer;
+    result.candidate = candidate;
   }
   // We had at least a valid candidate, so
   // next time we offer to the next device.
@@ -236,6 +243,7 @@ auto offerResources(ResourceState& resourceState,
   unusedOfferedResourceMetric(driverMetrics, unusedOfferedResource, timestamp);
 
   offeredResourceMetric(driverMetrics, resourceState.offered, timestamp);
+  return result;
 };
 
 auto processTimeslices = [](size_t index, DeviceMetricsInfo& deviceMetrics, bool& changed,
@@ -472,7 +480,6 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        static const ResourceSpec shmResourceSpec{
                          .name = "shared memory",
                          .unit = "MB",
-                         .api = "/shm-offer {}",
                          .maxAvailable = (int64_t)registry.get<RateLimitConfig>().maxMemory,
                          .maxQuantum = 100,
                          .minQuantum = 50,
@@ -481,7 +488,6 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                        static const ResourceSpec timesliceResourceSpec{
                          .name = "timeslice",
                          .unit = "timeslices",
-                         .api = "/timeslice-offer {}",
                          .maxAvailable = (int64_t)registry.get<RateLimitConfig>().maxTimeframes,
                          .maxQuantum = 1,
                          .minQuantum = 1,
@@ -502,17 +508,33 @@ o2::framework::ServiceSpec ArrowSupport::arrowBackendSpec()
                          .lowCount = shmResourceState.available - shmResourceSpec.minQuantum > 0 ? 0 : 1
                        };
 
-                       offerResources(timesliceResourceState, timesliceResourceSpec, timesliceResourceStats,
-                                      specs, infos, manager, totalTimeframesConsumed, totalTimeslicesExpired,
+                       auto timesliceOffer = computeResourceOffer(timesliceResourceState, timesliceResourceSpec, timesliceResourceStats,
+                                      specs, infos, totalTimeframesConsumed, totalTimeslicesExpired,
                                       totalTimeslicesStarted, totalTimeslicesDone, timestamp, driverMetrics,
                                       availableTimeslicesMetric, unusedOfferedTimeslicesMetric, offeredTimeslicesMetric,
                                       (void*)&sm);
 
-                       offerResources(shmResourceState, shmResourceSpec, shmResourceStats,
-                                      specs, infos, manager, shmOfferBytesConsumed, totalBytesExpired,
+                       auto shmOffer = computeResourceOffer(shmResourceState, shmResourceSpec, shmResourceStats,
+                                      specs, infos, shmOfferBytesConsumed, totalBytesExpired,
                                       totalBytesCreated, totalBytesDestroyed, timestamp, driverMetrics,
                                       availableSharedMemoryMetric, unusedOfferedSharedMemoryMetric, offeredSharedMemoryMetric,
-                                      (void*)&sm); },
+                                      (void*)&sm);
+
+                       // Send a single combined offer so the reader gets both resources atomically
+                       if (timesliceOffer.candidate >= 0 && shmOffer.candidate >= 0) {
+                         O2_SIGNPOST_ID_FROM_POINTER(sid, rate_limiting, (void*)&sm);
+                         O2_SIGNPOST_EVENT_EMIT(rate_limiting, sid, "offer",
+                                                "Sending combined offer: %lld MB shm + %lld timeslices to %{public}s",
+                                                shmOffer.amount, timesliceOffer.amount, specs[timesliceOffer.candidate].id.c_str());
+                         manager.queueMessage(specs[timesliceOffer.candidate].id.c_str(),
+                                              fmt::format("/combined-offer {} {}", shmOffer.amount, timesliceOffer.amount).data());
+                       } else if (timesliceOffer.candidate >= 0) {
+                         manager.queueMessage(specs[timesliceOffer.candidate].id.c_str(),
+                                              fmt::format("/timeslice-offer {}", timesliceOffer.amount).data());
+                       } else if (shmOffer.candidate >= 0) {
+                         manager.queueMessage(specs[shmOffer.candidate].id.c_str(),
+                                              fmt::format("/shm-offer {}", shmOffer.amount).data());
+                       } },
     .postDispatching = [](ProcessingContext& ctx, void* service) {
                        using DataHeader = o2::header::DataHeader;
                        auto* arrow = reinterpret_cast<ArrowContext*>(service);

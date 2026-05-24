@@ -120,6 +120,48 @@ void on_connect(uv_connect_t* connection, int status)
 
     state.pendingOffers.push_back(offer);
   });
+  client->observe("/combined-offer", [ref = context->ref](std::string_view cmd) {
+    O2_SIGNPOST_ID_GENERATE(wid, ws_client);
+    O2_SIGNPOST_START(ws_client, wid, "combined-offer", "Received combined offer.");
+    auto& state = ref.get<DeviceState>();
+    static constexpr int prefixSize = std::string_view{"/combined-offer "}.size();
+    if (prefixSize > cmd.size()) {
+      O2_SIGNPOST_END_WITH_ERROR(ws_client, wid, "combined-offer", "Malformed combined offer");
+      return;
+    }
+    cmd.remove_prefix(prefixSize);
+    // Parse "<shm_mb> <timeslices>"
+    size_t shmMB;
+    auto shmError = std::from_chars(cmd.data(), cmd.data() + cmd.size(), shmMB);
+    if (shmError.ec != std::errc() || shmError.ptr >= cmd.data() + cmd.size()) {
+      O2_SIGNPOST_END_WITH_ERROR(ws_client, wid, "combined-offer", "Malformed combined offer (shm)");
+      return;
+    }
+    // Skip space
+    auto remaining = std::string_view(shmError.ptr, cmd.data() + cmd.size() - shmError.ptr);
+    if (remaining.empty() || remaining[0] != ' ') {
+      O2_SIGNPOST_END_WITH_ERROR(ws_client, wid, "combined-offer", "Malformed combined offer (separator)");
+      return;
+    }
+    remaining.remove_prefix(1);
+    int64_t timeslices;
+    auto tsError = std::from_chars(remaining.data(), remaining.data() + remaining.size(), timeslices);
+    if (tsError.ec != std::errc()) {
+      O2_SIGNPOST_END_WITH_ERROR(ws_client, wid, "combined-offer", "Malformed combined offer (timeslices)");
+      return;
+    }
+    ComputingQuotaOffer offer{
+      .cpu = 0,
+      .memory = 0,
+      .sharedMemory = (int64_t)(shmMB * 1000000),
+      .timeslices = timeslices,
+      .runtime = 10000,
+      .user = -1,
+      .valid = true};
+    state.pendingOffers.push_back(offer);
+    O2_SIGNPOST_END(ws_client, wid, "combined-offer", "Received combined offer: %zu MB shm + %lli timeslices. Total pending %zu.",
+                    shmMB, timeslices, state.pendingOffers.size());
+  });
   client->observe("/timeslice-offer", [ref = context->ref](std::string_view cmd) {
     O2_SIGNPOST_ID_GENERATE(wid, ws_client);
     O2_SIGNPOST_START(ws_client, wid, "timeslice-offer", "Received timeslice offer.");
