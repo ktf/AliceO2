@@ -245,7 +245,8 @@ void on_connect(uv_connect_t* connection, int status)
         return false;
       }
       return true;
-    }, &name);
+    },
+                 &name);
   });
 
   client->observe("/signpost:disable", [](std::string_view cmd) {
@@ -263,7 +264,8 @@ void on_connect(uv_connect_t* connection, int status)
         return false;
       }
       return true;
-    }, &name);
+    },
+                 &name);
   });
 
   // Client will be filled in the line after. I can probably have a single
@@ -305,6 +307,12 @@ WSDriverClient::WSDriverClient(ServiceRegistryRef registry, char const* ip, unsi
 
 WSDriverClient::~WSDriverClient()
 {
+  for (auto& buf : mBacklog) {
+    free(buf.base);
+  }
+  for (auto* chunk : mFreeChunks) {
+    free(chunk);
+  }
   free(this->mAwakeMainThread);
 }
 
@@ -371,8 +379,24 @@ void WSDriverClient::flushPending(ServiceRegistryRef mainThreadRef)
     printed1 = false;
     printed2 = false;
   }
-  mClient->write(mBacklog);
-  mBacklog.resize(0);
+  // Return any pre-seeded but unused (zero-length) buffers to the free list
+  // so we don't send pointless zero-byte writes to the kernel.
+  while (!mBacklog.empty() && mBacklog.back().len == 0) {
+    mFreeChunks.push_back(mBacklog.back().base);
+    mBacklog.pop_back();
+  }
+  mClient->write(mBacklog, mFreeChunks);
+  // Pre-seed mBacklog with one recycled chunk from the previous write's callback
+  // so that the next encode_websocket_frames reuses memory instead of malloc-ing.
+  // Only one chunk (64 KB) since encode_websocket_frames appends to outputs.back().
+  if (!mFreeChunks.empty()) {
+    mBacklog.push_back(uv_buf_init(mFreeChunks.back(), 0));
+    mFreeChunks.pop_back();
+  }
+  for (auto* chunk : mFreeChunks) {
+    free(chunk);
+  }
+  mFreeChunks.clear();
 }
 
 } // namespace o2::framework
