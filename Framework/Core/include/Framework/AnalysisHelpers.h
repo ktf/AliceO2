@@ -513,9 +513,12 @@ struct WritingCursor {
 
   /// reserve @a size rows when filling, so that we do not
   /// spend time reallocating the buffers.
-  void reserve(int64_t size)
+  /// Returns an unsafe cursor that skips capacity checks
+  /// (safe because we just reserved enough space).
+  auto reserve(int64_t size)
   {
     mBuilder->reserve(typename persistent_table_t::column_types{}, size);
+    return FFL(mBuilder->template unsafeCursor<persistent_table_t>());
   }
 
   void release()
