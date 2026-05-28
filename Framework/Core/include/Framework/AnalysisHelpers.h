@@ -513,9 +513,12 @@ struct WritingCursor {
 
   /// reserve @a size rows when filling, so that we do not
   /// spend time reallocating the buffers.
+  /// Switches the internal cursor to UnsafeAppend (no capacity check),
+  /// which is safe because we just reserved enough space.
   void reserve(int64_t size)
   {
     mBuilder->reserve(typename persistent_table_t::column_types{}, size);
+    cursor = std::move(FFL(mBuilder->template unsafeCursor<persistent_table_t>()));
   }
 
   void release()
