@@ -1,4 +1,4 @@
-// Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+// Copyright 2019-2026 CERN and copyright holders of ALICE O2.
 // See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
 // All rights not expressly granted are reserved.
 //
@@ -9,17 +9,17 @@
 // granted to it by virtue of its status as an Intergovernmental Organization
 // or submit itself to any jurisdiction.
 
-#ifndef STEER_DIGITIZERWORKFLOW_ITS3DIGITIZER_H_
-#define STEER_DIGITIZERWORKFLOW_ITS3DIGITIZER_H_
+/// \file GPUTPCExtraADC.h
+/// \author Felix Weiglhofer
 
-#include "Framework/DataProcessorSpec.h"
+#include "GPUDefConstantsAndSettings.h"
+#include "DataFormatsTPC/Digit.h"
+#include <array>
+#include <vector>
 
-namespace o2::its3
+namespace o2::gpu
 {
-
-o2::framework::DataProcessorSpec getITS3DigitizerSpec(int channel, bool mctruth = true, bool doStag = false);
-
-} // namespace o2::its3
-  // end namespace o2
-
-#endif /* STEER_DIGITIZERWORKFLOW_ITS3DIGITIZER_H_ */
+struct GPUTPCExtraADC {
+  std::array<std::vector<tpc::Digit>, tpc::constants::MAXSECTOR> digitsBySector;
+};
+} // namespace o2::gpu

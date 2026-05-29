@@ -11,10 +11,12 @@
 #include "WorkflowHelpers.h"
 #include "Framework/AnalysisSupportHelpers.h"
 #include "Framework/AlgorithmSpec.h"
+#include "Framework/CommonLabels.h"
 #include "Framework/ConfigParamSpec.h"
 #include "Framework/ConfigParamsHelper.h"
 #include "Framework/CommonDataProcessors.h"
 #include "Framework/ConfigContext.h"
+#include "Framework/DataProcessorSpecHelpers.h"
 #include "Framework/DeviceSpec.h"
 #include "Framework/DataSpecUtils.h"
 #include "Framework/DataSpecViews.h"
@@ -32,6 +34,7 @@
 #include "Headers/DataHeader.h"
 #include <algorithm>
 #include <list>
+#include <map>
 #include <set>
 #include <utility>
 #include <vector>
@@ -282,8 +285,12 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
       bool hasProjectors = false;
       bool hasIndexRecords = false;
       bool hasCCDBURLs = false;
+      bool wasAOD = false;
       // all three options are exclusive
       for (auto const& p : input.metadata) {
+        if (p.name.starts_with("aod-origin-replaced")) {
+          wasAOD = true;
+        }
         if (p.name.compare("projectors") == 0) {
           hasProjectors = true;
           break;
@@ -342,7 +349,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
         DataSpecUtils::updateInputList(dec.requestedIDXs, InputSpec{input});
       } else if (hasCCDBURLs) {
         DataSpecUtils::updateInputList(dec.requestedTIMs, InputSpec{input});
-      } else if (DataSpecUtils::partialMatch(input, AODOrigins)) {
+      } else if (DataSpecUtils::partialMatch(input, AODOrigins) || wasAOD) {
         DataSpecUtils::updateInputList(dec.requestedAODs, InputSpec{input});
       }
     }
@@ -353,8 +360,12 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
       bool hasProjectors = false;
       bool hasIndexRecords = false;
       bool hasCCDBURLs = false;
+      bool wasAOD = false;
       // all three options are exclusive
       for (auto const& p : output.metadata) {
+        if (p.name.starts_with("aod-origin-replaced")) {
+          wasAOD = true;
+        }
         if (p.name.compare("projectors") == 0) {
           hasProjectors = true;
           break;
@@ -374,7 +385,7 @@ void WorkflowHelpers::injectServiceDevices(WorkflowSpec& workflow, ConfigContext
         dec.providedTIMs.emplace_back(output);
       } else if (hasIndexRecords) {
         dec.providedIDXs.emplace_back(output);
-      } else if (DataSpecUtils::partialMatch(output, AODOrigins)) {
+      } else if (DataSpecUtils::partialMatch(output, AODOrigins) || wasAOD) {
         dec.providedAODs.emplace_back(output);
       } else if (DataSpecUtils::partialMatch(output, header::DataOrigin{"ATSK"})) {
         dec.providedOutputObjHist.emplace_back(output);
@@ -951,7 +962,7 @@ WorkflowParsingState WorkflowHelpers::verifyWorkflow(const o2::framework::Workfl
   if (workflow.empty()) {
     return WorkflowParsingState::Empty;
   }
-  std::set<std::string> validNames;
+  std::map<std::string, size_t> validNames;
   // std::vector<OutputSpec> availableOutputs;
   // std::vector<InputSpec> requiredInputs;
 
@@ -963,17 +974,25 @@ WorkflowParsingState WorkflowHelpers::verifyWorkflow(const o2::framework::Workfl
 
   std::ostringstream ss;
 
-  for (auto& spec : workflow) {
+  for (size_t si = 0; si < workflow.size(); ++si) {
+    auto& spec = workflow[si];
     if (spec.name.empty()) {
       throw std::runtime_error("Invalid DataProcessorSpec name");
     }
     if (strpbrk(spec.name.data(), ",;:\"'$") != nullptr) {
       throw std::runtime_error("Cannot use any of ,;:\"'$ as DataProcessor name");
     }
-    if (validNames.find(spec.name) != validNames.end()) {
-      throw std::runtime_error("Name " + spec.name + " is used twice.");
+    auto it = validNames.find(spec.name);
+    if (it != validNames.end()) {
+      auto& firstSpec = workflow[it->second];
+      if (!DataProcessorSpecHelpers::hasLabel(firstSpec, allowDuplicatesLabel.value.c_str()) ||
+          !DataProcessorSpecHelpers::hasLabel(spec, allowDuplicatesLabel.value.c_str())) {
+        throw std::runtime_error("Name " + spec.name + " is used twice.");
+      }
+      LOG(warning) << "Duplicate DataProcessorSpec " << spec.name << " found with allow-duplicates label. Will be deduplicated.";
+      continue;
     }
-    validNames.insert(spec.name);
+    validNames.emplace(spec.name, si);
     for (auto& option : spec.options) {
       if (option.defaultValue.type() != VariantType::Empty &&
           option.type != option.defaultValue.type()) {
@@ -995,6 +1014,22 @@ WorkflowParsingState WorkflowHelpers::verifyWorkflow(const o2::framework::Workfl
     }
   }
   return WorkflowParsingState::Valid;
+}
+
+void WorkflowHelpers::removeDuplicates(WorkflowSpec& workflow)
+{
+  std::set<std::string> seen;
+  auto it = std::remove_if(workflow.begin(), workflow.end(), [&seen](DataProcessorSpec const& spec) {
+    if (seen.find(spec.name) == seen.end()) {
+      seen.insert(spec.name);
+      return false;
+    }
+    if (!DataProcessorSpecHelpers::hasLabel(spec, allowDuplicatesLabel.value.c_str())) {
+      return false;
+    }
+    return true;
+  });
+  workflow.erase(it, workflow.end());
 }
 
 using UnifiedDataSpecType = std::variant<InputSpec, OutputSpec>;
