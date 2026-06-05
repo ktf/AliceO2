@@ -60,8 +60,8 @@ BOOST_AUTO_TEST_CASE(Chebyshev3D_eval_accuracy)
   std::uniform_real_distribution<float> uy(bmin[1] + 1.f, bmax[1] - 1.f);
   std::uniform_real_distribution<float> uz(bmin[2] + 1.f, bmax[2] - 1.f);
 
-  float maxAbsErr = 0.f;     // |cheb - reference| (kernel reproduces the function)
-  float maxDimMismatch = 0.f; // |vector overload - per-dim overload|
+  float maxAbsErr = 0.f;         // |cheb - reference| (kernel reproduces the function)
+  float maxDimMismatch = 0.f;    // |vector overload - per-dim overload|
   float maxDoubleMismatch = 0.f; // |float overload - double overload|
 
   for (int i = 0; i < 20000; ++i) {
