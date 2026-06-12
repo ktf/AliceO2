@@ -1030,6 +1030,10 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
 {
   fair::Logger::SetConsoleColor(false);
   fair::Logger::OnFatal([]() { throw runtime_error("Fatal error"); });
+  fair::Logger::DefineVerbosity(fair::Verbosity::user1,
+                                fair::VerbositySpec::Make(fair::VerbositySpec::Info::timestamp_us,
+                                                          fair::VerbositySpec::Info::severity));
+  fair::Logger::SetVerbosity(fair::Verbosity::user1);
   DeviceSpec const& spec = runningWorkflow.devices[ref.index];
   LOG(info) << "Spawning new device " << spec.id << " in process with pid " << getpid();
 
@@ -1114,6 +1118,10 @@ int doChild(int argc, char** argv, ServiceRegistry& serviceRegistry,
     serviceRef.get<RawDeviceService>().setDevice(device.get());
     r.fDevice = std::move(device);
     fair::Logger::SetConsoleColor(false);
+    fair::Logger::DefineVerbosity(fair::Verbosity::user1,
+                                  fair::VerbositySpec::Make(fair::VerbositySpec::Info::timestamp_us,
+                                                            fair::VerbositySpec::Info::severity));
+    fair::Logger::SetVerbosity(fair::Verbosity::user1);
 
     /// Create all the requested services and initialise them
     for (auto& service : spec.services) {
@@ -3155,6 +3163,11 @@ int doMain(int argc, char** argv, o2::framework::WorkflowSpec const& workflow,
       exit(1);
     }
   }
+
+  fair::Logger::DefineVerbosity(fair::Verbosity::user1,
+                                fair::VerbositySpec::Make(fair::VerbositySpec::Info::timestamp_us,
+                                                          fair::VerbositySpec::Info::severity));
+  fair::Logger::SetVerbosity(fair::Verbosity::user1);
 
   enableSignposts(varmap["signposts"].as<std::string>());
 
