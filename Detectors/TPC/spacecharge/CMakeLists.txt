@@ -19,8 +19,12 @@ o2_add_library(TPCSpaceCharge
                                      O2::Field
                                      Vc::Vc
                                      ROOT::Core
-                                     ROOT::ROOTDataFrame
                                      O2::DataFormatsParameters)
+
+o2_add_library(TPCSpaceChargeIO
+               SOURCES src/SpaceChargeIO.cxx
+               PUBLIC_LINK_LIBRARIES O2::TPCSpaceCharge
+                                     ROOT::ROOTDataFrame)
 
 
 o2_target_root_dictionary(TPCSpaceCharge
