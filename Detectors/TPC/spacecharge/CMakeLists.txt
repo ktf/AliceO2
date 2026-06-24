@@ -42,10 +42,12 @@ o2_target_root_dictionary(TPCSpaceCharge
 
 o2_add_test_root_macro(macro/calculateDistortionsCorrections.C
                        PUBLIC_LINK_LIBRARIES O2::TPCSpaceCharge
+                                             O2::TPCSpaceChargeIO
                        LABELS tpc COMPILE_ONLY)
 
 o2_add_test_root_macro(macro/createResidualDistortionObject.C
                       PUBLIC_LINK_LIBRARIES O2::TPCSpaceCharge
+                                            O2::TPCSpaceChargeIO
                                             O2::CommonUtils
                       LABELS tpc)
 
@@ -55,6 +57,7 @@ install(FILES macro/createSCHistosFromHits.C
 
 o2_add_test_root_macro(macro/createSCHistosFromHits.C
                       PUBLIC_LINK_LIBRARIES O2::TPCSpaceCharge
+                                            O2::TPCSpaceChargeIO
                                             O2::CommonUtils
                                             O2::TPCBase
                                             O2::TPCSimulation
