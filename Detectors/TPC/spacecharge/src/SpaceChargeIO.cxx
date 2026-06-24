@@ -1023,7 +1023,6 @@ void SpaceCharge<DataT>::setFromFile(std::string_view file)
   setFromFile(file, Side::C);
 }
 
-
 // explicit template instantiations of the moved members
 template int o2::tpc::DataContainer3D<float>::writeToFile(std::string_view, std::string_view, std::string_view, const int) const;
 template bool o2::tpc::DataContainer3D<float>::initFromFile(std::string_view, std::string_view, const int);

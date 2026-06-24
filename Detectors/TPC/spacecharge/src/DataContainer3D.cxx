@@ -41,8 +41,6 @@ int DataContainer3D<DataT>::writeToFile(TFile& outf, const char* name) const
   return 0;
 }
 
-
-
 /// set values from file
 template <typename DataT>
 template <typename DataTIn>
@@ -122,7 +120,6 @@ void DataContainer3D<DataT>::print() const
   }
   LOGP(info, "{} \n \n", stream.str());
 }
-
 
 template <typename DataT>
 DataContainer3D<DataT>& DataContainer3D<DataT>::operator*=(const DataT value)
@@ -217,14 +214,12 @@ void DataContainer3D<DataT>::setGrid(unsigned short nZ, unsigned short nR, unsig
   }
 }
 
-
 template <typename DataT>
 DataT DataContainer3D<DataT>::interpolate(const DataT z, const DataT r, const DataT phi, const o2::tpc::RegularGrid3D<DataT>& grid) const
 {
   TriCubicInterpolator<DataT> interpolator(*this, grid);
   return interpolator(z, r, phi);
 }
-
 
 template <typename DataT>
 bool DataContainer3D<DataT>::getVertices(std::string_view treename, std::string_view fileIn, unsigned short& nR, unsigned short& nZ, unsigned short& nPhi)

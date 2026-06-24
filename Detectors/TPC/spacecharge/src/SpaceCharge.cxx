@@ -2464,8 +2464,6 @@ void SpaceCharge<DataT>::makeElectronDriftPathGif(const char* inpFile, TH2F& hDu
   can.Print(Form("%s.gif++", outName));
 }
 
-
-
 template <typename DataT>
 void SpaceCharge<DataT>::normalizeHistoQVEps0(TH3& histoIonsPhiRZ)
 {
@@ -2658,10 +2656,6 @@ void SpaceCharge<DataT>::calcDistCorr(const DataT p1r, const DataT p1phi, const 
   ddPhi += ddPhiExB;
 }
 
-
-
-
-
 template <typename DataT>
 template <typename DataTIn>
 void SpaceCharge<DataT>::setGlobalDistortionsFromFile(TFile& inpf, const Side side)
@@ -2675,8 +2669,6 @@ void SpaceCharge<DataT>::setGlobalDistortionsFromFile(TFile& inpf, const Side si
   mGlobalDistdRPhi[side].template initFromFile<DataTIn>(inpf, fmt::format("distRphi_side{}", sideName).data());
 }
 
-
-
 template <typename DataT>
 template <typename DataTIn>
 void SpaceCharge<DataT>::setGlobalCorrectionsFromFile(TFile& inpf, const Side side)
@@ -2689,15 +2681,6 @@ void SpaceCharge<DataT>::setGlobalCorrectionsFromFile(TFile& inpf, const Side si
   mGlobalCorrdZ[side].template initFromFile<DataTIn>(inpf, fmt::format("corrZ_side{}", sideName).data());
   mGlobalCorrdRPhi[side].template initFromFile<DataTIn>(inpf, fmt::format("corrRPhi_side{}", sideName).data());
 }
-
-
-
-
-
-
-
-
-
 
 template <typename DataT>
 bool SpaceCharge<DataT>::checkGridFromFile(std::string_view file, std::string_view tree)
@@ -2719,7 +2702,6 @@ bool SpaceCharge<DataT>::checkGridFromFile(std::string_view file, std::string_vi
   return true;
 }
 
-
 template <typename DataT>
 int SpaceCharge<DataT>::dumpGlobalCorrections(TFile& outf, const Side side) const
 {
@@ -2733,10 +2715,6 @@ int SpaceCharge<DataT>::dumpGlobalCorrections(TFile& outf, const Side side) cons
   const int ephi = mGlobalCorrdRPhi[side].template writeToFile<float>(outf, fmt::format("corrRPhi_side{}", sideName).data());
   return er + ez + ephi;
 }
-
-
-
-
 
 template <typename DataT>
 void SpaceCharge<DataT>::setSimNSector(const int nSectors)
@@ -2754,8 +2732,6 @@ void SpaceCharge<DataT>::unsetSimNSector()
 {
   o2::tpc::MGParameters::normalizeGridToNSector = SECTORSPERSIDE;
 }
-
-
 
 template <typename DataT>
 void SpaceCharge<DataT>::initContainer(DataContainer& data, const bool initMem)
