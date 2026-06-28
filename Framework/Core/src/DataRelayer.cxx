@@ -412,22 +412,20 @@ void DataRelayer::pruneCache(TimesliceSlot slot, OnDropCallback onDrop)
                      ref = mContext](TimesliceSlot slot) {
     if (onDrop) {
       auto oldestPossibleTimeslice = index.getOldestPossibleOutput();
-      // State of the computation
-      std::vector<std::vector<fair::mq::MessagePtr>> dropped(numInputTypes);
+      // Build spans over the cache entries (no copy or move of message ownership).
+      // The spans are valid for the duration of the onDrop call; entries are
+      // cleared below after the callback returns.
+      std::vector<std::span<fair::mq::MessagePtr>> droppedSpans(numInputTypes);
       for (size_t ai = 0, ae = numInputTypes; ai != ae; ++ai) {
         auto cacheId = slot.index * numInputTypes + ai;
         cachedStateMetrics[cacheId] = CacheEntryStatus::RUNNING;
-        // TODO: in the original implementation of the cache, there have been only two messages per entry,
-        // check if the 2 above corresponds to the number of messages.
-        if (!cache[cacheId].empty()) {
-          dropped[ai] = std::move(cache[cacheId]);
-        }
+        droppedSpans[ai] = cache[cacheId];
       }
-      bool anyDropped = std::any_of(dropped.begin(), dropped.end(), [](auto& m) { return !m.empty(); });
+      bool anyDropped = std::any_of(droppedSpans.begin(), droppedSpans.end(), [](auto& s) { return !s.empty(); });
       if (anyDropped) {
         O2_SIGNPOST_ID_GENERATE(aid, data_relayer);
         O2_SIGNPOST_EVENT_EMIT(data_relayer, aid, "pruneCache", "Dropping stuff from slot %zu with timeslice %zu", slot.index, oldestPossibleTimeslice.timeslice.value);
-        onDrop(slot, dropped, oldestPossibleTimeslice);
+        onDrop(slot, droppedSpans, oldestPossibleTimeslice);
       }
     }
     assert(cache.empty() == false);
@@ -886,58 +884,33 @@ void DataRelayer::updateCacheStatus(TimesliceSlot slot, CacheEntryStatus oldStat
   }
 }
 
-std::vector<std::vector<fair::mq::MessagePtr>> DataRelayer::consumeAllInputsForTimeslice(TimesliceSlot slot)
+std::vector<std::span<fair::mq::MessagePtr>> DataRelayer::consumeAllInputsForTimeslice(TimesliceSlot slot)
 {
   std::scoped_lock<O2_LOCKABLE(std::recursive_mutex)> lock(mMutex);
-
   const auto numInputTypes = mDistinctRoutesIndex.size();
-  // State of the computation
-  std::vector<std::vector<fair::mq::MessagePtr>> messages(numInputTypes);
-  auto& cache = mCache;
-  auto& index = mTimesliceIndex;
-
-  // Nothing to see here, this is just to make the outer loop more understandable.
-  auto jumpToCacheEntryAssociatedWith = [](TimesliceSlot) {
-    return;
-  };
-
-  // We move ownership so that the cache can be reused once the computation is
-  // finished. We mark the given cache slot invalid, so that it can be reused
-  // This means we can still handle old messages if there is still space in the
-  // cache where to put them.
-  auto moveHeaderPayloadToOutput = [&messages,
-                                    &cachedStateMetrics = mCachedStateMetrics,
-                                    &cache, &index, &numInputTypes](TimesliceSlot s, size_t arg) {
-    auto cacheId = s.index * numInputTypes + arg;
-    cachedStateMetrics[cacheId] = CacheEntryStatus::RUNNING;
-    // TODO: in the original implementation of the cache, there have been only two messages per entry,
-    // check if the 2 above corresponds to the number of messages.
-    if (!cache[cacheId].empty()) {
-      messages[arg] = std::move(cache[cacheId]);
-    }
-    index.markAsInvalid(s);
-  };
-
-  // An invalid set of arguments is a set of arguments associated to an invalid
-  // timeslice, so I can simply do that. I keep the assertion there because in principle
-  // we should have dispatched the timeslice already!
-  // FIXME: what happens when we have enough timeslices to hit the invalid one?
-  auto invalidateCacheFor = [&numInputTypes, &index, &cache](TimesliceSlot s) {
-    for (size_t ai = s.index * numInputTypes, ae = ai + numInputTypes; ai != ae; ++ai) {
-      assert(std::accumulate(cache[ai].begin(), cache[ai].end(), true, [](bool result, auto const& element) { return result && element.get() == nullptr; }));
-      cache[ai].clear();
-    }
-    index.markAsInvalid(s);
-  };
-
-  // Outer loop here.
-  jumpToCacheEntryAssociatedWith(slot);
-  for (size_t ai = 0, ae = numInputTypes; ai != ae; ++ai) {
-    moveHeaderPayloadToOutput(slot, ai);
+  // Move message vectors from mCache into mConsumedCache (same NxM layout) so that:
+  //   - mCache entries are immediately empty and the slot can be reused by relay()
+  //   - the messages remain alive in mConsumedCache until releaseSlot() is called
+  // relay() never touches mConsumedCache, so the returned spans are safe to use
+  // concurrently with new relay() calls into this (now-invalid) slot.
+  std::vector<std::span<fair::mq::MessagePtr>> spans(numInputTypes);
+  for (size_t ai = 0; ai < numInputTypes; ++ai) {
+    auto cacheId = slot.index * numInputTypes + ai;
+    mCachedStateMetrics[cacheId] = CacheEntryStatus::RUNNING;
+    mConsumedCache[cacheId] = std::move(mCache[cacheId]);
+    spans[ai] = mConsumedCache[cacheId];
   }
-  invalidateCacheFor(slot);
+  mTimesliceIndex.markAsInvalid(slot);
+  return spans;
+}
 
-  return messages;
+void DataRelayer::releaseSlot(TimesliceSlot slot)
+{
+  // No lock needed: relay() only touches mCache, never mConsumedCache.
+  const auto numInputTypes = mDistinctRoutesIndex.size();
+  for (size_t ai = slot.index * numInputTypes, ae = ai + numInputTypes; ai != ae; ++ai) {
+    mConsumedCache[ai].clear();
+  }
 }
 
 std::vector<std::vector<fair::mq::MessagePtr>> DataRelayer::consumeExistingInputsForTimeslice(TimesliceSlot slot)
@@ -991,6 +964,9 @@ void DataRelayer::clear()
   for (auto& cache : mCache) {
     cache.clear();
   }
+  for (auto& consumed : mConsumedCache) {
+    consumed.clear();
+  }
   for (size_t s = 0; s < mTimesliceIndex.size(); ++s) {
     mTimesliceIndex.markAsInvalid(TimesliceSlot{s});
   }
@@ -1024,6 +1000,7 @@ void DataRelayer::publishMetrics()
   // maybe misleading to have the allocation in a function primarily for
   // metrics publishing, do better in setPipelineLength?
   mCache.resize(numInputTypes * mTimesliceIndex.size());
+  mConsumedCache.resize(mCache.size());
   auto& states = mContext.get<DataProcessingStates>();
 
   mCachedStateMetrics.resize(mCache.size());

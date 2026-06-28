@@ -24,6 +24,7 @@
 
 #include <cstddef>
 #include <mutex>
+#include <span>
 #include <vector>
 #include <functional>
 
@@ -113,7 +114,7 @@ class DataRelayer
   ActivityStats processDanglingInputs(std::vector<ExpirationHandler> const&,
                                       ServiceRegistryRef context, bool createNew);
 
-  using OnDropCallback = std::function<void(TimesliceSlot, std::vector<std::vector<fair::mq::MessagePtr>>&, TimesliceIndex::OldestOutputInfo info)>;
+  using OnDropCallback = std::function<void(TimesliceSlot, std::vector<std::span<fair::mq::MessagePtr>>&, TimesliceIndex::OldestOutputInfo info)>;
 
   // Callback for when some messages are about to be owned by the the DataRelayer
   using OnInsertionCallback = std::function<void(ServiceRegistryRef&, std::span<fair::mq::MessagePtr>&)>;
@@ -153,11 +154,14 @@ class DataRelayer
   /// @returns the actions ready to be performed.
   void getReadyToProcess(std::vector<RecordAction>& completed);
 
-  /// Returns an input registry associated to the given timeslice and gives
-  /// ownership to the caller. This is because once the inputs are out of the
-  /// DataRelayer they need to be deleted once the processing is concluded.
-  std::vector<std::vector<fair::mq::MessagePtr>> consumeAllInputsForTimeslice(TimesliceSlot id);
+  /// Returns spans into the relayer's internal storage for the given timeslice.
+  /// The slot is marked invalid so new data can be relayed to it immediately,
+  /// but the underlying message vectors are NOT freed until releaseSlot() is
+  /// called. The caller must call releaseSlot() once it is done with the spans.
+  std::vector<std::span<fair::mq::MessagePtr>> consumeAllInputsForTimeslice(TimesliceSlot id);
   std::vector<std::vector<fair::mq::MessagePtr>> consumeExistingInputsForTimeslice(TimesliceSlot id);
+  /// Free the storage for a slot previously handed out by consumeAllInputsForTimeslice().
+  void releaseSlot(TimesliceSlot slot);
 
   /// Returns how many timeslices we can handle in parallel
   [[nodiscard]] size_t getParallelTimeslices() const;
@@ -204,6 +208,11 @@ class DataRelayer
   /// N is the maximum number of inflight timeslices, while
   /// M is the number of inputs which are requested.
   std::vector<std::vector<fair::mq::MessagePtr>> mCache;
+  /// Holding area for message vectors moved out of mCache by
+  /// consumeAllInputsForTimeslice(). Same NxM layout as mCache.
+  /// Spans returned to callers point here and remain valid until releaseSlot().
+  /// relay() never touches mConsumedCache, so no locking is needed in releaseSlot().
+  std::vector<std::vector<fair::mq::MessagePtr>> mConsumedCache;
 
   /// This is the index which maps a given timestamp to the associated
   /// cacheline.
