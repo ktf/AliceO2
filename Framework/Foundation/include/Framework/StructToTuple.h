@@ -201,7 +201,7 @@ using first_t = typename first_type<Ts...>::type;
 template <bool B = false, class T, int D = 0, typename L>
 constexpr auto homogeneous_apply_refs(L l, T&& object)
 {
-  auto&& [...members] = object;
+  auto&& [... members] = object;
   if constexpr (sizeof...(members) == 0) {
     return std::array<bool, 0>();
   } else {
