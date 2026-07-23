@@ -174,6 +174,46 @@ consteval int nested_brace_constructible_size()
   return brace_constructible_size<type>() - nesting;
 }
 
+// Structured binding packs (P1061) are C++26, but clang implements them as an
+// extension in every language mode and advertises them via the feature test
+// macro, so we can use them while still compiling as C++20.
+#if defined(__cpp_structured_bindings) && __cpp_structured_bindings >= 202411L
+#define DPL_STRUCTURED_BINDING_PACKS 1
+#endif
+
+#ifdef DPL_STRUCTURED_BINDING_PACKS
+namespace detail
+{
+template <typename... Ts>
+struct first_type;
+template <typename First, typename... Rest>
+struct first_type<First, Rest...> {
+  using type = First;
+};
+template <typename... Ts>
+using first_t = typename first_type<Ts...>::type;
+} // namespace detail
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++26-extensions"
+#endif
+template <bool B = false, class T, int D = 0, typename L>
+constexpr auto homogeneous_apply_refs(L l, T&& object)
+{
+  auto&& [...members] = object;
+  if constexpr (sizeof...(members) == 0) {
+    return std::array<bool, 0>();
+  } else {
+    return std::array<detail::first_t<decltype(l(members))...>, sizeof...(members)>{l(members)...};
+  }
+}
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+
+#else // DPL_STRUCTURED_BINDING_PACKS
+
 template <bool B = false, class T, int D = nested_brace_constructible_size<B, T>() / 10, typename L>
   requires(D == 9)
 constexpr auto homogeneous_apply_refs(L l, T&& object)
@@ -372,6 +412,8 @@ constexpr auto homogeneous_apply_refs(L l, T&& object)
   else { return std::array<bool,0>(); }
   // clang-format on
 }
+
+#endif // DPL_STRUCTURED_BINDING_PACKS
 
 template <int D, typename T, typename L>
 constexpr auto homogeneous_apply_refs_sized(L l, T&& object)
