@@ -17,6 +17,7 @@
 #include "CCDB/CCDBTimeStampUtils.h"
 #include <boost/test/unit_test.hpp>
 #include <cstdio>
+#include <cstdlib>
 #include <TH1F.h>
 
 using namespace std;
@@ -35,7 +36,13 @@ struct Fixture {
   Fixture()
   {
     CcdbApi api;
-    ccdbUrl = "https://localhost:22,https://localhost:8080,http://ccdb-test.cern.ch:8080";
+    // This suite uploads, so it needs a WRITABLE instance -- ccdb-test by
+    // default, not the official CCDB. Only the LAST entry is configurable:
+    // what is under test here is the failover, so the two dead endpoints in
+    // front of it are part of the fixture and stay hardcoded.
+    const char* host = std::getenv("ALICEO2_CCDB_HOST");
+    ccdbUrl = "https://localhost:22,https://localhost:8080,";
+    ccdbUrl += host ? host : "http://ccdb-test.cern.ch:8080";
     api.init(ccdbUrl);
     cout << "ccdb url: " << ccdbUrl << endl;
     hostReachable = api.isHostReachable();

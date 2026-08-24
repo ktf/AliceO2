@@ -1363,8 +1363,15 @@ bool CcdbApi::isHostReachable() const
   curl = curl_easy_init();
   curl_easy_setopt(curl, CURLOPT_USERAGENT, mUniqueAgentID.c_str());
   if (curl) {
+    // Each host in turn, not mUrl: mUrl holds whatever was passed to init(),
+    // which for a failover setup is the whole comma-separated list. curl
+    // rejects that as malformed (CURLE_URL_MALFORMAT), so every multi-host
+    // instance reported itself unreachable no matter how healthy its hosts
+    // were -- and testCcdbApiMultipleUrls, whose cases are gated on this,
+    // silently skipped instead of running.
     for (size_t hostIndex = 0; hostIndex < hostsPool.size() && res != CURLE_OK; hostIndex++) {
-      curl_easy_setopt(curl, CURLOPT_URL, mUrl.data());
+      std::string url = getHostUrl(hostIndex);
+      curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
       curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
       curlSetSSLOptions(curl);
       res = CURL_perform(curl);
