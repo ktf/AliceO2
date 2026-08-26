@@ -1,4 +1,4 @@
-# Copyright 2019-2020 CERN and copyright holders of ALICE O2.
+# Copyright 2019-2026 CERN and copyright holders of ALICE O2.
 # See https://alice-o2.web.cern.ch/copyright for details of the copyright holders.
 # All rights not expressly granted are reserved.
 #
@@ -9,14 +9,10 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-o2_add_test_root_macro(scanXX0.C
-                       LABELS alice3)
-
-o2_add_test_root_macro(plotHits.C
-                       LABELS alice3)
-
-o2_add_test_root_macro(ALICE3FieldShortMagnet.C
-                       LABELS alice3)
-
-o2_add_test_root_macro(ALICE3Field.C
-                       LABELS alice3)
+o2_add_library(FastSim
+               SOURCES src/FastSimModel.cxx
+                       src/FastSimRegions.cxx
+                       src/ToyAbsorberFastSim.cxx
+                       src/G4FastSimulation.cxx
+               PUBLIC_LINK_LIBRARIES MC::Geant4VMC MC::Geant4 O2::SimConfig
+)
