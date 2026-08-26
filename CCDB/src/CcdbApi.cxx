@@ -46,6 +46,7 @@
 #include <regex>
 #include <cstdio>
 #include <string>
+#include <string_view>
 #include <TAlienUserAgent.h>
 #include <unordered_set>
 #include "rapidjson/document.h"
@@ -62,6 +63,19 @@ unique_ptr<TJAlienCredentials> CcdbApi::mJAlienCredentials = nullptr;
 
 namespace
 {
+/// Strip surrounding whitespace, CR and LF included.
+///
+/// A value that keeps its line's trailing CRLF ends the header block early when
+/// it is spliced back into a request, silently dropping every header after it.
+std::string_view trimHeaderValue(std::string_view value)
+{
+  constexpr std::string_view whitespace = " \t\r\n";
+  const auto first = value.find_first_not_of(whitespace);
+  return first == std::string_view::npos
+           ? std::string_view{}
+           : value.substr(first, value.find_last_not_of(whitespace) - first + 1);
+}
+
 /// Append the gate token, if ALICEO2_CCDB_AUTH_TOKEN names one, to a header list.
 ///
 /// Set when CCDB is reached through a broker that authenticates its callers.
@@ -77,7 +91,11 @@ curl_slist* appendGateToken(curl_slist* list)
 {
   static const std::string header = []() -> std::string {
     const char* token = getenv("ALICEO2_CCDB_AUTH_TOKEN");
-    return (token && *token) ? std::string("Authorization: Bearer ") + token : std::string();
+    // Trimmed, because a token carrying a newline -- one read out of a file, say
+    // -- makes the request malformed, which a strict broker rejects with an
+    // opaque 400 rather than an auth error.
+    const auto value = token ? trimHeaderValue(token) : std::string_view{};
+    return value.empty() ? std::string() : std::string("Authorization: Bearer ").append(value);
   }();
   return header.empty() ? list : curl_slist_append(list, header.c_str());
 }
@@ -1620,11 +1638,13 @@ void CcdbApi::parseCCDBHeaders(std::vector<std::string> const& headers, std::vec
 {
   static std::string etagHeader = "ETag: ";
   static std::string locationHeader = "Content-Location: ";
+  // Trimmed: `headers` holds raw header lines, CRLF and all, and the etag goes
+  // straight back out as an If-None-Match request header.
   for (auto h : headers) {
     if (h.find(etagHeader) == 0) {
-      etag = std::string(h.data() + etagHeader.size());
+      etag = trimHeaderValue(std::string_view(h).substr(etagHeader.size()));
     } else if (h.find(locationHeader) == 0) {
-      pfns.emplace_back(std::string(h.data() + locationHeader.size(), h.size() - locationHeader.size()));
+      pfns.emplace_back(trimHeaderValue(std::string_view(h).substr(locationHeader.size())));
     }
   }
 }
