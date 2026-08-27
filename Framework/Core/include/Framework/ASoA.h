@@ -2416,8 +2416,9 @@ consteval static std::string_view namespace_prefix()
           TBufferFile f(TBufferFile::EMode::kRead, span.size(), (char*)span.data(), kFALSE);                        \
           auto* streamed = (_ConcreteType_*)soa::extractCCDBPayload((char*)payload, span.size(), c, "ccdb_object"); \
           if (!streamed) {                                                                                          \
-            LOGP(fatal, "Could not deserialise a {} from the CCDB payload for {} ({} bytes). Check the configured "  \
-                        "path (option \"ccdb:{}\") and that the object exists for this timestamp.",                 \
+            LOGP(fatal,                                                                                             \
+                 "Could not deserialise a {} from the CCDB payload for {} ({} bytes). Check the configured "        \
+                 "path (option \"ccdb:{}\") and that the object exists for this timestamp.",                        \
                  #_ConcreteType_, _CCDBQuery_, span.size(), _Label_);                                               \
           }                                                                                                         \
           deserialised = finalise(streamed);                                                                        \
