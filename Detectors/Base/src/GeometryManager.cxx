@@ -23,6 +23,7 @@
 #include <cassert>
 #include <cstddef> // for NULL
 #include <numeric>
+#include <type_traits> // for the NavigationState static_assert below
 
 #include "DetectorsBase/GeometryManager.h"
 #include "DetectorsBase/GeometryManagerParam.h"
@@ -32,6 +33,7 @@
 
 #ifdef O2_WITH_VECGEOM
 #include "TGeo2VecGeom/RootGeoManager.h"
+#include <VecGeom/base/Version.h>
 #include <VecGeom/management/GeoManager.h>
 #include <VecGeom/management/ABBoxManager.h>
 #include <VecGeom/management/BVHManager.h>
@@ -40,7 +42,11 @@
 #include <VecGeom/navigation/NewSimpleNavigator.h>
 #include <VecGeom/navigation/BVHNavigator.h>
 #include <VecGeom/navigation/SimpleLevelLocator.h>
+#if VECGEOM_VERSION >= 0x020000
+#include <VecGeom/navigation/SimpleABBoxLevelLocator.h>
+#else
 #include <VecGeom/navigation/BVHLevelLocator.h>
+#endif
 #include <VecGeom/navigation/VNavigator.h>
 #include <VecGeom/volumes/LogicalVolume.h>
 #include <mutex>
@@ -557,6 +563,14 @@ void GeometryManager::loadGeometry(std::string_view simPrefix, bool applyMisalig
 
 namespace
 {
+/// Volumes with very few daughters are cheaper to brute-force than to accelerate. Defined once
+/// because two places must agree on it: where the navigators and locators are attached below,
+/// and where vecGeomMaterialBudget() decides how to take a step.
+bool usesBvhAcceleration(vecgeom::LogicalVolume const* vol)
+{
+  return vol->GetDaughtersp()->size() > 2;
+}
+
 /// Converts the currently loaded TGeo geometry to VecGeom and sets up navigators, once per
 /// process, the first time the VecGeom backend is requested. Not part of loadGeometry(),
 /// which every job calls regardless of whether it ever uses the VecGeom backend.
@@ -578,16 +592,35 @@ void ensureVecGeomWorldBuilt()
     vecgeom::BVHManager::Init();
 
     // For each logical volume, set both a navigator (used for ComputeStep) and a matched
-    // level locator (used for point relocation after a boundary crossing via GlobalLocator);
-    // volumes with very few daughters are cheaper to brute-force than to accelerate.
+    // level locator (used for point relocation after a boundary crossing via GlobalLocator).
     for (auto& lvol : vecgeom::GeoManager::Instance().GetLogicalVolumesMap()) {
       auto* vol = lvol.second;
-      if (vol->GetDaughtersp()->size() <= 2) {
+      if (!usesBvhAcceleration(vol)) {
         vol->SetNavigator(vecgeom::NewSimpleNavigator<>::Instance());
         vol->SetLevelLocator(vecgeom::SimpleLevelLocator::GetInstance());
       } else {
+#if VECGEOM_VERSION >= 0x020000
+        // VecGeom 2 turned BVHNavigator into a plain class with static entry points instead of a
+        // VNavigator singleton, so there is nothing to attach: vecGeomMaterialBudget() calls it
+        // directly.
+        //
+        // The locator changes too, and not by choice. BVHLevelLocator does not compile in 2.1.0 or
+        // 2.1.1 -- the header is byte-identical in both -- because its four LevelLocate() calls
+        // have no match among the single templated BVH::LevelLocate(int exclude_item_id, ...) that
+        // v2 ships. It survived two releases because nothing in VecGeom includes that header
+        // except itself, so upstream CI never compiles it; O2 appears to be its only consumer.
+        //
+        // SimpleABBoxLevelLocator is the accelerated stand-in, using the ABBoxes built just above.
+        // Three of the four methods could be rebuilt on the templated API (the idiom is in
+        // BVHNavigator itself: bvh->LevelInside<BVHNavigator>(exclude_id, point, id, dlp)), but
+        // the direction-aware LevelLocateExclVol has no v2 counterpart at all, so this stays a
+        // fallback rather than a reimplementation. Revert to BVHLevelLocator once upstream fixes
+        // or removes it, and measure: whether ABBox location costs anything real here is unknown.
+        vol->SetLevelLocator(vecgeom::SimpleABBoxLevelLocator::GetInstance());
+#else
         vol->SetNavigator(vecgeom::BVHNavigator<>::Instance());
         vol->SetLevelLocator(vecgeom::BVHLevelLocator::GetInstance());
+#endif
       }
     }
   });
@@ -614,9 +647,16 @@ o2::base::MatBudget GeometryManager::vecGeomMaterialBudget(float x0, float y0, f
     dir[i] *= invlen;
   }
 
-  thread_local static vecgeom::NavigationState* newnavstate = vecgeom::NavigationState::MakeInstance(vecgeom::GeoManager::Instance().getMaxDepth());
-  thread_local static vecgeom::NavigationState* currnavstate = vecgeom::NavigationState::MakeInstance(vecgeom::GeoManager::Instance().getMaxDepth());
-  thread_local static vecgeom::NavigationState* startCache = vecgeom::NavigationState::MakeInstance(vecgeom::GeoManager::Instance().getMaxDepth());
+  // Held by value rather than through NavigationState::MakeInstance(): VecGeom 2 removed
+  // MakeInstance, and in VecGeom 1 it only ever did `new NavStateIndex()` with the depth argument
+  // ignored. By value it is also one fewer per-thread allocation that was never freed.
+  static_assert(std::is_default_constructible_v<vecgeom::NavigationState>,
+                "NavigationState must be an index or tuple state. A variable-depth NavStatePath "
+                "build (VecGeom 1 without VECGEOM_USE_INDEXEDNAVSTATES) needs the depth at "
+                "construction and is not supported here.");
+  thread_local static vecgeom::NavigationState newnavstate;
+  thread_local static vecgeom::NavigationState currnavstate;
+  thread_local static vecgeom::NavigationState startCache;
   thread_local static bool startCacheValid = false;
 
   Vector3D currPoint(x0, y0, z0);
@@ -627,31 +667,40 @@ o2::base::MatBudget GeometryManager::vecGeomMaterialBudget(float x0, float y0, f
   budStep.length = length;
 
   // Locate the starting volume, reusing the path from the previous call when still valid.
-  if (startCacheValid && !startCache->IsOutside()) {
-    startCache->CopyTo(currnavstate);
+  if (startCacheValid && !startCache.IsOutside()) {
+    startCache.CopyTo(&currnavstate);
     vecgeom::Transformation3D m;
-    currnavstate->TopMatrix(m);
-    vecgeom::GlobalLocator::RelocatePointFromPath(m.Transform(currPoint), *currnavstate);
+    currnavstate.TopMatrix(m);
+    vecgeom::GlobalLocator::RelocatePointFromPath(m.Transform(currPoint), currnavstate);
   } else {
-    currnavstate->Clear();
-    vecgeom::GlobalLocator::LocateGlobalPoint(world, currPoint, *currnavstate, true);
+    currnavstate.Clear();
+    vecgeom::GlobalLocator::LocateGlobalPoint(world, currPoint, currnavstate, true);
   }
-  if (currnavstate->IsOutside() || currnavstate->Top() == nullptr) {
+  if (currnavstate.IsOutside() || currnavstate.Top() == nullptr) {
     LOG(error) << "start point out of geometry: " << x0 << ':' << y0 << ':' << z0;
     startCacheValid = false;
     return o2::base::MatBudget();
   }
-  currnavstate->CopyTo(startCache);
+  currnavstate.CopyTo(&startCache);
   startCacheValid = true;
 
   double stepTot = 0.;
   double remainingDist = length;
   Int_t nzero = 0;
   while (remainingDist > 1.E-10) {
-    auto* lvol = currnavstate->Top()->GetLogicalVolume();
-    accountMaterial(static_cast<TGeoMaterial*>(lvol->GetMaterialPtr()), budStep);
-    vecgeom::VNavigator const* navigator = lvol->GetNavigator();
-    double step = static_cast<double>(navigator->ComputeStepAndPropagatedState(currPoint, dirr, remainingDist, *currnavstate, *newnavstate));
+    auto* lvol = currnavstate.Top()->GetLogicalVolume();
+    // Not LogicalVolume::GetMaterialPtr(): VecGeom 2 dropped the material slot from the logical
+    // volume. TGeo2VecGeom keeps what its conversion hook returned, indexed by logical volume id,
+    // and serves it for both VecGeom versions.
+    accountMaterial(static_cast<TGeoMaterial*>(tgeo2vecgeom::RootGeoManager::Instance().GetMaterialPtr(lvol)), budStep);
+#if VECGEOM_VERSION >= 0x020000
+    const double step =
+      usesBvhAcceleration(lvol)
+        ? static_cast<double>(vecgeom::BVHNavigator::ComputeStepAndPropagatedState(currPoint, dirr, remainingDist, currnavstate, newnavstate))
+        : static_cast<double>(lvol->GetNavigator()->ComputeStepAndPropagatedState(currPoint, dirr, remainingDist, currnavstate, newnavstate));
+#else
+    const double step = static_cast<double>(lvol->GetNavigator()->ComputeStepAndPropagatedState(currPoint, dirr, remainingDist, currnavstate, newnavstate));
+#endif
     if (step < 2.E-10) {
       nzero++;
     } else {
