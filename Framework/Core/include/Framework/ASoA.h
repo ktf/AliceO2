@@ -2370,7 +2370,7 @@ consteval static std::string_view namespace_prefix()
   };                                                                                                                                                                              \
   [[maybe_unused]] static constexpr o2::framework::expressions::BindingNode _Getter_ { _Label_, _Name_::hash, o2::framework::expressions::selectArrowType<_Type_>() }
 
-#define DECLARE_SOA_CCDB_COLUMN_FULL(_Name_, _Label_, _Getter_, _ConcreteType_, _CCDBQuery_, ...)         \
+#define DECLARE_SOA_CCDB_COLUMN_FULL(_Name_, _Label_, _Getter_, _ConcreteType_, _CCDBQuery_, ...)                   \
   struct _Name_ : o2::soa::Column<int64_t[3], _Name_> {                                                             \
     static constexpr const char* mLabel = _Label_;                                                                  \
     static constexpr const char* query = _CCDBQuery_;                                                               \
