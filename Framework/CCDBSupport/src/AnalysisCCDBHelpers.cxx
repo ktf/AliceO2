@@ -42,8 +42,6 @@
 
 O2_DECLARE_DYNAMIC_LOG(ccdb);
 
-
-
 namespace o2::framework
 {
 // Fill valid routes. Notice that for analysis the timestamps are associated to
