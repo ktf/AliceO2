@@ -468,12 +468,14 @@ namespace Catch {
     }
 
 namespace literals {
-    Approx operator ""_a(long double val) {
-        return Approx(val);
-    }
-    Approx operator ""_a(unsigned long long val) {
-        return Approx(val);
-    }
+Approx operator""_a(long double val)
+{
+  return Approx(val);
+}
+Approx operator""_a(unsigned long long val)
+{
+  return Approx(val);
+}
 } // end namespace literals
 
 std::string StringMaker<Catch::Approx>::convert(Catch::Approx const& value) {
