@@ -21,6 +21,122 @@
 #ifndef GPUCA_GPUCODE_COMPILEKERNELS
 #include <type_traits>
 #endif
+#elif defined(__METAL__)
+namespace std
+{
+template <bool B, class T, class F>
+struct conditional {
+  typedef T type;
+};
+template <class T, class F>
+struct conditional<false, T, F> {
+  typedef F type;
+};
+template <bool B, class T, class F>
+using contitional_t = typename conditional<B, T, F>::type;
+
+template <class T, class U>
+struct is_same {
+  enum { value = false };
+};
+template <class T>
+struct is_same<T, T> {
+  enum { value = true };
+};
+template <class T, class U>
+constant static constexpr bool is_same_v = is_same<T, U>::value;
+
+template <bool B, class T = void>
+struct enable_if {
+};
+template <class T>
+struct enable_if<true, T> {
+  typedef T type;
+};
+
+template <class T>
+struct remove_cv {
+  typedef T type;
+};
+template <class T>
+struct remove_cv<const T> {
+  typedef T type;
+};
+template <class T>
+struct remove_cv<volatile T> {
+  typedef T type;
+};
+template <class T>
+struct remove_cv<const volatile T> {
+  typedef T type;
+};
+template <class T>
+using remove_cv_t = typename remove_cv<T>::type;
+
+template <class T>
+struct remove_const {
+  typedef T type;
+};
+template <class T>
+struct remove_const<const T> {
+  typedef T type;
+};
+template <class T>
+using remove_const_t = typename remove_const<T>::type;
+
+template <class T>
+struct remove_volatile {
+  typedef T type;
+};
+template <class T>
+struct remove_volatile<volatile T> {
+  typedef T type;
+};
+template <class T>
+using remove_volatile_t = typename remove_volatile<T>::type;
+
+template <class T>
+struct is_pointer_t {
+  enum { value = false };
+};
+template <class T>
+struct is_pointer_t<device T*> {
+  enum { value = true };
+};
+// template <class T>
+// struct is_pointer : is_pointer_t<typename std::remove_cv<T>::type> {
+// };
+
+template <class T>
+struct remove_reference {
+  typedef T type;
+};
+template <class T>
+struct remove_reference<device T&> {
+  typedef T type;
+};
+template <class T>
+struct remove_reference<device T&&> {
+  typedef T type;
+};
+template <class T>
+using remove_reference_t = typename remove_reference<T>::type;
+
+template <class T>
+struct is_member_pointer_helper {
+  enum { value = false };
+};
+template <class T, class U>
+struct is_member_pointer_helper<T U::*> {
+  enum { value = true };
+};
+// template <class T>
+// struct is_member_pointer : is_member_pointer_helper<typename std::remove_cv<T>::type> {
+// };
+// template <class T>
+// static constexpr bool is_member_pointer_v = is_member_pointer<T>::value;
+
+} // namespace std
 #else
 namespace std
 {
