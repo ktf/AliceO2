@@ -277,5 +277,5 @@
   #define get_group_id(dim) iBlock
 #endif
 
-// clang-format on
+    // clang-format on
 #endif
