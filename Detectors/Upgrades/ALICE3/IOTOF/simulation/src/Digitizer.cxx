@@ -20,7 +20,11 @@
 #include "IOTOFSimulation/DPLDigitizerParam.h"
 #include "DetectorsRaw/HBFUtils.h"
 
+#include <TCollection.h>
+#include <TFile.h>
+#include <TKey.h>
 #include <TRandom.h>
+
 #include <vector>
 #include <iostream>
 #include <numeric>
@@ -51,6 +55,9 @@ void Digitizer::init()
   }
 
   const auto& digitizerParams = o2::iotof::DPLDigitizerParam::Instance();
+  if (!digitizerParams.efficiencyFilePath.empty()) {
+    loadEfficiencyMap(digitizerParams.efficiencyFilePath);
+  }
 
   LOG(info) << "Initializing IOTOF digitizer";
   LOG(info) << "  Time resolution: " << digitizerParams.timeResolution * 1e3 << " ps";
@@ -95,17 +102,31 @@ void Digitizer::processHit(const o2::itsmft::Hit& hit, int evID, int srcID)
 {
   // Process a single hit and create a digit if it passes all cuts
 
-  // Apply efficiency cut
-  if (!isEfficient()) {
-    LOG(debug) << "Hit rejected by efficiency cut";
-    return;
-  }
-
   // Get detector element ID
   const int chipID = hit.GetDetectorID();
   auto& chip = mChips[chipID];
   if (chip.isDisabled()) {
     LOG(debug) << "Hit rejected because chip " << chipID << " is disabled";
+    return;
+  }
+
+  // middle position of the hit in the sensor frame
+  const auto& matrix = mGeometry->getMatrixL2G(chipID);
+  auto xyzPositionStart = matrix ^ hit.GetPosStart();
+  auto xyzPositionEnd = matrix ^ hit.GetPos();
+  const auto xMid = 0.5f * (xyzPositionStart.X() + xyzPositionEnd.X());
+  const auto zMid = 0.5f * (xyzPositionStart.Z() + xyzPositionEnd.Z());
+  // move this to the local pixel coordinates for the efficiency map
+  int row, col;
+  float xPixelCenter, zPixelCenter;
+  if (!sSegmentation->localToDetector(xMid, zMid, row, col, mGeometry->getIOTOFLayer(chipID))) {
+    LOG(debug) << "Hit rejected because position (" << xMid << ", " << zMid << ") is outside the active area of chip " << chipID;
+    return; // hit is outside the active area
+  }
+  sSegmentation->detectorToLocalUnchecked(row, col, xPixelCenter, zPixelCenter, mGeometry->getIOTOFLayer(chipID));
+
+  if (!isEfficient(xMid - xPixelCenter, zMid - zPixelCenter)) {
+    LOG(debug) << "Hit rejected by efficiency cut";
     return;
   }
 
@@ -123,10 +144,10 @@ void Digitizer::processHit(const o2::itsmft::Hit& hit, int evID, int srcID)
 
   // Get hit time and apply smearing
   // Hit time is in seconds, convert to ns and add event time
-  double hitTime = hit.GetTime() * sec2ns;      // convert to ns
-  double eventTimeNS = mEventTime.getTimeNS();  // event time since orbit 0
-  double absoluteTime = hitTime + eventTimeNS;  // absolute time
-  double smearedTime = smearTime(absoluteTime); // apply detector resolution
+  double hitTime = hit.GetTime() * sec2ns;                // convert to ns
+  double eventTimeInBC = mEventTime.getTimeOffsetWrtBC(); // event time wrt bc
+  double hitTimeWrtBC = hitTime + eventTimeInBC;          // hit time wrt bc
+  double smearedTime = smearTime(hitTimeWrtBC);
 
   if (chipID < 0 || chipID >= mGeometry->getSize() || mGeometry->getSize() < 1) {
     LOG(debug) << "Invalid detector ID: " << chipID << ", geometry size: " << mGeometry->getSize();
@@ -166,8 +187,8 @@ void Digitizer::processHit(const o2::itsmft::Hit& hit, int evID, int srcID)
 
 void Digitizer::stepping(const o2::itsmft::Hit& hit, float**& respMatrix, int& rowStart, int& colStart, int& rowSpan, int& colSpan)
 {
-  const auto& matrix = mGeometry->getMatrixL2G(hit.GetDetectorID());
   const int chipID = hit.GetDetectorID();
+  const auto& matrix = mGeometry->getMatrixL2G(chipID);
   const int subdetectorID = mGeometry->getIOTOFLayer(chipID);
 
   auto xyzPositionStart(matrix ^ (hit.GetPosStart())); // start position in sensor frame
@@ -277,10 +298,45 @@ int Digitizer::energyToCharge(float energyLoss) const
 }
 
 //_______________________________________________________________________
-bool Digitizer::isEfficient() const
+void Digitizer::loadEfficiencyMap(const std::string& filePath)
+{
+  // Load the efficiency map from a file
+  TFile* file = TFile::Open(filePath.c_str());
+  if (!file || !file->IsOpen()) {
+    LOG(error) << "Failed to open efficiency map file: " << filePath;
+    return;
+  }
+
+  auto* rawMap = dynamic_cast<TH2D*>(file->Get("hEfficiencyMap"));
+  if (!rawMap) {
+    LOG(error) << "Failed to retrieve efficiency map from file: " << filePath;
+    LOG(error) << "Available keys in the file:";
+    TIter next(file->GetListOfKeys());
+    TKey* key;
+    while ((key = dynamic_cast<TKey*>(next()))) {
+      LOG(error) << "  " << key->GetName() << " (" << key->GetClassName() << ")";
+    }
+    file->Close();
+    return;
+  }
+  mEfficiencyMap = dynamic_cast<TH2D*>(rawMap->Clone("mEfficiencyMap"));
+  mEfficiencyMap->SetDirectory(nullptr); // Detach from file to avoid deletion when file is closed
+
+  file->Close();
+}
+
+//_______________________________________________________________________
+bool Digitizer::isEfficient(const float x, const float z) const
 {
   // Apply efficiency cut using random number
   const auto& digitizerParams = o2::iotof::DPLDigitizerParam::Instance();
+  if (mEfficiencyMap) {
+    // int bin = mEfficiencyMap->FindBin(x * o2::iotof::Digitizer::cm2um, z * o2::iotof::Digitizer::cm2um);
+    int bin = mEfficiencyMap->FindBin(x * o2::iotof::Digitizer::cm2um, z * o2::iotof::Digitizer::cm2um);
+    float efficiency = mEfficiencyMap->GetBinContent(bin);
+    LOG(debug) << "Efficiency map check: x=" << x * o2::iotof::Digitizer::cm2um << ", z=" << z * o2::iotof::Digitizer::cm2um << ", bin=" << bin << ", efficiency=" << efficiency;
+    return gRandom->Uniform() < efficiency;
+  }
   return gRandom->Uniform() < digitizerParams.efficiency;
 }
 
@@ -316,7 +372,7 @@ void Digitizer::fillOutputContainer()
       }
 
       int digitID = mDigits->size();
-      mDigits->emplace_back(digit.getChipIndex(), digit.getRow(), digit.getColumn(), digit.getCharge(), digit.getTime());
+      mDigits->emplace_back(digit.getChipIndex(), digit.getRow(), digit.getColumn(), digit.getCharge(), digit.getTime(), digit.getBc(), digit.getTdc());
       if (mMCLabels) {
         mMCLabels->addElement(digitID, digit.getLabel().mLabel);
       }
@@ -345,11 +401,20 @@ void Digitizer::registerDigits(Chip& chip, uint32_t roFrame, double time, int nR
 {
   (void)nROF;
 
-  auto key = o2::iotof::Digit::getOrderingKey(chip.getChipIndex(), row, col);
+  const auto& digitizerParams = o2::iotof::DPLDigitizerParam::Instance();
+
+  uint64_t nbc = static_cast<uint64_t>(time / o2::constants::lhc::LHCBunchSpacingNS);
+  int tdc = int((time - nbc * o2::constants::lhc::LHCBunchSpacingNS) / digitizerParams.tdcBin);
+  nbc += mEventTime.toLong();
+
+  LOG(debug) << nbc << "\t" << tdc;
+  double absoluteTime = tdc * digitizerParams.tdcBin * 1.e-9 + nbc * o2::constants::lhc::LHCBunchSpacingNS;
+
+  auto key = o2::iotof::Digit::getOrderingKey(nbc, row, col);
   o2::iotof::LabeledDigit* existingDigit = chip.findDigit(key);
   if (!existingDigit) {
     // No existing digit, create a new one
-    chip.addDigit(row, col, nElectrons, time, label);
+    chip.addDigit(row, col, nElectrons, absoluteTime, nbc, tdc, label);
   } else {
     // Digit already exists, update charge and labels
     const int storedCharge = existingDigit->getCharge();
