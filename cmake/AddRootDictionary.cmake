@@ -11,8 +11,8 @@
 
 include_guard()
 
-configure_file(${CMAKE_CURRENT_LIST_DIR}/rootcling_wrapper.sh.in
-               ${CMAKE_BINARY_DIR}/rootcling_wrapper.sh @ONLY)
+set(O2_ROOT_DICTIONARY_APPEND_SCRIPT
+    ${CMAKE_CURRENT_LIST_DIR}/AppendToRootDictionary.cmake)
 
 #
 # add_root_dictionary generates one dictionary to be added to a target.
@@ -132,25 +132,43 @@ function(add_root_dictionary target)
   set(includeDirs $<TARGET_PROPERTY:${target},INCLUDE_DIRECTORIES>)
   set(includeDirs $<REMOVE_DUPLICATES:${includeDirs}>)
 
-  list(LENGTH A_EXTRA_PATCH hasExtraPatch)
+  # the pcm dependencies (-m) are only meaningful where the modules are actually
+  # loaded from disk, which is not the case on macOS
+  set(pcmDeps $<REMOVE_DUPLICATES:$<TARGET_PROPERTY:${target},O2_PCM_DEPS>>)
+  if(APPLE)
+    set(pcmDeps)
+  endif()
+
+  if(A_EXTRA_PATCH)
+    set(extraPatchCommand
+        COMMAND ${CMAKE_COMMAND}
+                -DDICTIONARY=${dictionaryFile}
+                -DPATCH=${CMAKE_CURRENT_LIST_DIR}/${A_EXTRA_PATCH}
+                -P ${O2_ROOT_DICTIONARY_APPEND_SCRIPT})
+  else()
+    set(extraPatchCommand)
+  endif()
+
   # add a custom command to generate the dictionary using rootcling
   # cmake-format: off
   add_custom_command(
     OUTPUT ${dictionaryFile} ${pcmFile} ${rootmapFile}
     VERBATIM
+    COMMAND_EXPAND_LISTS
     COMMAND
-    ${CMAKE_BINARY_DIR}/rootcling_wrapper.sh
-      --rootmap_file ${rootmapFile}
-      --dictionary_file ${dictionaryFile}
-      --ld_library_path ${LD_LIBRARY_PATH}
-      --rootmap_library_name $<TARGET_FILE_NAME:${target}>
-      --include_dirs -I$<JOIN:${includeDirs},$<SEMICOLON>-I>
-      $<$<BOOL:${prop}>:--compile_defs>
+    ${CMAKE_COMMAND} -E env LD_LIBRARY_PATH=${LD_LIBRARY_PATH}
+    ${ROOT_rootcling_CMD}
+      -f ${dictionaryFile}
+      -inlineInputHeader
+      -noGlobalUsingStd
+      -failOnWarnings
+      -rmf ${rootmapFile}
+      -rml $<TARGET_FILE_NAME:${target}>
+      -I$<JOIN:${includeDirs},$<SEMICOLON>-I>
       $<$<BOOL:${prop}>:-D$<JOIN:${prop},$<SEMICOLON>-D>>
-      $<$<BOOL:${hasExtraPatch}>:--extra-patch>
-      $<$<BOOL:${hasExtraPatch}>:${CMAKE_CURRENT_LIST_DIR}/${A_EXTRA_PATCH}>
-      --pcmdeps "$<REMOVE_DUPLICATES:$<TARGET_PROPERTY:${target},O2_PCM_DEPS>>"
-      --headers "${headers}"
+      $<$<BOOL:${pcmDeps}>:-m$<SEMICOLON>$<JOIN:${pcmDeps},$<SEMICOLON>-m$<SEMICOLON>>>
+      ${headers}
+    ${extraPatchCommand}
     COMMAND
     ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_BINARY_DIR}/${pcmBase} ${pcmFile}
     DEPENDS ${headers} "$<REMOVE_DUPLICATES:$<TARGET_PROPERTY:${target},O2_PCM_DEPS>>" ${A_EXTRA_PATCH})

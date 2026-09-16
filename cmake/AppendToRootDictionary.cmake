@@ -9,15 +9,12 @@
 # granted to it by virtue of its status as an Intergovernmental Organization
 # or submit itself to any jurisdiction.
 
-include(CPack)
+# Appends PATCH to the end of DICTIONARY. Run with cmake -P, as CMake has no
+# `cmake -E` equivalent of `cat a >> b`.
 
-install(EXPORT O2Targets
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/O2
-        NAMESPACE O2::
-        FILE O2Targets.cmake)
+if(NOT DICTIONARY OR NOT PATCH)
+  message(FATAL_ERROR "Both DICTIONARY and PATCH must be given")
+endif()
 
-install(FILES O2Config.cmake ../cmake/AddRootDictionary.cmake
-              ../cmake/AppendToRootDictionary.cmake
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/O2)
-
-install(DIRECTORY ../dependencies/ DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/O2)
+file(READ ${PATCH} patchContent)
+file(APPEND ${DICTIONARY} "${patchContent}")
