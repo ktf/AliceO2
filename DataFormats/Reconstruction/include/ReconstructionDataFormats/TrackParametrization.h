@@ -100,12 +100,12 @@ enum DirType : int { DirInward = -1,
 GPUglobalconstexpr() int kNParams = 5, kCovMatSize = 15, kLabCovMatSize = 21;
 
 GPUglobalconstexpr() float kCY2max = 100 * 100, // SigmaY<=100cm
-  kCZ2max = 100 * 100,               // SigmaZ<=100cm
-  kCSnp2max = 1 * 1,                 // SigmaSin<=1
-  kCTgl2max = 1 * 1,                 // SigmaTan<=1
-  kC1Pt2max = 100 * 100,             // Sigma1/Pt<=100 1/GeV
-  kMostProbablePt = 0.6f,            // Most Probable Pt (GeV), for running with Bz=0
-  kCalcdEdxAuto = -999.f;            // value indicating request for dedx calculation
+  kCZ2max = 100 * 100,                          // SigmaZ<=100cm
+  kCSnp2max = 1 * 1,                            // SigmaSin<=1
+  kCTgl2max = 1 * 1,                            // SigmaTan<=1
+  kC1Pt2max = 100 * 100,                        // Sigma1/Pt<=100 1/GeV
+  kMostProbablePt = 0.6f,                       // Most Probable Pt (GeV), for running with Bz=0
+  kCalcdEdxAuto = -999.f;                       // value indicating request for dedx calculation
 
 // access to covariance matrix by row and column
 GPUconstexpr() int CovarMap[kNParams][kNParams] = {{0, 1, 3, 6, 10},

@@ -483,9 +483,15 @@ GPUhdi() constexpr int32_t GPUCommonMath::Abs<int32_t>(int32_t x)
 // has the same size and alignment; the overloads keep the address space, which a
 // generic pointer would not carry into atomic_*_explicit.
 template <class T>
-GPUdi() threadgroup metal::atomic<T>* GPUCommonMathMetalAtomic(threadgroup T* p) { return reinterpret_cast<threadgroup metal::atomic<T>*>(p); }
+GPUdi() threadgroup metal::atomic<T>* GPUCommonMathMetalAtomic(threadgroup T* p)
+{
+  return reinterpret_cast<threadgroup metal::atomic<T>*>(p);
+}
 template <class T>
-GPUdi() device metal::atomic<T>* GPUCommonMathMetalAtomic(T* p) { return (device metal::atomic<T>*)p; }
+GPUdi() device metal::atomic<T>* GPUCommonMathMetalAtomic(T* p)
+{
+  return (device metal::atomic<T>*)p;
+}
 #endif
 
 template <class S, class T>

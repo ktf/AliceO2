@@ -32,7 +32,7 @@ enum BeamDirection : int { BeamA, // beamA = beam 0,
                            NBeamDirections,
                            InteractingBC = -1 // as used in the BunchFilling class
 };
-GPUglobalconstexpr() int LHCMaxBunches = 3564;                              // max N bunches
+GPUglobalconstexpr() int LHCMaxBunches = 3564;                                               // max N bunches
 GPUglobalconstexpr() o2::gpu::GPUdoubleValue LHCRFFreq = 400.789e6;                          // LHC RF frequency in Hz
 GPUglobalconstexpr() o2::gpu::GPUdoubleValue LHCBunchSpacingNS = 10 * 1.e9 / LHCRFFreq;      // bunch spacing in ns (10 RFbuckets)
 GPUglobalconstexpr() o2::gpu::GPUdoubleValue LHCOrbitNS = LHCMaxBunches * LHCBunchSpacingNS; // orbit duration in ns

@@ -102,8 +102,8 @@ class PID
   static GPUglobalconstexpr() ID Alpha = 8;
 
   static GPUglobalconstexpr() ID First = Electron;
-  static GPUglobalconstexpr() ID Last = Alpha;     ///< if extra IDs added, update this !!!
-  static GPUglobalconstexpr() ID NIDs = Last + 1;  ///< number of defined IDs
+  static GPUglobalconstexpr() ID Last = Alpha;    ///< if extra IDs added, update this !!!
+  static GPUglobalconstexpr() ID NIDs = Last + 1; ///< number of defined IDs
 
   // PID for derived particles
   static GPUglobalconstexpr() ID PI0 = 9;

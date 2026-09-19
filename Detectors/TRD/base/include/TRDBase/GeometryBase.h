@@ -140,7 +140,7 @@ class GeometryBase
   static GPUglobalconstexpr() float CWSH = 0.3;    ///< Height of additional wacosit ledge on lower frame
 
   static GPUglobalconstexpr() float CPADW = 0.0; ///>Difference of outer chamber width and pad plane width
-  static GPUglobalconstexpr() float RPADW = 1.0; ///<Difference of outer chamber width and pad plane width
+  static GPUglobalconstexpr() float RPADW = 1.0; ///< Difference of outer chamber width and pad plane width
 
   //
   // Thickness of the the material layers
@@ -188,11 +188,11 @@ class GeometryBase
   static GPUglobalconstexpr() float TIME0BASE = 300.65; ///< Base value for calculation of Time-position of pad 0
   // Time-position of pad 0
   static GPUglobalconstexpr() float TIME0[6] = {TIME0BASE + 0 * (CH + VSPACE),
-                                     TIME0BASE + 1 * (CH + VSPACE),
-                                     TIME0BASE + 2 * (CH + VSPACE),
-                                     TIME0BASE + 3 * (CH + VSPACE),
-                                     TIME0BASE + 4 * (CH + VSPACE),
-                                     TIME0BASE + 5 * (CH + VSPACE)};
+                                                TIME0BASE + 1 * (CH + VSPACE),
+                                                TIME0BASE + 2 * (CH + VSPACE),
+                                                TIME0BASE + 3 * (CH + VSPACE),
+                                                TIME0BASE + 4 * (CH + VSPACE),
+                                                TIME0BASE + 5 * (CH + VSPACE)};
 
   static GPUglobalconstexpr() float XTRDBEG = 288.43; ///< X-coordinate in tracking system of begin of TRD mother volume
   static GPUglobalconstexpr() float XTRDEND = 366.33; ///< X-coordinate in tracking system of end of TRD mother volume

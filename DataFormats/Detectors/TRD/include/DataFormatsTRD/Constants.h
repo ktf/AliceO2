@@ -40,27 +40,27 @@ GPUglobalconstexpr() int NFLP = 12;             ///< the number of FLP we have.
 GPUglobalconstexpr() int NCRUPERFLP = 3;        ///< the number of CRU per FLP
 GPUglobalconstexpr() int TRDLINKID = 15;        ///< hard coded link id, specific to TRD
 
-GPUglobalconstexpr() int NCOLUMN = 144; ///< the number of pad columns for each chamber
-GPUglobalconstexpr() int NROWC0 = 12;   ///< the number of pad rows for chambers of type C0 (installed in stack 2)
-GPUglobalconstexpr() int NROWC1 = 16;   ///< the number of pad rows for chambers of type C1 (installed in stacks 0, 1, 3 and 4)
+GPUglobalconstexpr() int NCOLUMN = 144;                          ///< the number of pad columns for each chamber
+GPUglobalconstexpr() int NROWC0 = 12;                            ///< the number of pad rows for chambers of type C0 (installed in stack 2)
+GPUglobalconstexpr() int NROWC1 = 16;                            ///< the number of pad rows for chambers of type C1 (installed in stacks 0, 1, 3 and 4)
 GPUglobalconstexpr() int FIRSTROW[NSTACK] = {0, 16, 32, 44, 60}; ///< first pad row for each stack
 
-GPUglobalconstexpr() int NMCMROB = 16;     ///< the number of MCMs per ROB
-GPUglobalconstexpr() int NMCMHCMAX = 64;   ///< the maximum number of MCMs for one half chamber (C1 type)
-GPUglobalconstexpr() int NMCMROBINROW = 4; ///< the number of MCMs per ROB in row direction
-GPUglobalconstexpr() int NMCMROBINCOL = 4; ///< the number of MCMs per ROB in column direction
-GPUglobalconstexpr() int NROBC0 = 6;       ///< the number of ROBs per C0 chamber
-GPUglobalconstexpr() int NROBC1 = 8;       ///< the number of ROBs per C1 chamber
-GPUglobalconstexpr() int NADCMCM = 21;     ///< the number of ADC channels per MCM
-GPUglobalconstexpr() int NCOLMCM = 18;     ///< the number of pads per MCM
+GPUglobalconstexpr() int NMCMROB = 16;                                                                                    ///< the number of MCMs per ROB
+GPUglobalconstexpr() int NMCMHCMAX = 64;                                                                                  ///< the maximum number of MCMs for one half chamber (C1 type)
+GPUglobalconstexpr() int NMCMROBINROW = 4;                                                                                ///< the number of MCMs per ROB in row direction
+GPUglobalconstexpr() int NMCMROBINCOL = 4;                                                                                ///< the number of MCMs per ROB in column direction
+GPUglobalconstexpr() int NROBC0 = 6;                                                                                      ///< the number of ROBs per C0 chamber
+GPUglobalconstexpr() int NROBC1 = 8;                                                                                      ///< the number of ROBs per C1 chamber
+GPUglobalconstexpr() int NADCMCM = 21;                                                                                    ///< the number of ADC channels per MCM
+GPUglobalconstexpr() int NCOLMCM = 18;                                                                                    ///< the number of pads per MCM
 GPUglobalconstexpr() int NCHANNELSPERROW = NMCMROBINCOL * 2 * NADCMCM;                                                    ///< the number of readout channels per pad row
 GPUglobalconstexpr() int NCHANNELSC0 = NROWC0 * NCHANNELSPERROW;                                                          ///< the number of readout channels per C0 chamber
 GPUglobalconstexpr() int NCHANNELSC1 = NROWC1 * NCHANNELSPERROW;                                                          ///< the number of readout channels per C1 chamber
 GPUglobalconstexpr() int NCHANNELSTOTAL = NSECTOR * NLAYER * (NSTACK - 1) * NCHANNELSC1 + NSECTOR * NLAYER * NCHANNELSC0; ///< the total number of readout channels for TRD
 GPUglobalconstexpr() int NCHANNELSPERSECTOR = NCHANNELSTOTAL / NSECTOR;                                                   ///< then number of readout channels per sector
 GPUglobalconstexpr() int NCHANNELSPERLAYER = NCHANNELSPERSECTOR / NLAYER;                                                 ///< then number of readout channels per layer
-GPUglobalconstexpr() int NCPU = 4;         ///< the number of CPUs inside the TRAP chip
-GPUglobalconstexpr() int NCHARGES = 3;     ///< the number of charges per tracklet (Q0/1/2)
+GPUglobalconstexpr() int NCPU = 4;                                                                                        ///< the number of CPUs inside the TRAP chip
+GPUglobalconstexpr() int NCHARGES = 3;                                                                                    ///< the number of charges per tracklet (Q0/1/2)
 
 // the values below should come out of the TRAP config in the future
 GPUglobalconstexpr() int NBITSTRKLPOS = 11;                                      ///< number of bits for position in tracklet64 word
@@ -73,9 +73,9 @@ GPUglobalconstexpr() float GRANULARITYTRKLSLOPE = 1.f / PADGRANULARITYTRKLSLOPE;
 GPUglobalconstexpr() int ADCBASELINE = 10;                                       ///< baseline in ADC units
 
 // OS: Should this not be flexible for example in case of Kr calib?
-GPUglobalconstexpr() int TIMEBINS = 30;            ///< the number of time bins
-GPUglobalconstexpr() float MAXIMPACTANGLE = 25.f;  ///< the maximum impact angle for tracks relative to the TRD detector plane to be considered for vDrift and ExB calibration
-GPUglobalconstexpr() int NBINSANGLEDIFF = 25;      ///< the number of bins for the track angle used for the vDrift and ExB calibration based on the tracking
+GPUglobalconstexpr() int TIMEBINS = 30;           ///< the number of time bins
+GPUglobalconstexpr() float MAXIMPACTANGLE = 25.f; ///< the maximum impact angle for tracks relative to the TRD detector plane to be considered for vDrift and ExB calibration
+GPUglobalconstexpr() int NBINSANGLEDIFF = 25;     ///< the number of bins for the track angle used for the vDrift and ExB calibration based on the tracking
 #ifndef GPUCA_GPUCODE_DEVICE
 // calibration defaults, host only: these are double and never used in device code
 constexpr double VDRIFTDEFAULT = 1.546; ///< default value for vDrift
@@ -85,9 +85,9 @@ constexpr double EXBDEFAULT = 0.0;      ///< default value for LorentzAngle
 constexpr double EXBMIN = -0.4;         ///< min value for LorentzAngle
 constexpr double EXBMAX = 0.4;          ///< max value for LorentzAngle
 #endif
-GPUglobalconstexpr() int NBINSGAINCALIB = 320;     ///< number of bins in the charge (Q0+Q1+Q2) histogram for gain calibration
-GPUglobalconstexpr() float MPVDEDXDEFAULT = 42.;   ///< default Most Probable Value of TRD dEdx
-GPUglobalconstexpr() float T0DEFAULT = 1.2;        ///< default value for t0
+GPUglobalconstexpr() int NBINSGAINCALIB = 320;   ///< number of bins in the charge (Q0+Q1+Q2) histogram for gain calibration
+GPUglobalconstexpr() float MPVDEDXDEFAULT = 42.; ///< default Most Probable Value of TRD dEdx
+GPUglobalconstexpr() float T0DEFAULT = 1.2;      ///< default value for t0
 
 // array size to store incoming half cru payload.
 GPUglobalconstexpr() int HBFBUFFERMAX = 1048576;                 ///< max buffer size for data read from a half cru, (all events)
