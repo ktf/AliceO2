@@ -89,7 +89,6 @@ GPUhdi() GPUdoubleValue GPUdoubleGet(GPUdoubleStore d) { return d; }
 static_assert(sizeof(GPUdoubleStore) == 8, "GPUdoubleStore must match the size of a double");
 static_assert(alignof(GPUdoubleStore) == 8, "GPUdoubleStore must match the alignment of a double");
 
-
 // Compensated two-float arithmetic, value = mHi + mLo, for the intermediates that
 // are deliberately computed in double even when the track itself is float -- the
 // Jacobian and covariance terms in TrackParametrizationWithError::propagateTo and
@@ -221,21 +220,21 @@ GPUhdi() GPUdoubleBinary64 GPUCommonMath::Abs<GPUdoubleBinary64>(GPUdoubleBinary
 #define GPUCA_DOUBLECALC_BINARY64 4
 
 #ifndef GPUCA_DOUBLECALC
-  #if defined(__METAL__) && defined(__FAST_MATH__)
-    // Fast math reassociates the compensation terms away, so the two-float type
-    // would cost 1.5x for the accuracy of a plain float.
-    #define GPUCA_DOUBLECALC GPUCA_DOUBLECALC_FLOAT
-  #elif defined(__METAL__)
-    #define GPUCA_DOUBLECALC GPUCA_DOUBLECALC_TWOFLOAT
-  #else
-    #define GPUCA_DOUBLECALC GPUCA_DOUBLECALC_DOUBLE
-  #endif
+#if defined(__METAL__) && defined(__FAST_MATH__)
+// Fast math reassociates the compensation terms away, so the two-float type
+// would cost 1.5x for the accuracy of a plain float.
+#define GPUCA_DOUBLECALC GPUCA_DOUBLECALC_FLOAT
+#elif defined(__METAL__)
+#define GPUCA_DOUBLECALC GPUCA_DOUBLECALC_TWOFLOAT
+#else
+#define GPUCA_DOUBLECALC GPUCA_DOUBLECALC_DOUBLE
+#endif
 #endif
 
 #if GPUCA_DOUBLECALC == GPUCA_DOUBLECALC_DOUBLE
-  #ifdef __METAL__
-    #error "MSL has no double; GPUCA_DOUBLECALC_DOUBLE cannot be selected for Metal"
-  #endif
+#ifdef __METAL__
+#error "MSL has no double; GPUCA_DOUBLECALC_DOUBLE cannot be selected for Metal"
+#endif
 typedef double GPUdoubleCalc;
 #elif GPUCA_DOUBLECALC == GPUCA_DOUBLECALC_FLOAT
 typedef float GPUdoubleCalc;
@@ -244,7 +243,7 @@ typedef GPUdoubleCalcImpl GPUdoubleCalc;
 #elif GPUCA_DOUBLECALC == GPUCA_DOUBLECALC_BINARY64
 typedef GPUdoubleBinary64 GPUdoubleCalc;
 #else
-  #error "Invalid setting for GPUCA_DOUBLECALC"
+#error "Invalid setting for GPUCA_DOUBLECALC"
 #endif
 
 } // namespace o2::gpu
