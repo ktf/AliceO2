@@ -16,7 +16,6 @@
 #ifndef ALICEO2_LHCCONSTANTS_H_
 #define ALICEO2_LHCCONSTANTS_H_
 
-
 #include "GPUCommonDef.h"
 
 namespace o2
@@ -32,7 +31,7 @@ enum BeamDirection : int { BeamA, // beamA = beam 0,
                            InteractingBC = -1 // as used in the BunchFilling class
 };
 GPUglobalconstexpr() int LHCMaxBunches = 3564;                   // max N bunches
-GPUglobalconstexpr() double LHCRFFreq = 400.789e6;                          // LHC RF frequency in Hz
+GPUglobalconstexpr() double LHCRFFreq = 400.789e6;               // LHC RF frequency in Hz
 GPUglobalconstexpr() double LHCBunchSpacingNS = 10 * 1.e9 / LHCRFFreq;      // bunch spacing in ns (10 RFbuckets)
 GPUglobalconstexpr() double LHCOrbitNS = LHCMaxBunches * LHCBunchSpacingNS; // orbit duration in ns
 GPUglobalconstexpr() double LHCRevFreq = 1.e9 / LHCOrbitNS;                 // revolution frequency

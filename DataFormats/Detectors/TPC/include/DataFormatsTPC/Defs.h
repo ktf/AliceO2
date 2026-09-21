@@ -19,7 +19,6 @@
 #ifndef AliceO2_TPC_Defs_H
 #define AliceO2_TPC_Defs_H
 
-
 #include "GPUCommonDef.h"
 
 #ifndef GPUCA_GPUCODE_DEVICE
