@@ -453,7 +453,7 @@ class SMatrixGPU
   GPUd() SMatrixGPU(const SMatrixGPU<T, D1, D2, R2>& rhs);
   template <class A, class R2>
   GPUd() SMatrixGPU(const Expr<A, T, D1, D2, R2>& rhs);
-  template <class M>
+  template <class M, class = decltype(M::mRep)>
   GPUd() SMatrixGPU<T, D1, D2, R>& operator=(const M& rhs);
   template <class A, class R2>
   GPUd() SMatrixGPU<T, D1, D2, R>& operator=(Expr<A, T, D1, D2, R2> rhs);
@@ -684,7 +684,7 @@ GPUdi() SMatrixGPU<T, D1, D2, R>& SMatrixGPU<T, D1, D2, R>::operator=(Expr<A, T,
 }
 
 template <class T, unsigned int D1, unsigned int D2, class R>
-template <class M>
+template <class M, class>
 GPUdi() SMatrixGPU<T, D1, D2, R>& SMatrixGPU<T, D1, D2, R>::operator=(const M & rhs)
 {
   mRep = rhs.mRep;
