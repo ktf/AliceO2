@@ -399,7 +399,8 @@ int32_t GPUReconstructionMetal::GetMetalPrograms()
 
   // the section is part of the mapped image, so it outlives the dispatch_data_t
   // and does not have to be copied
-  dispatch_data_t blob = dispatch_data_create(p, sz, nullptr, ^{});
+  dispatch_data_t blob = dispatch_data_create(p, sz, nullptr, ^{
+                                                     });
 
   NSError* error = nil;
   mInternals->library = [mInternals->device newLibraryWithData:blob error:&error];

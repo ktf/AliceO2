@@ -34,7 +34,7 @@ static_assert(alignof(double) == 8, "the emulated double must match the alignmen
 template <>
 GPUhdi() constexpr double GPUCommonMath::Abs<double>(double x)
 {
-  return double::fromBits(x.bits() & ~GPUCA_B64_SIGN);
+  return double ::fromBits(x.bits() & ~GPUCA_B64_SIGN);
 }
 
 // metal::fabs is not constant-evaluable, so this also fails to compile if the
