@@ -87,6 +87,9 @@ class GPUCommonMath
   GPUd() constexpr static float Sin(float x);
   GPUd() constexpr static float Cos(float x);
   GPUhdni() static void SinCos(float x, float& s, float& c);
+#ifdef __METAL__ // math_utils::detail::sincos routes every type through SinCos on Metal
+  GPUhdni() static void SinCos(double x, double& s, double& c);
+#endif
   GPUhdni() static void SinCosd(double x, double& s, double& c);
   GPUd() constexpr static float Tan(float x);
   GPUd() constexpr static float Pow(float x, float y);
@@ -308,6 +311,15 @@ GPUhdi() void GPUCommonMath::SinCos(float x, float& s, float& c)
   ) // clang-format on
 }
 
+#ifdef __METAL__ // MSL has no double, so this is the emulated binary64's own sine and cosine
+GPUhdi() void GPUCommonMath::SinCosd(double x, double& s, double& c)
+{
+  const binary64_detail::SinCosPair sc = binary64_detail::sincos(x);
+  s = sc.s;
+  c = sc.c;
+}
+GPUhdi() void GPUCommonMath::SinCos(double x, double& s, double& c) { SinCosd(x, s, c); }
+#else
 GPUhdi() void GPUCommonMath::SinCosd(double x, double& s, double& c)
 {
 #if !defined(GPUCA_GPUCODE_DEVICE) && defined(__APPLE__)
@@ -318,6 +330,7 @@ GPUhdi() void GPUCommonMath::SinCosd(double x, double& s, double& c)
   GPUCA_CHOICE((void)((s = sin(x)) + (c = cos(x))), sincos(x, &s, &c), s = sincos(x, &c));
 #endif
 }
+#endif
 
 GPUdi() constexpr uint32_t GPUCommonMath::Clz(uint32_t x)
 {
@@ -444,11 +457,23 @@ GPUhdi() constexpr float GPUCommonMath::Abs<float>(float x)
   return GPUCA_CHOICE(fabsf(x), fabsf(x), fabs(x));
 }
 
+#ifdef __METAL__ // MSL has no double, so the keyword names the emulated binary64 and fabs does not apply
+template <>
+GPUhdi() constexpr double GPUCommonMath::Abs<double>(double x)
+{
+  return GPUdoubleBinary64::fromBits(x.bits() & ~GPUCA_B64_SIGN);
+}
+// metal::fabs is not constant-evaluable, so this also fails to compile if the
+// specialisation above is ever dropped and the call falls back to it in float
+static_assert(GPUCommonMath::Abs<double>(GPUdoubleBinary64::fromBits(0xBFF0000000000001ULL)).bits() == 0x3FF0000000000001ULL,
+              "Abs on the emulated double must clear the sign bit and keep every other one");
+#else
 template <>
 GPUhdi() constexpr double GPUCommonMath::Abs<double>(double x)
 {
   return GPUCA_CHOICE(fabs(x), fabs(x), fabs(x));
 }
+#endif
 
 template <>
 GPUhdi() constexpr int32_t GPUCommonMath::Abs<int32_t>(int32_t x)
