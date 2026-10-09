@@ -91,4 +91,4 @@
 #define GPUCA_KRNL_LB(x_class, x_attributes, ...) GPUCA_KRNL(x_class, (REG, (GPUCA_M_CAT(GPUCA_LB_, GPUCA_M_KRNL_NAME(x_class))), GPUCA_M_STRIP(x_attributes)), __VA_ARGS__)
 
 #endif // O2_GPU_GPURECONSTRUCTIONKERNELMACROS_H
-// clang-format on
+  // clang-format on
