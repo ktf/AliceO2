@@ -554,7 +554,7 @@ GPUd() int32_t GPUTPCGMMerger::RefitSectorTrack(GPUTPCGMSectorTrack& sectorTrack
   GPUTPCGMPropagator prop;
   prop.SetMaterialTPC();
   prop.SetMaxSinPhi(constants::MAX_SIN_PHI);
-  prop.SetSeedingErrors(true); // Larger errors for seeds, better since we don't start with good hypothesis
+  prop.SetSeedingErrors(true);    // Larger errors for seeds, better since we don't start with good hypothesis
   prop.SetFitInProjections(true); // TODO: Was false, consider reenabling after fitInProjection is fixed
   prop.SetPolynomialField(&Param().polynomialField);
   GPUTPCGMTrackParam trk;
@@ -1202,6 +1202,7 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
       // PrintMergeGraph(track1, std::cout);
       // PrintMergeGraph(track2, std::cout);
 
+      bool nextTrack = false;
       while (track2->PrevSegmentNeighbour() >= 0) {
         track2 = &mSectorTrackInfos[track2->PrevSegmentNeighbour()];
       }
@@ -1212,8 +1213,12 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
         while (track1->PrevSegmentNeighbour() >= 0) {
           track1 = &mSectorTrackInfos[track1->PrevSegmentNeighbour()];
           if (track1 == track2) {
-            goto NextTrack;
+            nextTrack = true;
+            break;
           }
+        }
+        if (nextTrack) {
+          continue;
         }
         GPUCommonAlgorithm::swap(track1, track1Base);
         for (int32_t k = 0; k < 2; k++) {
@@ -1221,16 +1226,27 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
           while (tmp->Neighbour(k) >= 0) {
             tmp = &mSectorTrackInfos[tmp->Neighbour(k)];
             if (tmp == track2) {
-              goto NextTrack;
+              nextTrack = true;
+              break;
             }
           }
+          if (nextTrack) {
+            break;
+          }
+        }
+        if (nextTrack) {
+          continue;
         }
 
         while (track1->NextSegmentNeighbour() >= 0) {
           track1 = &mSectorTrackInfos[track1->NextSegmentNeighbour()];
           if (track1 == track2) {
-            goto NextTrack;
+            nextTrack = true;
+            break;
           }
+        }
+        if (nextTrack) {
+          continue;
         }
       } else {
         while (track1->PrevSegmentNeighbour() >= 0) {
@@ -1245,9 +1261,16 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
           while (tmp->Neighbour(k) >= 0) {
             tmp = &mSectorTrackInfos[tmp->Neighbour(k)];
             if (tmp == track2) {
-              goto NextTrack;
+              nextTrack = true;
+              break;
             }
           }
+          if (nextTrack) {
+            break;
+          }
+        }
+        if (nextTrack) {
+          continue;
         }
 
         float z1min, z1max, z2min, z2max;
@@ -1319,7 +1342,6 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
       }
       // GPUInfo("Result");
       // PrintMergeGraph(track1, std::cout);
-    NextTrack:;
     }
   }
 }
