@@ -56,11 +56,13 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   virtual void SwitchFullscreen(bool set) = 0;                                                                               // Toggle full-screen mode
   virtual void ToggleMaximized(bool set) = 0;                                                                                // Maximize window
   virtual void SetVSync(bool enable) = 0;                                                                                    // Enable / disable vsync
+  virtual bool canSetVSync() { return false; }                                                                               // OpenGL: swap interval can be set
   bool EnableSendKey() override;                                                                                             // Request external keys (e.g. from terminal)
   virtual void OpenGLPrint(const char* s, float x, float y, float r, float g, float b, float a, bool fromBotton = true) = 0; // Print text on the display (needs the backend to build the font)
   GPUDisplayBackend* backend();
   static GPUDisplayFrontend* getFrontend(const char* type);
   virtual void getSize(int32_t& width, int32_t& height) { width = height = 0; }
+  virtual float getRefreshRate() { return 0.f; }        // Refresh rate of the display the window is on in Hz, 0 = unknown
   virtual float getDisplayScale() const { return 1.f; } // HiDPI scale factor: physical pixels per logical pixel, text positions and sizes are scaled by it
   virtual int32_t getVulkanSurface(void* instance, void* surface) { return 1; }
   virtual uint32_t getReqVulkanExtensions(const char**& p) { return 0; };
@@ -80,7 +82,7 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   virtual int32_t FrontendMain() = 0;
   virtual void StopDisplayA();
   static void* FrontendThreadWrapper(void*);
-  void waitForFPSLimit(); // Sleep until the next frame is due according to fpsRate (no sleep with maxFPSRate or fpsRate <= 0)
+  void waitForFPSLimit(); // Sleep until the next frame is due according to fpsRate (only in FPS_LIMIT_RATE mode, see GPUDisplayBackend::fpsLimitMode)
 
   static constexpr int32_t INIT_WIDTH = 1024, INIT_HEIGHT = 768;                        // Initial window size, before maximizing
   static constexpr int32_t MIN_WIDTH = 200, MIN_HEIGHT = 150;                           // Minimum window size
@@ -154,6 +156,7 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   int32_t InitDisplay(bool initFailure = false);   // Callback to initialize the GL Display (to be called in StartDisplay)
   void ExitDisplay();                              // Callback to clean up the GL Display
   int32_t& drawTextFontSize();
+  bool vsyncEnabled() const;                            // VSync setting (drawQualityVSync)
   void setWindowState(bool fullScreen, bool maximized); // Sync the settings if the window manager changed the window state
   void focusLost();                                     // Release all keys and mouse buttons when the window loses focus, since the release events go to another window
   void applyInitialWindowState();                       // Switch to fullscreen / maximize at startup according to the settings
