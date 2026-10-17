@@ -28,13 +28,15 @@ class GPUReconstruction;
 class GPUDisplay;
 class GPUDisplayBackend;
 class GPUDisplayGUIWrapper;
+struct GPUDisplayGUIChannel;
 
 class GPUDisplayFrontend : public GPUDisplayFrontendInterface
 {
   friend class GPUDisplay;
+  friend class GPUDisplayGUI; // Key codes
 
  public:
-  GPUDisplayFrontend() = default;
+  GPUDisplayFrontend();
   ~GPUDisplayFrontend() override;
 
   enum frontendTypes {
@@ -57,7 +59,6 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   virtual void ToggleMaximized(bool set) = 0;                                                                                // Maximize window
   virtual void SetVSync(bool enable) = 0;                                                                                    // Enable / disable vsync
   virtual bool canSetVSync() { return false; }                                                                               // OpenGL: swap interval can be set
-  bool EnableSendKey() override;                                                                                             // Request external keys (e.g. from terminal)
   virtual void OpenGLPrint(const char* s, float x, float y, float r, float g, float b, float a, bool fromBotton = true) = 0; // Print text on the display (needs the backend to build the font)
   GPUDisplayBackend* backend();
   static GPUDisplayFrontend* getFrontend(const char* type);
@@ -69,7 +70,7 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
 
   int32_t getDisplayControl() const override { return mDisplayControl; }
   void setDisplayControl(int32_t v) override { mDisplayControl = v; }
-  void sendKey(int32_t v) override;
+  void sendExternalGUIKey(int32_t v) override;
 
   frontendTypes frontendType() const { return mFrontendType; }
   const char* frontendName() const override { return mFrontendName; }
@@ -102,7 +103,7 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   static constexpr int32_t KEY_ENTER = 13; // fixed at 13
   static constexpr int32_t KEY_F1 = 14;
   static constexpr int32_t KEY_F2 = 15;
-  static constexpr int32_t KEY_F3 = 26;
+  static constexpr int32_t KEY_F3 = 16;
   static constexpr int32_t KEY_F4 = 17;
   static constexpr int32_t KEY_F5 = 18;
   static constexpr int32_t KEY_F6 = 19;
@@ -121,8 +122,8 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   // volatile variables to exchange control informations between display and backend
   volatile int32_t mDisplayControl = 0; // Control for next event (=1) or quit (=2)
   volatile int32_t mNeedUpdate = 0;     // flag that backend shall update the GL window, and call DrawGLScene
-  std::mutex mSendKeyMutex;
-  std::vector<int32_t> mSendKeys; // Keys sent by external entity (usually console), may be ignored by backend.
+  std::mutex mExternalGUIKeyMutex;
+  std::vector<int32_t> mExternalGUIKeys; // Keys sent by external entity (usually console), may be ignored by backend.
   std::mutex mExitStateMutex;
 
   // Keyboard / Mouse actions
@@ -147,11 +148,13 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   const char* mFrontendName = nullptr;
   volatile bool mDisplayRunning = false;
 
+  std::unique_ptr<GPUDisplayGUIChannel> mGUIChannel; // Must outlive mGUI
   std::unique_ptr<GPUDisplayGUIWrapper> mGUI;
 
   void HandleKey(uint8_t key);                     // Callback for handling key presses
   int32_t DrawGLScene();                           // Callback to draw the GL scene
-  void HandleSendKeys();                           // Optional callback to handle key press from external source (e.g. stdin by default)
+  void HandleExternalGUISignals();                 // Callback to handle signals from external GUIs
+  bool HasExternalGUISignals() const;              // Returns whether there are currently pending signals from external GUIs to be handled
   void ResizeScene(int32_t width, int32_t height); // Callback when GL window is resized
   int32_t InitDisplay(bool initFailure = false);   // Callback to initialize the GL Display (to be called in StartDisplay)
   void ExitDisplay();                              // Callback to clean up the GL Display
@@ -160,6 +163,8 @@ class GPUDisplayFrontend : public GPUDisplayFrontendInterface
   void setWindowState(bool fullScreen, bool maximized); // Sync the settings if the window manager changed the window state
   void focusLost();                                     // Release all keys and mouse buttons when the window loses focus, since the release events go to another window
   void applyInitialWindowState();                       // Switch to fullscreen / maximize at startup according to the settings
+ private:
+  bool HandleExternalGUIKeys(); // Returns whether keys were handled, config changes are not handled
 };
 } // namespace o2::gpu
 
