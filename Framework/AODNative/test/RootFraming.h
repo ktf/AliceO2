@@ -122,9 +122,9 @@ inline std::vector<uint8_t> makeBasket(Algo algo, std::span<const uint8_t> value
   auto build = [&](uint16_t keylen) {
     h.bytes.clear();
     h.put<uint32_t>(keylen + payload.size()); // fNbytes
-    h.put<int16_t>(4);                         // key version
-    h.put<uint32_t>(raw.size());               // fObjlen
-    h.put<uint32_t>(0);                        // fDatime
+    h.put<int16_t>(4);                        // key version
+    h.put<uint32_t>(raw.size());              // fObjlen
+    h.put<uint32_t>(0);                       // fDatime
     h.put<uint16_t>(keylen);
     h.put<uint16_t>(1);  // fCycle
     h.put<uint32_t>(0);  // fSeekKey
@@ -132,12 +132,12 @@ inline std::vector<uint8_t> makeBasket(Algo algo, std::span<const uint8_t> value
     h.string("TBasket"); // class, name, title
     h.string("fX");
     h.string("O2track");
-    h.put<uint16_t>(3);                       // fVersion
-    h.put<int32_t>(32000);                    // fBufferSize
-    h.put<int32_t>(0);                        // fNevBufSize
-    h.put<int32_t>(nevbuf);                   // fNevBuf
-    h.put<int32_t>(keylen + values.size());   // fLast
-    h.put<uint8_t>(tailBytes ? 1 : 2);        // flag
+    h.put<uint16_t>(3);                     // fVersion
+    h.put<int32_t>(32000);                  // fBufferSize
+    h.put<int32_t>(0);                      // fNevBufSize
+    h.put<int32_t>(nevbuf);                 // fNevBuf
+    h.put<int32_t>(keylen + values.size()); // fLast
+    h.put<uint8_t>(tailBytes ? 1 : 2);      // flag
   };
   build(0);
   auto keylen = (uint16_t)h.bytes.size();
