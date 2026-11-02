@@ -42,8 +42,20 @@ void ReadBufferPool::put(Buffer buffer)
 {
   std::lock_guard lock{mMutex};
   mFree.push_back(std::move(buffer));
-  if (mFree.size() > kMaxFree) {
+  if (mMaxFreeBytes == 0 && mFree.size() > kMaxFree) {
     mFree.erase(std::ranges::min_element(mFree, {}, &Buffer::capacity));
+  }
+  auto freeBytes = [this] {
+    size_t total = 0;
+    for (auto const& b : mFree) {
+      total += b.capacity;
+    }
+    return total;
+  };
+  // The same headroom as get() allocates, so that a buffer for a group just
+  // under the budget can still be kept.
+  while (mMaxFreeBytes > 0 && !mFree.empty() && freeBytes() > mMaxFreeBytes + mMaxFreeBytes / 8) {
+    mFree.erase(std::ranges::max_element(mFree, {}, &Buffer::capacity));
   }
 }
 
@@ -78,6 +90,19 @@ void ReadPlan::add(TreeInfo const& tree)
       }
     }
   }
+}
+
+uint64_t ReadPlan::bytesOf(TreeInfo const& tree)
+{
+  uint64_t total = 0;
+  for (auto const& branch : tree.branches) {
+    for (auto const& basket : branch.baskets) {
+      if (!basket.embedded) {
+        total += basket.nbytes;
+      }
+    }
+  }
+  return total;
 }
 
 std::span<const uint8_t> ReadPlan::lookup(uint64_t offset, size_t length) const
