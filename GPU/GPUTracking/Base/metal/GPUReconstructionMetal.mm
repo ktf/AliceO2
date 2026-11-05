@@ -137,7 +137,12 @@ int32_t GPUReconstructionMetal::InitDevice_Runtime()
 
   for (uint32_t i = 0; i < mEvents.size(); i++) {
     auto* events = (id<MTLSharedEvent>*)mEvents[i].data();
-    new (events) id<MTLSharedEvent>[ mEvents[i].size() ];
+    for (uint32_t j = 0; j < mEvents[i].size(); j++) {
+      events[j] = [mInternals->device newSharedEvent];
+      if (events[j] == nil) {
+        GPUErrorReturn("Error creating Metal event");
+      }
+    }
   }
 
   return (0);
@@ -147,6 +152,13 @@ int32_t GPUReconstructionMetal::ExitDevice_Runtime()
 {
   // Tear down Metal
   SynchronizeGPU();
+
+  for (uint32_t i = 0; i < mEvents.size(); i++) {
+    auto* events = (id<MTLSharedEvent>*)mEvents[i].data();
+    for (uint32_t j = 0; j < mEvents[i].size(); j++) {
+      [events[j] release];
+    }
+  }
 
   if (mMaster == nullptr) {
     if (mDeviceMemoryBase) {
@@ -279,10 +291,14 @@ size_t GPUReconstructionMetal::WriteToConstantMemory(size_t offset, const void* 
 
 void GPUReconstructionMetal::ReleaseEvent(deviceEvent ev)
 {
-  // FIXME: is this supposed to reset the event for it to be repurposed
-  //        or to decrease the ref count?
-  auto mtlEvent = (__bridge id<MTLSharedEvent>)(ev.get<void*>());
-  [mtlEvent setSignaledValue:0];
+  // Nothing to do, as in CUDA: the next RecordMarker supersedes the last one.
+}
+
+uint64_t GPUReconstructionMetal::EventValue(deviceEvent ev, bool next)
+{
+  std::lock_guard<std::mutex> lock(mInternals->eventMutex);
+  auto& value = mInternals->eventValues[ev.get<void*>()];
+  return next ? ++value : value;
 }
 
 void GPUReconstructionMetal::RecordMarker(deviceEvent* ev, int32_t stream)
@@ -291,7 +307,7 @@ void GPUReconstructionMetal::RecordMarker(deviceEvent* ev, int32_t stream)
   // Does not change the retain count, so it's important we manage
   // the lifetime of the events outside here.
   auto mtlEvent = (__bridge id<MTLSharedEvent>)(ev->get<void*>());
-  [cb encodeSignalEvent:mtlEvent value:1];
+  [cb encodeSignalEvent:mtlEvent value:EventValue(*ev, true)];
   CommitStream(stream);
 }
 
@@ -311,6 +327,9 @@ void GPUReconstructionMetal::DrainStream(int32_t stream)
   // committed, so it never completes. Only what was submitted can be waited for.
   for (id<MTLCommandBuffer> cb : mInternals->submittedBuffers[stream]) {
     [cb waitUntilCompleted];
+    if (cb.status == MTLCommandBufferStatusError) {
+      GPUError("Metal command buffer on stream %d failed: %s", stream, [[cb.error description] UTF8String]);
+    }
     [cb release];
   }
   mInternals->submittedBuffers[stream].clear();
@@ -341,7 +360,9 @@ void GPUReconstructionMetal::StreamWaitForEvents(int32_t stream, deviceEvent* ev
   id<MTLCommandBuffer> cb = mInternals->commandBuffers[stream];
   for (int32_t ei = 0; ei < nEvents; ei++) {
     auto mtlEvent = (__bridge id<MTLSharedEvent>)(evList[ei].get<void*>());
-    [cb encodeWaitForEvent:mtlEvent value:1];
+    if (const uint64_t value = EventValue(evList[ei], false)) {
+      [cb encodeWaitForEvent:mtlEvent value:value];
+    }
   }
   CommitStream(stream);
   DrainStream(stream);
@@ -351,7 +372,7 @@ bool GPUReconstructionMetal::IsEventDone(deviceEvent* evList, int32_t nEvents)
 {
   for (int32_t i = 0; i < nEvents; i++) {
     auto mtlEvent = (__bridge id<MTLSharedEvent>)(evList[i].get<void*>());
-    if (mtlEvent.signaledValue == 0) {
+    if (mtlEvent.signaledValue < EventValue(evList[i], false)) {
       return false;
     }
   }
