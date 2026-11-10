@@ -167,7 +167,13 @@ int32_t GPUReconstructionMetal::InitDevice_Runtime()
       mInternals->streamOrderValue[i] = 0;
       mInternals->streamFence[i] = [mInternals->device newFence];
       mInternals->streamHasWork[i] = false;
+      mInternals->timelineKernels[i] = 0;
     }
+    if (const char* timeline = getenv("GPUCA_METAL_TIMELINE")) {
+      mInternals->timeline = fopen(timeline, "w");
+    }
+    mInternals->maxKernelsPerBuffer = getenv("GPUCA_METAL_MAX_KERNELS_PER_BUFFER") ? atoi(getenv("GPUCA_METAL_MAX_KERNELS_PER_BUFFER")) : 0;
+    mInternals->maxStreamsInFlight = getenv("GPUCA_METAL_MAX_STREAMS_IN_FLIGHT") ? atoi(getenv("GPUCA_METAL_MAX_STREAMS_IN_FLIGHT")) : 0;
 
     mInternals->mem_host = metalNewSharedBuffer(mInternals->device, mHostMemorySize);
     if (mInternals->mem_host == nil) {
@@ -212,7 +218,8 @@ int32_t GPUReconstructionMetal::InitDevice_Runtime()
 
 int32_t GPUReconstructionMetal::ExitDevice_Runtime()
 {
-  // Tear down Metal
+  // Tear down Metal, also after a failure, without failing again
+  mInternals->exiting = true;
   SynchronizeGPU();
 
   for (uint32_t i = 0; i < mEvents.size(); i++) {
@@ -245,6 +252,12 @@ int32_t GPUReconstructionMetal::ExitDevice_Runtime()
         [mInternals->streamFence[i] release];
       }
       [mInternals->mem_host release];
+    }
+    // The completion handlers of the limit still use the internals
+    std::unique_lock<std::mutex> lock(mInternals->inFlightMutex);
+    mInternals->inFlightDone.wait(lock, [this] { return mInternals->streamsInFlight == 0; });
+    if (mInternals->timeline) {
+      fflush(mInternals->timeline);  // not closed: a completion handler may still write to it
     }
 
     [mInternals->library release];
@@ -312,6 +325,7 @@ size_t GPUReconstructionMetal::GPUMemCpy(void* dst, const void* src, size_t size
     id<MTLCommandBuffer> cb = mInternals->commandBuffers[realStream];
     id<MTLBlitCommandEncoder> blit = [cb blitCommandEncoder];
     metalBeginEncoder(mInternals, blit, realStream);
+    metalTimelineAdd(mInternals, realStream, "b", nullptr, sizeBytes);
     [blit copyFromBuffer:s.buffer
             sourceOffset:s.offset
                 toBuffer:d.buffer
@@ -345,6 +359,7 @@ size_t GPUReconstructionMetal::WriteToConstantMemory(size_t offset, const void* 
     id<MTLCommandBuffer> cb = mInternals->commandBuffers[realStream];
     id<MTLBlitCommandEncoder> blit = [cb blitCommandEncoder];
     metalBeginEncoder(mInternals, blit, realStream);
+    metalTimelineAdd(mInternals, realStream, "b", nullptr, size);
     [blit copyFromBuffer:s.buffer
             sourceOffset:s.offset
                 toBuffer:mInternals->mem_constant
@@ -380,7 +395,10 @@ void GPUReconstructionMetal::RecordMarker(deviceEvent* ev, int32_t stream)
   // Does not change the retain count, so it's important we manage
   // the lifetime of the events outside here.
   auto mtlEvent = (__bridge id<MTLSharedEvent>)(ev->get<void*>());
-  [cb encodeSignalEvent:mtlEvent value:EventValue(*ev, true)];
+  const uint64_t value = EventValue(*ev, true);
+  [cb encodeSignalEvent:mtlEvent value:value];
+  metalSignalOnError(cb, mtlEvent, value);
+  metalTimelineAdd(mInternals, stream, "s", mtlEvent, value);
   CommitStream(stream);
 }
 
@@ -392,13 +410,32 @@ void GPUReconstructionMetal::CommitStream(int32_t stream)
   // in constant memory. So each buffer of a stream waits for the previous one.
   const uint64_t value = ++mInternals->streamOrderValue[stream];
   [cb encodeSignalEvent:mInternals->streamOrder[stream] value:value];
+  metalSignalOnError(cb, mInternals->streamOrder[stream], value);
+  if (mInternals->maxStreamsInFlight) {
+    metalLimitStreamsInFlight(mInternals, cb, stream);
+  }
+  if (mInternals->timeline) {
+    metalTimelineAdd(mInternals, stream, "s", mInternals->streamOrder[stream], value);
+    FILE* f = mInternals->timeline;
+    const std::string ops = std::move(mInternals->timelineOps[stream]);
+    const uint32_t nKernels = mInternals->timelineKernels[stream];
+    const uint64_t seq = mInternals->timelineBuffers++;
+    const double commitTime = metalHostTime();
+    [cb addCompletedHandler:^(id<MTLCommandBuffer> c) {
+      fprintf(f, "CB %llu s%d st%d commit %.6f gpu %.6f %.6f nk %u:%s\n", (unsigned long long)seq, stream, (int)c.status, commitTime, c.GPUStartTime, c.GPUEndTime, nKernels, ops.c_str());
+    }];
+    mInternals->timelineOps[stream].clear();
+    mInternals->timelineKernels[stream] = 0;
+  }
   [cb commit];
   // Hand the committed buffer over to the stream's submission list, which owns
   // it until it is waited for, and open a fresh one to encode the next work in.
   mInternals->submittedBuffers[stream].emplace_back(cb);
   mInternals->streamHasWork[stream] = false;
+  mInternals->streamKernels[stream] = 0;
   mInternals->commandBuffers[stream] = [[mInternals->commandQueues[stream] commandBuffer] retain];
   [mInternals->commandBuffers[stream] encodeWaitForEvent:mInternals->streamOrder[stream] value:value];
+  metalTimelineAdd(mInternals, stream, "w", mInternals->streamOrder[stream], value);
 }
 
 void GPUReconstructionMetal::DrainStream(int32_t stream)
@@ -417,19 +454,29 @@ void GPUReconstructionMetal::DrainStream(int32_t stream)
   // waitUntilCompleted, which sleeps until the completion has been processed.
   // Only short waits are worth a busy core, so give up after a while.
   bool done = false;
+  const double drainStart = mInternals->timeline && !mInternals->submittedBuffers[stream].empty() ? metalHostTime() : 0.;
   const auto t0 = std::chrono::steady_clock::now();
   while (!mInternals->submittedBuffers[stream].empty() && !(done = mInternals->streamOrder[stream].signaledValue >= mInternals->streamOrderValue[stream]) && std::chrono::steady_clock::now() - t0 < std::chrono::milliseconds(20)) {
   }
+  int64_t error = 0;
   for (id<MTLCommandBuffer> cb : mInternals->submittedBuffers[stream]) {
     if (!done) {
       [cb waitUntilCompleted];
     }
     if (cb.status == MTLCommandBufferStatusError) {
       GPUError("Metal command buffer on stream %d failed: %s", stream, [[cb.error description] UTF8String]);
+      error = error ? error : cb.error.code;
     }
     [cb release];
   }
   mInternals->submittedBuffers[stream].clear();
+  if (drainStart) {
+    fprintf(mInternals->timeline, "DR s%d %.6f %.6f\n", stream, drainStart, metalHostTime());
+  }
+  // The work of a failed buffer is lost, so the results are wrong: fail like the other backends.
+  if (error && !mInternals->exiting) {
+    GPUChkErr(error);
+  }
 }
 
 void GPUReconstructionMetal::SynchronizeGPU()
@@ -453,12 +500,18 @@ void GPUReconstructionMetal::SynchronizeEvents(deviceEvent* evList, int32_t nEve
 
 void GPUReconstructionMetal::StreamWaitForEvents(int32_t stream, deviceEvent* evList, int32_t nEvents)
 {
+  // Encoded after the stream's pending work, the waits would keep its command buffer
+  // from completing until the other streams are done: wait in a buffer of its own.
+  if (mInternals->streamHasWork[stream]) {
+    CommitStream(stream);
+  }
   // Encode commands to wait for all the events
   id<MTLCommandBuffer> cb = mInternals->commandBuffers[stream];
   for (int32_t ei = 0; ei < nEvents; ei++) {
     auto mtlEvent = (__bridge id<MTLSharedEvent>)(evList[ei].get<void*>());
     if (const uint64_t value = EventValue(evList[ei], false)) {
       [cb encodeWaitForEvent:mtlEvent value:value];
+      metalTimelineAdd(mInternals, stream, "w", mtlEvent, value);
     }
   }
   CommitStream(stream);
