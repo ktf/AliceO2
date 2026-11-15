@@ -1024,7 +1024,7 @@ int32_t main(int argc, char** argv)
       }
     }
     if (nEventsProcessed > 1) {
-      printf("Total: %ld clusters, %ld tracks\n", nClustersTotal, nTracksTotal);
+      printf("Total: %lld clusters, %lld tracks\n", (long long)nClustersTotal, (long long)nTracksTotal);
     }
   }
 
