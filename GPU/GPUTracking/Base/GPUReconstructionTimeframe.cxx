@@ -290,8 +290,8 @@ int32_t GPUReconstructionTimeframe::LoadCreateTimeFrame(int32_t iEvent)
             return (1);
           }
           nTotalClusters += nClusters;
-          printf("Placing event %4d+%d (ID %4d) at z %7.3f (time %'dns) %s(collisions %4d, bunch %6ld, train %3d) (%'10d clusters, %'10d MC labels, %'10d track MC info)\n", nCollisions, nBorderCollisions, useEvent, shift, (int32_t)(nBunch * config.bunchSpacing), inTF ? " inside" : "outside",
-                 nCollisions, nBunch, nTrain, nClusters, mChain->mIOPtrs.nMCLabelsTPC, mChain->mIOPtrs.nMCInfosTPC);
+          printf("Placing event %4d+%d (ID %4d) at z %7.3f (time %'dns) %s(collisions %4d, bunch %6lld, train %3d) (%'10d clusters, %'10d MC labels, %'10d track MC info)\n", nCollisions, nBorderCollisions, useEvent, shift, (int32_t)(nBunch * config.bunchSpacing), inTF ? " inside" : "outside",
+                 nCollisions, (long long)nBunch, nTrain, nClusters, mChain->mIOPtrs.nMCLabelsTPC, mChain->mIOPtrs.nMCInfosTPC);
           nInBunchPileUp++;
           nCollisionsInTrain++;
           p2 *= mCollisionProbability / nInBunchPileUp;
