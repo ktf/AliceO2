@@ -33,6 +33,13 @@
 #endif
 namespace std
 {
+#ifdef __METAL__
+using metal::numeric_limits;
+template <class T>
+constant constexpr bool is_standard_layout_v = __is_standard_layout(T);
+template <class T>
+constant constexpr bool is_trivially_copyable_v = __is_trivially_copyable(T);
+#endif
 template <bool B, class T, class F>
 struct conditional {
   typedef T type;
