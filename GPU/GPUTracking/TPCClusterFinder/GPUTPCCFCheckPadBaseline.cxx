@@ -22,6 +22,7 @@
 #ifndef GPUCA_GPUCODE
 #include "MCLabelAccumulator.h"
 #include "utils/VcShim.h"
+#include <climits>
 #include <vector>
 #endif
 
@@ -238,6 +239,12 @@ GPUd() void GPUTPCCFCheckPadBaseline::CheckBaselineGPU(int32_t nBlocks, int32_t 
 
   const CfFragment& frag = clusterer.mPmemory->frag;
   const bool hipFilterOn = clusterer.Param().rec.tpc.hipTailFilter;
+  if constexpr (GPUCA_PAR_CF_CHECK_PAD_BASELINE_SEGMENTED) {
+    if (!hipFilterOn) {
+      CheckBaselineGPUSegmented(iBlock, iThread, smem, clusterer);
+      return;
+    }
+  }
   const Charge hipTailThreshold = clusterer.Param().rec.tpc.hipTailFilterThreshold;
   const Charge hipTailFilterAlpha = clusterer.Param().rec.tpc.hipTailFilterAlpha;
   CfArray2D<PackedCharge> chargeMap(reinterpret_cast<PackedCharge*>(clusterer.mPchargeMap));
@@ -403,6 +410,65 @@ GPUd() void GPUTPCCFCheckPadBaseline::CheckBaselineGPU(int32_t nBlocks, int32_t 
     DPRINTB_IF(nClosedTails > 0, "%d: Close remaining tails (%d)\n", iBlock, nClosedTails);
   }
 
+#endif
+}
+
+// Without the HIP tail filter, a pad only needs the number of time bins with charge, the longest run of
+// them and the largest charge. These combine over consecutive time segments, so the NThreads / MaxNPadsPerRow
+// threads of a pad each scan one segment straight from the charge map, instead of one thread scanning all time
+// bins of the pad, and the segments are joined at the end. The result is the same as that of the scan in time order.
+GPUd() void GPUTPCCFCheckPadBaseline::CheckBaselineGPUSegmented(int32_t iBlock, int32_t iThread, GPUSharedMemory& smem, processorType& clusterer)
+{
+#if defined(GPUCA_GPUCODE) && !defined(GPUCA_DEVICE_SINGLE_THREAD)
+  constexpr int32_t NSegments = NThreads / MaxNPadsPerRow;
+  constexpr GPUTPCGeometry geo;
+  const CfFragment& frag = clusterer.mPmemory->frag;
+  CfArray2D<PackedCharge> chargeMap(reinterpret_cast<PackedCharge*>(clusterer.mPchargeMap));
+  const auto iRow = iBlock;
+  const int16_t nPads = geo.NPads(iRow);
+  const CfChargePos basePos{(Row)iRow, 0, 0};
+  const int16_t pad = iThread % MaxNPadsPerRow;
+  const int32_t segment = iThread / MaxNPadsPerRow;
+  const int32_t segmentLength = (frag.length + NSegments - 1) / NSegments;
+  const int32_t tStart = CAMath::Min<int32_t>(segment * segmentLength, frag.length);
+  const int32_t tEnd = CAMath::Min<int32_t>(tStart + segmentLength, frag.length);
+
+  if (segment < NSegments) {
+    int32_t totalCharges = 0, consecCharges = 0, maxConsecCharges = 0, firstConsecCharges = 0;
+    bool leading = true;
+    Charge maxCharge = 0;
+    if (pad < nPads) {
+      for (int32_t t = tStart; t < tEnd; t++) {
+        const Charge q = chargeMap[basePos.delta({pad, (TPCFragmentTime)t})].unpack();
+        totalCharges += q > 0;
+        consecCharges = q > 0 ? consecCharges + 1 : 0;
+        maxConsecCharges = CAMath::Max(consecCharges, maxConsecCharges);
+        maxCharge = CAMath::Max<Charge>(q, maxCharge);
+        leading &= q > 0;
+        firstConsecCharges += leading;
+      }
+    }
+    smem.segments.totalCharges[iThread] = totalCharges;
+    smem.segments.maxConsecCharges[iThread] = maxConsecCharges;
+    smem.segments.firstConsecCharges[iThread] = firstConsecCharges;
+    smem.segments.lastConsecCharges[iThread] = consecCharges;
+    smem.segments.maxCharge[iThread] = maxCharge;
+  }
+  GPUbarrier();
+
+  if (segment == 0 && pad < nPads) {
+    int32_t totalCharges = 0, maxConsecCharges = 0, consecCharges = 0;
+    Charge maxCharge = 0;
+    for (int32_t i = 0; i < NSegments; i++) {
+      const int32_t j = i * MaxNPadsPerRow + pad;
+      const int32_t length = CAMath::Min<int32_t>(CAMath::Min<int32_t>(i * segmentLength, frag.length) + segmentLength, frag.length) - CAMath::Min<int32_t>(i * segmentLength, frag.length);
+      totalCharges += smem.segments.totalCharges[j];
+      maxConsecCharges = CAMath::Max(maxConsecCharges, CAMath::Max(smem.segments.maxConsecCharges[j], consecCharges + smem.segments.firstConsecCharges[j]));
+      consecCharges = smem.segments.firstConsecCharges[j] == length ? consecCharges + length : smem.segments.lastConsecCharges[j];
+      maxCharge = CAMath::Max<Charge>(smem.segments.maxCharge[j], maxCharge);
+    }
+    updatePadBaseline(basePos.gpad + pad, clusterer, totalCharges, maxConsecCharges, maxCharge);
+  }
 #endif
 }
 
@@ -747,6 +813,11 @@ GPUd() void GPUTPCCFHIPTailConnector::Thread<0>(int32_t nBlocks, int32_t nThread
   if (iBlock >= (int32_t)GPUTPCGeometry::NROWS) {
     return;
   }
+
+  if (clusterer.Param().rec.tpc.hipTailFwdAsCluster) {
+    return;
+  }
+
   const uint32_t row = iBlock;
 
   const uint32_t nTails = CAMath::Min(clusterer.mPnHIPTails[row], (uint32_t)MaxHIPTailsPerRow - 1);
@@ -836,6 +907,8 @@ GPUd() void GPUTPCCFHIPClusterizer::Thread<0>(int32_t nBlocks, int32_t nThreads,
 
     CPU_ONLY(auto labelAcc = MCLabelAccumulator{clusterer});
 
+    uint16_t padMin = 0xFFFF, padMax = 0;
+
     float qTot = 0;
     float qMax = 0;
     float padSum = 0;
@@ -848,17 +921,19 @@ GPUd() void GPUTPCCFHIPClusterizer::Thread<0>(int32_t nBlocks, int32_t nThreads,
     // Zero-th element is empty tail
     for (; tail != tails; tail = &tails[tail->iNext]) {
       const float tailWeight = tail->qTot;
-      const float tailPad = tail->pad;
       qMax = CAMath::Max(qMax, tail->qMax);
       qTot += tail->qTot;
-      padSum += tailWeight * tailPad;
-      padSqSum += tailWeight * tailPad * tailPad;
+      padSum += tailWeight * tail->pad;
+      padSqSum += tailWeight * tail->pad * tail->pad;
       if (tail->satStart >= 0 && tail->satEnd >= 0) {
         satTimeSum += 0.5f * (tail->satStart + tail->satEnd);
         nSatTails++;
       }
       tailStart = CAMath::Min<uint32_t>(tailStart, tail->tailStart);
       tailEnd = CAMath::Max<uint32_t>(tailEnd, tail->tailEnd);
+
+      padMin = CAMath::Min(padMin, tail->pad);
+      padMax = CAMath::Max(padMax, tail->pad);
 
       CPU_ONLY(labelAcc.collectTail(row, tail->pad, tail->tailStart, tail->tailEnd));
     }
@@ -867,12 +942,14 @@ GPUd() void GPUTPCCFHIPClusterizer::Thread<0>(int32_t nBlocks, int32_t nThreads,
     const float padMean = padSum / weightSum;
     const float padSigma = CAMath::Sqrt(CAMath::Max(0.f, padSqSum / weightSum - padMean * padMean));
 
+    const bool singlePad = padMin == padMax;
+
     tpc::ClusterNative cn;
     cn.qMax = qMax;
     cn.setSaturatedQtot(qTot);
     cn.setSaturatedTailLength(tailEnd - tailStart);
     cn.setPad(padMean);
-    cn.setSigmaPad(padSigma);
+    cn.setSigmaPad(singlePad ? 0.f : padSigma);
 
     if (cn.qMax >= 1023) {
 
@@ -881,7 +958,9 @@ GPUd() void GPUTPCCFHIPClusterizer::Thread<0>(int32_t nBlocks, int32_t nThreads,
       // but these never contain a saturated charge and are dropped by the qMax cut.
       const float clusterTime = frag.start + satTimeSum / nSatTails - clusterer.Param().rec.tpc.clustersShiftTimebinsClusterizer;
       assert(!CAMath::IsNaN(clusterTime));
-      cn.setTimeFlags(clusterTime, 0);
+
+      const uint8_t flags = singlePad ? tpc::ClusterNative::flagSingle : 0;
+      cn.setTimeFlags(clusterTime, flags);
 
       uint32_t index;
 

@@ -140,6 +140,13 @@ class Digitizer
   void setMeanLumiDistortions(float meanLumi);
   void setMeanLumiDistortionsDerivative(float meanLumi);
 
+  /// method of recalculateDistortions()
+  /// \param method 0: invert the average and the derivative distortions to corrections and invert the scaled corrections C_avg + s * C_der to distortions,
+  ///               1: invert only the derivative distortions and apply the scaled derivative corrections directly to the average distortions (SpaceCharge::scaleGlobalDistWithDerivativeCorr).
+  ///               Other values are a fatal error
+  void setRecalcDistortionsMethod(int method);
+  int getRecalcDistortionsMethod() const { return mRecalcDistortionsMethod; }
+
   /// in case of scaled distortions, the distortions can be recalculated to ensure consistent distortions and corrections
   void recalculateDistortions();
 
@@ -161,6 +168,9 @@ class Digitizer
   /// Whether flush() also flushes the process-wide debug streamer
   void setFlushDebugStreamer(bool flush) { mFlushDebugStreamer = flush; }
 
+  /// Apply the gain map for MC (TPC/Calib/PadGainFullMC) instead of the one of the reconstruction (TPC/Calib/PadGainFull)
+  void setUseGainMapMC(bool use) { mUseGainMapMC = use; }
+
  private:
   /// Fill the random rings of the sector seeding, if not done yet
   void initSectorSeeding();
@@ -176,6 +186,7 @@ class Digitizer
   ULong64_t mSeedingTimeframe = 0;                       //!< Timeframe identifier for sector seeding
   bool mUseSectorSeeding = false;                        //!< Whether sector seeding is used
   bool mFlushDebugStreamer = true;                       //!< Whether flush() flushes the debug streamer
+  bool mUseGainMapMC = false;                            //!< Whether the gain map for MC is applied instead of the one of the reconstruction
 
   DigitContainer mDigitContainer;        ///< Container for the Digits
   std::vector<float> mSignalArray;       //!< Workspace for the shaped signal of one electron
@@ -192,7 +203,8 @@ class Digitizer
   int mDistortionScaleType = 0;          ///< type=0: no scaling of distortions, type=1 distortions without any scaling, type=2 distortions scaling with lumi
   float mLumiScaleFactor = 0;            ///< value used to scale the derivative map
   bool mUseScaledDistortions = false;    ///< whether the distortions are already scaled
-  ClassDefNV(Digitizer, 4);
+  int mRecalcDistortionsMethod = 1;      ///< method of recalculateDistortions(): 0 = inversion of the scaled corrections, 1 = derivative corrections applied to the distortions
+  ClassDefNV(Digitizer, 5);
 };
 } // namespace tpc
 } // namespace o2

@@ -134,9 +134,11 @@ std::vector<framework::ConfigParamSpec> TPCDigitizerConditions::options()
   return {
     {"TPCtriggered", VariantType::Bool, false, {"Impose triggered RO mode (default: continuous)"}},
     {"TPCuseCCDB", VariantType::Bool, false, {"true: load calibrations from CCDB; false: use random calibratoins"}},
+    {"TPCuseGainMapMC", VariantType::Bool, false, {"with TPCuseCCDB, true: apply the gain map for MC (TPC/Calib/PadGainFullMC); false: apply TPC/Calib/PadGainFull. A GainMap.root file replaces both"}},
     {"meanLumiDistortions", VariantType::Float, -1.f, {"override lumi of distortion object if >=0"}},
     {"meanLumiDistortionsDerivative", VariantType::Float, -1.f, {"override lumi of derivative distortion object if >=0"}},
     {"do-not-recalculate-distortions", VariantType::Bool, false, {"Do not recalculate the distortions"}},
+    {"recalculate-distortions-method", VariantType::Int, 1, {"Recalculation of the distortions with the derivative map: 0 = inversion of the scaled corrections (old), 1 = scaled derivative corrections applied to the distortions"}},
     {"n-threads-distortions", VariantType::Int, 4, {"Number of threads used for the calculation of the distortions"}},
   };
 }
@@ -160,11 +162,21 @@ void TPCDigitizerConditions::init(framework::InitContext& ic, int distortionType
 {
   mDistortionType = distortionType;
   mRecalcDistortions = !(ic.options().get<bool>("do-not-recalculate-distortions"));
+  mRecalcDistortionsMethod = ic.options().get<int>("recalculate-distortions-method");
   SpaceCharge<float>::setNThreads(ic.options().get<int>("n-threads-distortions"));
   mUseCalibrationsFromCCDB = ic.options().get<bool>("TPCuseCCDB");
+  mUseGainMapMC = ic.options().get<bool>("TPCuseGainMapMC");
   mMeanLumiDistortions = ic.options().get<float>("meanLumiDistortions");
   mMeanLumiDistortionsDerivative = ic.options().get<float>("meanLumiDistortionsDerivative");
   LOG(info) << "TPC calibrations from CCDB: " << mUseCalibrationsFromCCDB;
+
+  if (!mUseCalibrationsFromCCDB) {
+    if (mUseGainMapMC) {
+      LOGP(warning, "TPC: TPCuseGainMapMC has no effect without TPCuseCCDB, the digitizer applies the default gain map");
+    }
+  } else {
+    LOGP(info, "TPC: gain map from the CCDB applied in the digitizer: {}", CDBTypeMap.at(mUseGainMapMC ? CDBType::CalPadGainFullMC : CDBType::CalPadGainFull));
+  }
 }
 
 bool TPCDigitizerConditions::finaliseCCDB(framework::ConcreteDataMatcher& matcher, void* obj, Digitizer& digitizer)
@@ -218,6 +230,7 @@ void TPCDigitizerConditions::update(framework::ProcessingContext& pc, Digitizer&
       pc.inputs().get<SC*>("tpcdistortionsderiv");
       digitizer.setLumiScaleFactor();
       if (mRecalcDistortions) {
+        digitizer.setRecalcDistortionsMethod(mRecalcDistortionsMethod);
         digitizer.recalculateDistortions();
       }
     }
@@ -237,7 +250,7 @@ void TPCDigitizerConditions::update(framework::ProcessingContext& pc, Digitizer&
   }
 
   if (std::filesystem::exists("GainMap.root")) {
-    LOG(info) << "TPC: Using gain map from 'GainMap.root'";
+    LOG(info) << "TPC: Using gain map from 'GainMap.root'" << (mUseGainMapMC ? ", TPCuseGainMapMC has no effect" : "");
     cdb.setGainMapFromFile("GainMap.root");
   }
 }

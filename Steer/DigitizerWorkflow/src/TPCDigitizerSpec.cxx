@@ -112,6 +112,7 @@ class TPCDPLDigitizerTask : public BaseDPLDigitizer
 
     mDigitizer.setContinuousReadout(!triggeredMode);
     mDigitizer.setDistortionScaleType(mDistortionType);
+    mDigitizer.setUseGainMapMC(mConditions.useGainMapMC());
 
     if (ic.options().get<bool>("tpc-sector-seeding")) {
       const auto seed = o2::conf::DigiParams::Instance().seed;

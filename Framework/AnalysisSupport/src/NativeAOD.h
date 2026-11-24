@@ -126,15 +126,16 @@ class NativeAODFileSystem : public VirtualRootFileSystemBase
 class NativeAODInputFile : public AODInputFile
 {
  public:
-  /// Opens @a url and parses its header, keys, maps and the trees of its first
+  /// Opens @a url and parses its header, keys, parent files and the trees of its first
   /// DF, so that layouts and versions we cannot read are found here, when the
   /// file can still go to ROOT. Throws o2::aod::native::FormatError.
   /// @a name is what the file is called (an LFN for a grid file); @a url by default.
   static std::shared_ptr<NativeAODInputFile> open(std::string const& url, RootObjectReadingFactory& factory, o2::aod::native::Options const& options, std::string const& name = {});
   /// The same, reading from @a source (e.g. the replicas of a grid file).
   static std::shared_ptr<NativeAODInputFile> open(std::unique_ptr<o2::aod::native::ByteSource> source, RootObjectReadingFactory& factory, o2::aod::native::Options const& options, std::string const& name);
-  /// The storage element and the seconds the grid lookup and open took, for monitoring.
-  void setGridInfo(std::string se, double openTime);
+  /// For monitoring: the storage element, the seconds the catalogue lookup took,
+  /// and those the opening of the replica read took (failed replicas excluded).
+  void setGridInfo(std::string se, double accessTime, double replicaOpenTime);
   std::string monitoringDetails() const override;
 
   std::string name() const override { return mName; }
@@ -144,7 +145,8 @@ class NativeAODInputFile : public AODInputFile
   std::vector<Key> topLevelKeys() override;
   std::vector<std::string> keysIn(std::string const& dir) override;
   std::map<std::string, std::string> parentFiles() override { return mParentFiles; }
-  std::map<std::string, std::string> metaData() override { return mMetaData; }
+  /// Read when asked for: the reader does not need it, and it costs a round trip at open.
+  std::map<std::string, std::string> metaData() override { return mFile->readStringMap("metaData"); }
   std::shared_ptr<VirtualRootFileSystemBase> filesystem() override { return mFilesystem; }
   void setReadOrder(std::vector<std::string> const& dfs) override { mFilesystem->setReadOrder(dfs); }
 
@@ -152,11 +154,12 @@ class NativeAODInputFile : public AODInputFile
   NativeAODInputFile() = default;
   std::string mName;
   std::string mSE;
-  double mOpenTime = 0;
+  double mAccessTime = 0;
+  double mOpenTime = 0;    // replica open and the reads of TFile::Init, as TJAlienFile
+  double mPrepareTime = 0; // parentFiles and the first DF's directory, keys and trees
   std::shared_ptr<o2::aod::native::RootFile> mFile;
   std::shared_ptr<NativeAODFileSystem> mFilesystem;
   std::map<std::string, std::string> mParentFiles;
-  std::map<std::string, std::string> mMetaData;
 };
 
 } // namespace o2::framework

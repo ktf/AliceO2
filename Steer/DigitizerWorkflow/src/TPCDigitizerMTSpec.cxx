@@ -130,6 +130,7 @@ class TPCDPLDigitizerMTTask : public o2::base::BaseDPLDigitizer
       worker->id = i;
       worker->digitizer.setContinuousReadout(!triggeredMode);
       worker->digitizer.setDistortionScaleType(mDistortionType);
+      worker->digitizer.setUseGainMapMC(mConditions.useGainMapMC());
       worker->digitizer.setUseSectorSeeding(sectorSeed);
       // the main thread flushes the process-wide debug streamer after the workers
       worker->digitizer.setFlushDebugStreamer(false);
