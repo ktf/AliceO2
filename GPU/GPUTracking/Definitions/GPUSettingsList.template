@@ -32,7 +32,7 @@ BeginNamespace(o2::gpu)
 
 // Reconstruction parameters for TPC, no bool in here !!!
 BeginSubConfig(GPUSettingsRecTPC, tpc, configStandalone.rec, "RECTPC", 0, "Reconstruction settings", rec_tpc)
-AddOptionRTC(rejectQPtB5, float, 1.f / 0.050f, "", 0, "QPt threshold to reject clusters of TPC tracks (Inverse Pt, scaled to B=0.5T!!!)") // TODO: Sort these options automatically for parameter size
+AddOptionRTC(rejectQPtB5, float, 1.f / 0.050f, "", 0, "QPt threshold to reject clusters of TPC tracks (Inverse Pt, scaled to B=0.5T!!!)")
 AddOptionRTC(hitPickUpFactor, float, 1.f, "", 0, "multiplier for the combined cluster+track error during track following")
 AddOptionRTC(hitSearchArea2, float, 2.f, "", 0, "square of maximum search road of hits during seeding")
 AddOptionRTC(neighboursSearchArea, float, 3.f, "", 0, "area in cm for the search of neighbours, for z only used if searchWindowDZDR = 0")
@@ -90,7 +90,7 @@ AddOptionRTC(extraClusterErrorSplitPadSharedSingleY2, float, 0.03f, "", 0, "Addi
 AddOptionRTC(extraClusterErrorFactorSplitPadSharedSingleY2, float, 3.0f, "", 0, "Multiplicative extra cluster error for Y2 if splitpad, shared, or single set")
 AddOptionRTC(extraClusterErrorSplitTimeSharedSingleZ2, float, 0.03f, "", 0, "Additive extra cluster error for Z2 if splittime, shared, or single set")
 AddOptionRTC(extraClusterErrorFactorSplitTimeSharedSingleZ2, float, 3.0f, "", 0, "Multiplicative extra cluster error for Z2 if splittime, shared, or single set")
-AddOptionArray(errorsCECrossing, float, 5, (0.f, 0.f, 0.f, 0.f, 0.f), "", 0, "Extra errors to add to track when crossing CE, depending on addErrorsCECrossing") // BUG: CUDA cannot yet handle AddOptionArrayRTC
+AddOptionArrayRTC(errorsCECrossing, float, 5, (0.f, 0.f, 0.f, 0.f, 0.f), "", 0, "Extra errors to add to track when crossing CE, depending on addErrorsCECrossing")
 AddOptionRTC(extrapolationTrackingYRangeUpper, float, 0.85f, "", 0, "Inner portion of y-range in sector that is not used in searching for extrapolated track candidates")
 AddOptionRTC(extrapolationTrackingYRangeLower, float, 0.85f, "", 0, "Inner portion of y-range in sector that is not used in searching for extrapolated track candidates")
 AddOptionRTC(trackFollowingYFactor, float, 4.f, "", 0, "Weight of y residual vs z residual in tracklet constructor")
@@ -158,7 +158,7 @@ AddOptionRTC(mergerNonInterpolateRejectMinNDF, uint8_t, 5, "", 0, "Minimum NDF o
 AddOptionRTC(rebuildTrackInFit, uint8_t, 1, "", 0, "Rebuild track completely during fit based on clusters closed to interpolated track positions, adds 2 fit iterations")
 AddOptionRTC(rebuildTrackInFitClusterCandidates, uint8_t, 3, "", 0, "Number of cluster candidates per row for rebuilt track")
 AddOptionRTC(disableRebuildAttachment, uint8_t, 0, "", 0, "Bitmask to disable certain attachment steps during track rebuid (1: current row, 2: interpolate missing row, 4: one sided interpolation, 8: original hit, 16: extrapolation)")
-AddOptionRTC(disableMarkAdjacent, uint8_t, 0, "", 0, "Bitmask to disable certain steps during refit to mark adjacenrt clusters (1: current row, 2: interpolate missing rows, 4: extrapolate inwards / outwards, 8: loop following)") // TODO: Add history
+AddOptionRTC(disableMarkAdjacent, uint8_t, 0, "", 0, "Bitmask to disable certain steps during refit to mark adjacenrt clusters (1: current row, 2: interpolate missing rows, 4: extrapolate inwards / outwards, 8: loop following, 16 track history)")
 AddOptionRTC(dEdxTruncLow, uint8_t, 2, "", 0, "Low truncation threshold, fraction of 128")
 AddOptionRTC(dEdxTruncHigh, uint8_t, 77, "", 0, "High truncation threshold, fraction of 128")
 AddOptionRTC(extrapolationTracking, int8_t, 1, "", 0, "Enable Extrapolation Tracking (prolong tracks to adjacent sectors to find short segments)")
@@ -190,7 +190,7 @@ AddOptionRTC(rebuildTrackCandidateErrChi2, uint8_t, 0, "", 0, "Rank cluster cand
 AddOptionRTC(rebuildTrackMaxRowsFromEnd, uint8_t, 10, "", 0, "If the last fitted hit of the outward way of the rebuild is more than this number of rows away from the end of the track, the final fit starts from the original track parameters")
 AddOptionRTC(rebuildTrackFallbackMaxNCl, uint8_t, 20, "", 0, "For tracks with at most this number of clusters, keep the original cluster of a row as candidate during rebuild if no candidate was found but it passes the interpolated chi2 cut (0 = disabled)")
 AddOptionRTC(rebuildTrackNonIntMinNDF, uint8_t, 10, "", 0, "NDF the track must exceed for non-interpolated cluster attachment (one-sided search and extrapolation) during rebuild")
-AddOptionArray(PID_remap, int8_t, 9, (0, 1, 2, 3, 4, 5, 6, 7, 8), "", 0, "Remap Ipid to PID_reamp[Ipid] (no remap if<0)") // BUG: CUDA cannot yet handle AddOptionArrayRTC
+AddOptionArrayRTC(PID_remap, int8_t, 9, (0, 1, 2, 3, 4, 5, 6, 7, 8), "", 0, "Remap Ipid to PID_reamp[Ipid] (no remap if<0)")
 AddVariableRTC(nWays, uint8_t, 0)
 AddHelp("help", 0)
 EndConfig()
@@ -208,7 +208,7 @@ AddOptionRTC(extraRoadY, float, 5.f, "", 0, "Addition to search road around trac
 AddOptionRTC(extraRoadZ, float, 10.f, "", 0, "Addition to search road around track prolongation along Z in cm")
 AddOptionRTC(trkltResRPhiIdeal, float, 1.f, "", 0, "Optimal tracklet rphi resolution in cm (in case phi of track = lorentz angle)")
 AddOptionRTC(trkltResVsTanPhiMisalign, float, 0.f, "", 0, "tan(phi) dependence of tracklet error due to radial misalignment (centered at 0 angle)")
-AddOptionRTC(maxChi2Red, float, 99.f, "", 0, "maximum chi2 per attached tracklet for TRD tracks TODO: currently effectively disabled, requires tuning")
+AddOptionRTC(maxChi2Red, float, 99.f, "", 0, "maximum chi2 per attached tracklet for TRD tracks")
 AddOptionRTC(applyDeflectionCut, uint8_t, 0, "", 0, "Set to 1 to enable tracklet selection based on deflection")
 AddOptionRTC(addDeflectionInChi2, uint8_t, 0, "", 0, "1 = add the slope in the chi2 calculation for matching, 2 = in addition, take into account the full likelihood of the slope including exponential tails")
 AddOptionRTC(stopTrkAfterNMissLy, uint8_t, 6, "", 0, "Abandon track following after N layers without a TRD match")
@@ -428,7 +428,7 @@ AddOption(mergerSanityCheck, bool, false, "", 0, "Run some simple sanity checks 
 AddOption(clusterizerZSSanityCheck, bool, false, "", 0, "Run some simple sanity checks on ZS decoding during clusterization")
 AddOption(allSanityChecks, bool, false, "", 0, "Enable all sanity checks")
 AddOption(tpcSingleSector, int32_t, -1, "", 0, "Restrict TPC processing to a single sector")
-AddOption(tpcDownscaledEdx, uint8_t, 0, "", 0, "If != 0, downscale dEdx processing (if enabled) to x %")
+AddOption(tpcDownscaledEdx, uint8_t, 0, "", 0, "If != 0, downscale dEdx processing (if enabled) to x % (> 100: enable setting but always return false)")
 AddOption(tpcMaxAttachedClustersPerSectorRow, uint32_t, 51000, "", 0, "Maximum number of TPC attached clusters which can be decoded per SectorRow")
 AddOption(tpcUseOldCPUDecoding, bool, false, "", 0, "Enable old CPU-based TPC decoding")
 AddOption(tpcApplyCFCutsAtDecoding, bool, false, "", 0, "Apply cluster cuts from clusterization during decoding of compressed clusters")

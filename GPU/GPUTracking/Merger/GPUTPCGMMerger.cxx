@@ -63,6 +63,8 @@
 
 using namespace o2::gpu;
 using namespace o2::tpc;
+
+static_assert(sizeof(GPUTPCGMMerger::trackRebuildHelperCandidate) == 6);
 using namespace gputpcgmmergertypes;
 
 namespace o2::gpu::internal
@@ -264,12 +266,12 @@ void GPUTPCGMMerger::CheckCollectedTracks()
 void GPUTPCGMMerger::CheckMergeGraph()
 {
   uint32_t nErr = 0;
-  std::vector<bool> trkUsed(SectorTrackInfoLocalTotal());
-  for (int32_t i = 0; i < SectorTrackInfoLocalTotal(); i++) {
+  std::vector<bool> trkUsed(mMemory->nUnpackedTracks);
+  for (uint32_t i = 0; i < mMemory->nUnpackedTracks; i++) {
     trkUsed[i] = false;
   }
 
-  for (int32_t itr = 0; itr < SectorTrackInfoLocalTotal(); itr++) {
+  for (int32_t itr = 0; itr < (int32_t)mMemory->nUnpackedTracks; itr++) {
     GPUTPCGMSectorTrack& track = mSectorTrackInfos[itr];
     if (track.PrevSegmentNeighbour() >= 0 && mSectorTrackInfos[track.PrevSegmentNeighbour()].NextSegmentNeighbour() != itr) {
       GPUError("FAILURE: Invalid reciprocal segment link: %d PrevSegmentNeighbour %d NextSegmentNeighbour %d", itr, track.PrevSegmentNeighbour(), mSectorTrackInfos[track.PrevSegmentNeighbour()].NextSegmentNeighbour());
@@ -326,7 +328,7 @@ void GPUTPCGMMerger::CheckMergeGraph()
       break;
     }
   }
-  for (int32_t i = 0; i < SectorTrackInfoLocalTotal(); i++) {
+  for (uint32_t i = 0; i < mMemory->nUnpackedTracks; i++) {
     if (trkUsed[i] == false) {
       GPUError("FAILURE: trk missed");
       nErr++;
@@ -378,7 +380,6 @@ void GPUTPCGMMerger::InitializeProcessor() {}
 void* GPUTPCGMMerger::SetPointersMerger(void* mem)
 {
   computePointerWithAlignment(mem, mSectorTrackInfos, mNTotalSectorTracks);
-  computePointerWithAlignment(mem, mSectorTrackInfoIndex, NSECTORS * 2 + 1);
   if (mRec->GetProcessingSettings().deterministicGPUReconstruction) {
     computePointerWithAlignment(mem, mTmpSortMemory, std::max(mNTotalSectorTracks, mNMaxTracks * 2));
   }
@@ -609,7 +610,7 @@ void GPUTPCGMMerger::CreateMCLabels(int32_t nBlocks, int32_t nThreads, int32_t i
 
 GPUd() void GPUTPCGMMerger::ClearTrackLinks(int32_t nBlocks, int32_t nThreads, int32_t iBlock, int32_t iThread, bool output)
 {
-  const int32_t n = output ? mMemory->nMergedTracks : SectorTrackInfoLocalTotal();
+  const int32_t n = output ? mMemory->nMergedTracks : mMemory->nUnpackedTracks;
   for (int32_t i = iBlock * nThreads + iThread; i < n; i += nThreads * nBlocks) {
     mTrackLinks[i] = -1;
   }
@@ -683,11 +684,6 @@ GPUd() void GPUTPCGMMerger::SetTrackClusterT(GPUTPCGMSectorTrack& track, int32_t
   track.SetClusterT(cl[clusterIndex1].getTime(), cl[clusterIndex2].getTime());
 }
 
-GPUd() void GPUTPCGMMerger::UnpackSaveNumber(int32_t id)
-{
-  mSectorTrackInfoIndex[id] = mMemory->nUnpackedTracks;
-}
-
 GPUd() void GPUTPCGMMerger::UnpackSectorGlobal(int32_t nBlocks, int32_t nThreads, int32_t iBlock, int32_t iThread, int32_t iSector)
 {
   const GPUTPCTracker& trk = GetConstantMem()->tpcTrackers[iSector];
@@ -701,7 +697,7 @@ GPUd() void GPUTPCGMMerger::UnpackSectorGlobal(int32_t nBlocks, int32_t nThreads
     if (localId == -1) {
       continue;
     }
-    uint32_t myTrack = CAMath::AtomicAdd(&mMemory->nUnpackedTracks, 1u);
+    uint32_t myTrack = mMemory->nUnpackedTracks + CAMath::AtomicAdd(&mMemory->nUnpackedTracksGlobal, 1u);
     GPUTPCGMSectorTrack& track = mSectorTrackInfos[myTrack];
     SetTrackClusterT(track, iSector, sectorTr);
     track.Set(this, sectorTr, alpha, iSector);
@@ -758,7 +754,7 @@ GPUd() void GPUTPCGMMerger::RefitSectorTracks(int32_t nBlocks, int32_t nThreads,
 
 GPUd() void GPUTPCGMMerger::LinkExtrapolatedTracks(int32_t nBlocks, int32_t nThreads, int32_t iBlock, int32_t iThread)
 {
-  for (int32_t itr = SectorTrackInfoGlobalFirst(0) + iBlock * nThreads + iThread; itr < SectorTrackInfoGlobalLast(NSECTORS - 1); itr += nThreads * nBlocks) {
+  for (uint32_t itr = mMemory->nUnpackedTracks + iBlock * nThreads + iThread; itr < mMemory->nUnpackedTracks + mMemory->nUnpackedTracksGlobal; itr += nThreads * nBlocks) {
     GPUTPCGMSectorTrack& extrapolatedTrack = mSectorTrackInfos[itr];
     GPUTPCGMSectorTrack& localTrack = mSectorTrackInfos[extrapolatedTrack.LocalTrackId() & 0xFFFFFF];
     int up = (extrapolatedTrack.LocalTrackId() & 0x40000000) ? 1 : 0;
@@ -792,7 +788,7 @@ GPUd() void GPUTPCGMMerger::MergeSectorsPrepareStep2(int32_t nBlocks, int32_t nT
   float sinAlpha = CAMath::Sin(dAlpha);
 
   GPUTPCGMSectorTrack trackTmp;
-  for (int32_t itr = iBlock * nThreads + iThread; itr < SectorTrackInfoLocalTotal(); itr += nThreads * nBlocks) {
+  for (uint32_t itr = iBlock * nThreads + iThread; itr < mMemory->nUnpackedTracks; itr += nThreads * nBlocks) {
     const GPUTPCGMSectorTrack* track = &mSectorTrackInfos[itr];
     int32_t iSector = track->Sector();
 
@@ -1074,7 +1070,7 @@ GPUd() void GPUTPCGMMerger::MergeWithinSectorsPrepare(int32_t nBlocks, int32_t n
   float x0 = GPUTPCGeometry::Row2X(63);
   const float maxSin = CAMath::Sin(60.f / 180.f * CAMath::Pi());
 
-  for (int32_t itr = iBlock * nThreads + iThread; itr < SectorTrackInfoLocalTotal(); itr += nThreads * nBlocks) {
+  for (uint32_t itr = iBlock * nThreads + iThread; itr < mMemory->nUnpackedTracks; itr += nThreads * nBlocks) {
     const GPUTPCGMSectorTrack& track = mSectorTrackInfos[itr];
     int32_t iSector = track.Sector();
     GPUTPCGMBorderTrack b;
@@ -1135,7 +1131,7 @@ GPUd() void GPUTPCGMMerger::hookEdge(int32_t u, int32_t v)
 GPUd() void GPUTPCGMMerger::ResolveFindConnectedComponentsSetup(int32_t nBlocks, int32_t nThreads, int32_t iBlock, int32_t iThread)
 {
   int32_t start, end;
-  setBlockRange(SectorTrackInfoLocalTotal(), nBlocks, iBlock, start, end);
+  setBlockRange(mMemory->nUnpackedTracks, nBlocks, iBlock, start, end);
   for (int32_t i = start + iThread; i < end; i += nThreads) {
     mTrackCCRoots[i] = i;
   }
@@ -1146,7 +1142,7 @@ GPUd() void GPUTPCGMMerger::ResolveFindConnectedComponentsHookLinks(int32_t nBlo
   // Compute connected components in parallel, step 1.
   // Source: Adaptive Work-Efficient Connected Components on the GPU, Sutton et al, 2016 (https://arxiv.org/pdf/1612.01178.pdf)
   int32_t start, end;
-  setBlockRange(SectorTrackInfoLocalTotal(), nBlocks, iBlock, start, end);
+  setBlockRange(mMemory->nUnpackedTracks, nBlocks, iBlock, start, end);
   for (int32_t itr = start + iThread; itr < end; itr += nThreads) {
     hookEdge(itr, mTrackLinks[itr]);
   }
@@ -1161,7 +1157,7 @@ GPUd() void GPUTPCGMMerger::ResolveFindConnectedComponentsHookNeighbors(int32_t 
   }
 
   int32_t start, end;
-  setBlockRange(SectorTrackInfoLocalTotal(), nBlocks / 4, iBlock / 4, start, end);
+  setBlockRange(mMemory->nUnpackedTracks, nBlocks / 4, iBlock / 4, start, end);
 
   int32_t myNeighbor = iBlock % 4;
 
@@ -1175,7 +1171,7 @@ GPUd() void GPUTPCGMMerger::ResolveFindConnectedComponentsMultiJump(int32_t nBlo
 {
   // Compute connected components in parallel, step 2.
   int32_t start, end;
-  setBlockRange(SectorTrackInfoLocalTotal(), nBlocks, iBlock, start, end);
+  setBlockRange(mMemory->nUnpackedTracks, nBlocks, iBlock, start, end);
   for (int32_t itr = start + iThread; itr < end; itr += nThreads) {
     int32_t root = itr;
     int32_t next = mTrackCCRoots[root];
@@ -1223,7 +1219,7 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
   }
 
   int32_t start, end;
-  setBlockRange(SectorTrackInfoLocalTotal(), nBlocks, iBlock, start, end);
+  setBlockRange(mMemory->nUnpackedTracks, nBlocks, iBlock, start, end);
 
   // Walk a segment chain to its end, dir 0 towards the head and 1 towards the
   // tail, reporting whether target was met on the way.
@@ -1250,9 +1246,9 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
     return false;
   };
 
-  for (int32_t baseIdx = 0; baseIdx < SectorTrackInfoLocalTotal(); baseIdx += nThreads) {
-    int32_t itr = baseIdx + iThread;
-    bool inRange = itr < SectorTrackInfoLocalTotal();
+  for (uint32_t baseIdx = 0; baseIdx < mMemory->nUnpackedTracks; baseIdx += nThreads) {
+    uint32_t itr = baseIdx + iThread;
+    bool inRange = itr < mMemory->nUnpackedTracks;
 
     int32_t itr2 = -1;
     if (inRange) {
@@ -1277,9 +1273,9 @@ GPUd() void GPUTPCGMMerger::ResolveMergeSectors(GPUResolveSharedMemory& smem, in
       continue;
     }
 
-    const int32_t nSectors = smemIdx;
+    const uint32_t nSectors = smemIdx;
 
-    for (int32_t i = 0; i < nSectors; i++) {
+    for (uint32_t i = 0; i < nSectors; i++) {
       itr = smem.iTrack1[i];
       itr2 = smem.iTrack2[i];
 
@@ -1574,7 +1570,7 @@ GPUd() void GPUTPCGMMerger::CollectMergedTracks(int32_t nBlocks, int32_t nThread
     }
 
     if (trbase == nullptr) {
-      while (itr < SectorTrackInfoLocalTotal()) {
+      while (itr < (int32_t)mMemory->nUnpackedTracks) {
         trbase = &mSectorTrackInfos[itr];
         if (trbase->PrevSegmentNeighbour() >= 0 || trbase->PrevNeighbour() >= 0) {
           itr += nThreads * nBlocks;
@@ -1582,7 +1578,7 @@ GPUd() void GPUTPCGMMerger::CollectMergedTracks(int32_t nBlocks, int32_t nThread
         }
         break;
       }
-      if (itr >= SectorTrackInfoLocalTotal()) {
+      if (itr >= (int32_t)mMemory->nUnpackedTracks) {
         break;
       }
       revertSegments = false;
@@ -1906,7 +1902,7 @@ GPUd() void GPUTPCGMMerger::PrepareForFit1(int32_t nBlocks, int32_t nThreads, in
     mTrackOrderAttach[mTrackSort[i]] = i;
     GPUTPCGMMergedTrack& trk = mMergedTracks[i];
     if (trk.OK()) {
-      const bool protect = CAMath::Abs(trk.GetParam().GetQPt() * Param().qptB5Scaler) <= Param().rec.tpc.rejectQPtB5 && !trk.MergedLooper() && trk.Leg() == 0;
+      const bool protect = CAMath::Abs(trk.GetParam().GetQPt() * Param().qptB5Scaler) <= Param().rec.tpc.rejectQPtB5 && !trk.MergedLooper() && trk.Leg() == 0 && !(Param().rec.tpc.disableMarkAdjacent & 16);
       [[maybe_unused]] uint8_t rowMin = 255, rowMax = 0;
       for (uint32_t j = 0; j < trk.NClusters(); j++) {
         rowMin = CAMath::Min(rowMin, mClusters[trk.FirstClusterRef() + j].row);

@@ -204,6 +204,10 @@ int32_t ReadConfiguration(int argc, char** argv)
     return 1;
   }
 #endif
+  if (configStandalone.setO2Settings && configStandalone.runGPU && !(configStandalone.testAsync || configStandalone.testSyncAsync)) {
+    configStandalone.proc.rtc.enable = 1;
+    configStandalone.proc.doublePipeline = 1;
+  }
   if (configStandalone.proc.doublePipeline && configStandalone.testSyncAsync) {
     printf("Cannot run asynchronous processing with double pipeline\n");
     return 1;
@@ -274,10 +278,10 @@ int32_t ReadConfiguration(int argc, char** argv)
     configStandalone.QA.clusterRejectionHistograms = 1;
     configStandalone.proc.tpcIncreasedMinClustersPerRow = 500000;
     configStandalone.proc.ignoreNonFatalGPUErrors = 1;
-    // TODO: rundEdx=1
-    // GPU_proc.qcRunFraction=$TPC_TRACKING_QC_RUN_FRACTION;"
-    // [[ $CTFINPUT == 1 ]] && GPU_CONFIG_KEY+="GPU_proc.tpcInputWithClusterRejection=1;"
-    // double pipeline / rtc
+    if (configStandalone.testSync && configStandalone.rundEdx == -1) {
+      configStandalone.rundEdx = 1;
+      configStandalone.proc.qcRunFraction = 0.f;
+    }
   }
 
   if (configStandalone.outputcontrolmem) {
@@ -401,6 +405,10 @@ int32_t SetupReconstruction()
   procSet = configStandalone.proc;
   GPURecoStepConfiguration steps;
 
+  if (configStandalone.setO2Settings && grp.doCompClusterDecode) {
+    procSet.tpcInputWithClusterRejection = 1;
+  }
+
   if (configStandalone.solenoidBzNominalGPU != -1e6f) {
     grp.solenoidBzNominalGPU = configStandalone.solenoidBzNominalGPU;
   }
@@ -498,7 +506,7 @@ int32_t SetupReconstruction()
   GPURecoStepConfiguration stepsAsync = steps;
 
   // Set settings for synchronous
-  GPUChainTracking::ApplySyncSettings(procSet, recSet, steps.steps, (configStandalone.testSyncAsync || configStandalone.testSync) && !configStandalone.testSyncAsyncNoSyncSettings, configStandalone.rundEdx);
+  GPUChainTracking::ApplySyncSettings(procSet, recSet, steps.steps, (configStandalone.testSyncAsync && !configStandalone.testSyncAsyncNoSyncSettings) || configStandalone.testSync, configStandalone.testAsync && !configStandalone.testSyncAsync, configStandalone.rundEdx);
   int32_t runAsyncQA = procSet.runQA && !configStandalone.testSyncAsyncQcInSync ? procSet.runQA : 0;
   if (configStandalone.testSyncAsync) {
     procSet.eventDisplay = nullptr;
@@ -532,7 +540,7 @@ int32_t SetupReconstruction()
   if (configStandalone.proc.doublePipeline) {
     recPipeline->SetSettings(&grp, &recSet, &procSet, &steps);
   }
-  if (configStandalone.testSyncAsync) { // TODO: Add --async mode / flag
+  if (configStandalone.testSyncAsync) {
     // Set settings for asynchronous
     stepsAsync.steps.setBits(gpudatatypes::RecoStep::TPCDecompression, true);
     stepsAsync.steps.setBits(gpudatatypes::RecoStep::TPCdEdx, true);
@@ -550,7 +558,7 @@ int32_t SetupReconstruction()
     }
     recSetAsync.tpc.disableMarkAdjacent = 0xFF;
     recSetAsync.maxTrackQPtB5 = CAMath::Min(recSetAsync.maxTrackQPtB5, recSetAsync.tpc.rejectQPtB5);
-    GPUChainTracking::ApplySyncSettings(procSetAsync, recSetAsync, stepsAsync.steps, false, configStandalone.rundEdx);
+    GPUChainTracking::ApplySyncSettings(procSetAsync, recSetAsync, stepsAsync.steps, false, true, configStandalone.rundEdx);
     finalizeSteps(stepsAsync, procSetAsync);
     recAsync->SetSettings(&grp, &recSetAsync, &procSetAsync, &stepsAsync);
   }
@@ -777,9 +785,7 @@ int32_t RunBenchmark(GPUReconstruction* recUse, GPUChainTracking* chainTrackingU
       }
       recAsync->ClearAllocatedMemory();
     }
-    if (!configStandalone.proc.doublePipeline) {
-      recUse->ClearAllocatedMemory();
-    }
+    recUse->ClearAllocatedMemory();
 
     if (tmpRetVal == GPUReconstruction::retValValue::retDoExit) {
       configStandalone.continueOnError = 0; // Forced exit from event display loop

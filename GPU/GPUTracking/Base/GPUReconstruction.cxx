@@ -94,13 +94,6 @@ GPUReconstruction::GPUReconstruction(const GPUSettingsDeviceBackend& cfg) : mHos
   }
   param().SetDefaults(mGRPSettings.get());
   mMemoryScalers.reset(new GPUMemorySizeScalers);
-  for (uint32_t i = 0; i < NSECTORS; i++) {
-    processors()->tpcTrackers[i].SetSector(i); // TODO: Move to a better place
-    processors()->tpcClusterer[i].mISector = i;
-#ifdef GPUCA_HAS_ONNX
-    processors()->tpcNNClusterer[i].mISector = i;
-#endif
-  }
 }
 
 GPUReconstruction::~GPUReconstruction()
@@ -438,7 +431,7 @@ int32_t GPUReconstruction::InitPhaseAfterDevice()
 void GPUReconstruction::WriteConstantParams(int32_t stream)
 {
   if (IsGPU()) {
-    const auto threadContext = GetThreadContext();
+    const auto holdContext = GetThreadContext();
     WriteToConstantMemory(ptrDiff(&processors()->param, processors()), &param(), sizeof(param()), stream);
   }
 }
@@ -753,20 +746,23 @@ void* GPUReconstruction::AllocateDirectMemory(size_t size, int32_t type)
   void*& pool = (type & GPUMemoryResource::MEMORY_GPU) ? mDeviceMemoryPool : mHostMemoryPool;
   void*& poolend = (type & GPUMemoryResource::MEMORY_GPU) ? mDeviceMemoryPoolEnd : mHostMemoryPoolEnd;
   char* retVal;
-  if ((type & GPUMemoryResource::MEMORY_STACK)) {
-    poolend = (char*)poolend - size; // TODO: Implement overflow check
+  if (size > (size_t)((char*)poolend - (char*)pool)) {
+    GPUError("Insufficient direct memory: requested %zu, available %td bytes", size, ptrDiff(poolend, pool));
+    throw std::bad_alloc();
+  } else if ((type & GPUMemoryResource::MEMORY_STACK)) {
+    poolend = (char*)poolend - size;
     poolend = (char*)poolend - GPUProcessor::getAlignmentMod<constants::GPU_MEMALIGN>(poolend);
     retVal = (char*)poolend;
   } else {
     GPUProcessor::computePointerWithAlignment(pool, retVal, size);
   }
   if (pool > poolend) {
-    GPUError("Insufficient unmanaged memory: missing %ld bytes", ptrDiff(pool, poolend));
+    GPUError("Insufficient direct memory: missing %td bytes", ptrDiff(pool, poolend));
     throw std::bad_alloc();
   }
   UpdateMaxMemoryUsed();
   if (GetProcessingSettings().allocDebugLevel >= 2) {
-    std::cout << "Allocated (unmanaged " << ((type & GPUMemoryResource::MEMORY_GPU) ? "gpu" : "host") << "): " << size << " - available: " << ptrDiff(poolend, pool) << "\n";
+    std::cout << "Allocated (direct " << ((type & GPUMemoryResource::MEMORY_GPU) ? "gpu" : "host") << "): " << size << " - available: " << ptrDiff(poolend, pool) << "\n";
   }
   return retVal;
 }
@@ -1145,10 +1141,13 @@ void GPUReconstruction::RunPipelineWorker()
     {
       std::lock_guard<std::mutex> lk(q->m);
       q->done = true;
+      q->c.notify_one();
     }
-    q->c.notify_one();
-    mPipelineContext->workerRunning = false;
-    mPipelineContext->cond.notify_one();
+    {
+      std::lock_guard<std::mutex> lk(mPipelineContext->mutex);
+      mPipelineContext->workerRunning = false;
+      mPipelineContext->cond.notify_one();
+    }
   }
   if (GetProcessingSettings().debugLevel >= 3) {
     GPUInfo("Pipeline worker ended");

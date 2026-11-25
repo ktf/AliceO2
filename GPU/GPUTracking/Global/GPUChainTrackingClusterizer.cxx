@@ -69,6 +69,8 @@ using namespace o2::tpc;
 using namespace o2::tpc::constants;
 using namespace o2::dataformats;
 
+static_assert(sizeof(o2::tpc::TriggerInfoDLBZS) % sizeof(uint32_t) == 0); // GPUTriggerOutputs::hasher hashes it as uint32_t words
+
 #ifndef GPUCA_RUN2
 std::pair<uint32_t, uint32_t> GPUChainTracking::TPCClusterizerDecodeZSCountUpdate(uint32_t iSector, const CfFragment& frag)
 {
@@ -655,7 +657,7 @@ int32_t GPUChainTracking::RunTPCClusterizer_prepare(bool restorePointers, const 
     processorsShadow()->ioPtrs.clustersNative = mCFContext->ptrClusterNativeSave;
     return 0;
   }
-  const auto& threadContext = GetThreadContext();
+  const auto& holdContext = GetThreadContext();
   mRec->MemoryScalers()->nTPCdigits = 0;
   if (mCFContext == nullptr) {
     mCFContext.reset(new GPUTPCCFChainContext);
@@ -763,7 +765,7 @@ int32_t GPUChainTracking::RunTPCClusterizer(bool synchronizeOutput)
   int32_t tpcTimeBinCut = (mUpdateNewCalibObjects && mNewCalibValues->newTPCTimeBinCut) ? mNewCalibValues->tpcTimeBinCut : param().tpcCutTimeBin;
 
   mRec->PushNonPersistentMemory(qStr2Tag("TPCCLUST"));
-  const auto& threadContext = GetThreadContext();
+  const auto& holdContext = GetThreadContext();
   const bool doGPU = GetRecoStepsGPU() & RecoStep::TPCClusterFinding;
 
   GPUTPCExtraADC extraADCs;
@@ -984,10 +986,8 @@ int32_t GPUChainTracking::RunTPCClusterizer(bool synchronizeOutput)
   auto notifyForeignChainFinished = [this]() {
     if (mPipelineNotifyCtx) {
       SynchronizeStream(OutputStream()); // Must finish before updating ioPtrs in (global) constant memory
-      {
-        std::lock_guard<std::mutex> lock(mPipelineNotifyCtx->mutex);
-        mPipelineNotifyCtx->ready = true;
-      }
+      std::lock_guard<std::mutex> lock(mPipelineNotifyCtx->mutex);
+      mPipelineNotifyCtx->ready = true;
       mPipelineNotifyCtx->cond.notify_one();
     }
   };

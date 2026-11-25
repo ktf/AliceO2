@@ -84,9 +84,18 @@ void GPUChainTracking::RegisterPermanentMemoryAndProcessors()
   }
 
   mRec->RegisterGPUProcessor(mInputsHost.get(), mRec->IsGPU());
-  if (GetRecoSteps() & RecoStep::TPCSectorTracking) {
-    for (uint32_t i = 0; i < NSECTORS; i++) {
+  for (uint32_t i = 0; i < NSECTORS; i++) {
+    if (GetRecoSteps() & RecoStep::TPCSectorTracking) {
+      processors()->tpcTrackers[i].SetSector(i);
       mRec->RegisterGPUProcessor(&processors()->tpcTrackers[i], GetRecoStepsGPU() & RecoStep::TPCSectorTracking);
+    }
+    if (GetRecoSteps() & RecoStep::TPCClusterFinding) {
+      processors()->tpcClusterer[i].mISector = i;
+      mRec->RegisterGPUProcessor(&processors()->tpcClusterer[i], GetRecoStepsGPU() & RecoStep::TPCClusterFinding);
+#ifdef GPUCA_HAS_ONNX
+      processors()->tpcNNClusterer[i].mISector = i;
+      mRec->RegisterGPUProcessor(&processors()->tpcNNClusterer[i], GetRecoStepsGPU() & RecoStep::TPCClusterFinding);
+#endif
     }
   }
   if (GetRecoSteps() & RecoStep::TPCMerging) {
@@ -103,14 +112,6 @@ void GPUChainTracking::RegisterPermanentMemoryAndProcessors()
   }
   if (GetRecoSteps() & RecoStep::TPCDecompression) {
     mRec->RegisterGPUProcessor(&processors()->tpcDecompressor, GetRecoStepsGPU() & RecoStep::TPCDecompression);
-  }
-  if (GetRecoSteps() & RecoStep::TPCClusterFinding) {
-    for (uint32_t i = 0; i < NSECTORS; i++) {
-      mRec->RegisterGPUProcessor(&processors()->tpcClusterer[i], GetRecoStepsGPU() & RecoStep::TPCClusterFinding);
-#ifdef GPUCA_HAS_ONNX
-      mRec->RegisterGPUProcessor(&processors()->tpcNNClusterer[i], GetRecoStepsGPU() & RecoStep::TPCClusterFinding);
-#endif
-    }
   }
   if (GetRecoSteps() & RecoStep::Refit) {
     mRec->RegisterGPUProcessor(&processors()->trackingRefit, GetRecoStepsGPU() & RecoStep::Refit);
@@ -334,7 +335,7 @@ bool GPUChainTracking::ValidateSettings()
 
 int32_t GPUChainTracking::Init()
 {
-  const auto& threadContext = GetThreadContext();
+  const auto& holdContext = GetThreadContext();
   if (GetProcessingSettings().debugLevel >= 1) {
     printf("Enabled Reconstruction Steps: 0x%x (on GPU: 0x%x)", (int32_t)GetRecoSteps().get(), (int32_t)GetRecoStepsGPU().get());
     for (uint32_t i = 0; i < sizeof(gpudatatypes::RECO_STEP_NAMES) / sizeof(gpudatatypes::RECO_STEP_NAMES[0]); i++) {
@@ -408,7 +409,6 @@ int32_t GPUChainTracking::Init()
 
 void GPUChainTracking::UpdateGPUCalibObjects(int32_t stream, const GPUCalibObjectsConst* ptrMask)
 {
-  // TODO: Is this correct?
   if (processors()->calibObjects.fastTransform && (ptrMask == nullptr || ptrMask->fastTransform)) {
     memcpy((void*)mFlatObjectsShadow.mCalibObjects.fastTransform, (const void*)processors()->calibObjects.fastTransform, processors()->calibObjects.fastTransform->size());
   }
@@ -503,7 +503,6 @@ void* GPUChainTracking::GPUTrackingFlatObjects::SetPointersFlatObjects(void* mem
 {
   char* fastTransformBase = (char*)mem;
   if (mChainTracking->processors()->calibObjects.fastTransform) {
-    // TODO: Is this correct?!
     char* podBuf = nullptr;
     computePointerWithAlignment(mem, podBuf, mChainTracking->processors()->calibObjects.fastTransform->size()); // raw bytes
     mCalibObjects.fastTransform = reinterpret_cast<TPCFastTransformPOD*>(podBuf);
@@ -686,7 +685,7 @@ int32_t GPUChainTracking::RunChain()
   if (GetProcessingSettings().autoAdjustHostThreads && !mRec->IsGPU()) {
     mRec->SetNActiveThreads(-1);
   }
-  const auto threadContext = GetThreadContext();
+  const auto holdContext = GetThreadContext();
   if (GetProcessingSettings().runCompressionStatistics && mCompressionStatistics == nullptr) {
     mCompressionStatistics.reset(new GPUTPCClusterStatistics);
   }
@@ -908,7 +907,7 @@ int32_t GPUChainTracking::CheckErrorCodes(bool cpuOnly, bool forceShowErrors, st
   bool hasDebugError = false;
   for (int32_t i = 0; i < 1 + (!cpuOnly && mRec->IsGPU()); i++) {
     if (i) {
-      const auto& threadContext = GetThreadContext();
+      const auto& holdContext = GetThreadContext();
       if (GetProcessingSettings().doublePipeline) {
         TransferMemoryResourceLinkToHost(RecoStep::NoRecoStep, mInputsHost->mResourceErrorCodes, 0);
         SynchronizeStream(0);
@@ -974,7 +973,7 @@ void GPUChainTracking::ClearErrorCodes(bool cpuOnly)
 {
   processors()->errorCodes.clear();
   if (mRec->IsGPU() && !cpuOnly) {
-    const auto& threadContext = GetThreadContext();
+    const auto& holdContext = GetThreadContext();
     WriteToConstantMemory(RecoStep::NoRecoStep, (char*)&processors()->errorCodes - (char*)processors(), &processorsShadow()->errorCodes, sizeof(processorsShadow()->errorCodes), 0);
     TransferMemoryResourceLinkToGPU(RecoStep::NoRecoStep, mInputsHost->mResourceErrorCodes, 0);
   }
@@ -1015,16 +1014,26 @@ void GPUChainTracking::SetO2Propagator(const o2::base::Propagator* prop)
   }
 }
 
-void GPUChainTracking::ApplySyncSettings(GPUSettingsProcessing& proc, GPUSettingsRec& rec, gpudatatypes::RecoStepField& steps, bool syncMode, int32_t dEdxMode)
+void GPUChainTracking::ApplySyncSettings(GPUSettingsProcessing& proc, GPUSettingsRec& rec, gpudatatypes::RecoStepField& steps, bool syncMode, bool asyncMode, int32_t dEdxMode)
 {
+  if (syncMode && asyncMode) {
+    throw std::runtime_error("Cannot apply sync and async settings at the same time");
+  }
   if (syncMode) {
     rec.useMatLUT = false;
     rec.tpc.rebuildTrackMaxNonIntCov = 0.f; // TODO: Check if this yields a performance benefit
+  } else if (asyncMode) {
+    rec.useMatLUT = true;
   }
   if (proc.rtc.optSpecialCode == -1) {
     proc.rtc.optSpecialCode = syncMode;
   }
   if (dEdxMode != -2) {
-    steps.setBits(gpudatatypes::RecoStep::TPCdEdx, dEdxMode == -1 ? !syncMode : (dEdxMode > 0));
+    steps.setBits(gpudatatypes::RecoStep::TPCdEdx, dEdxMode == -1 ? 1 : (dEdxMode > 0));
+  }
+  if (syncMode) {
+    proc.tpcDownscaledEdx = 127;
+  } else if (asyncMode) {
+    proc.tpcDownscaledEdx = 0;
   }
 }

@@ -64,8 +64,6 @@ class GPUCommonMath
   using half_t = _Float16;
 #endif
 
-  GPUd() static float2 MakeFloat2(float x, float y); // TODO: Find better appraoch that is constexpr
-
   template <class T>
   GPUhd() constexpr static T Min(const T x, const T y)
   {
@@ -289,17 +287,6 @@ GPUdi() constexpr T GPUCommonMath::nextMultipleOf(T val)
   } else {
     return (val + I - 1) & ~(T)(I - 1);
   }
-  return 0; // BUG: Cuda complains about missing return value with constexpr if
-}
-
-GPUdi() float2 GPUCommonMath::MakeFloat2(float x, float y)
-{
-#if !defined(GPUCA_GPUCODE) || defined(__OPENCL__) || defined(__OPENCL_HOST__) || defined(__METAL__) || defined(__METAL_HOST__) || defined(__CPUDEVICE__)
-  float2 ret = {x, y};
-  return ret;
-#else
-  return make_float2(x, y);
-#endif // GPUCA_GPUCODE
 }
 
 GPUdi() constexpr float GPUCommonMath::Modf(float x, float y) { return GPUCA_CHOICE(fmodf(x, y), fmodf(x, y), fmod(x, y)); }
@@ -442,7 +429,7 @@ GPUdi() constexpr uint32_t GPUCommonMath::Ctz(uint32_t x)
 
 GPUdi() constexpr uint32_t GPUCommonMath::Popcount(uint32_t x)
 {
-#if (defined(__GNUC__) || defined(__clang__) || defined(__CUDACC__) || defined(__HIPCC__)) && !defined(__OPENCL__) // TODO: remove OPENCL when reported SPIR-V bug is fixed
+#if (defined(__GNUC__) || defined(__clang__) || defined(__CUDACC__) || defined(__HIPCC__))
   // use builtin if available
   return GPUCA_CHOICE(__builtin_popcount(x), __popc(x), __builtin_popcount(x));
 #else
@@ -482,7 +469,7 @@ GPUdi() constexpr uint32_t GPUCommonMath::Ctz64(uint64_t x)
 
 GPUdi() constexpr uint32_t GPUCommonMath::Popcount64(uint64_t x)
 {
-#if (defined(__GNUC__) || defined(__clang__) || defined(__CUDACC__) || defined(__HIPCC__)) && !defined(__OPENCL__) // TODO: remove OPENCL when reported SPIR-V bug is fixed
+#if (defined(__GNUC__) || defined(__clang__) || defined(__CUDACC__) || defined(__HIPCC__))
   // use builtin if available
   return GPUCA_CHOICE(__builtin_popcountll(x), __popcll(x), __builtin_popcountll(x));
 #else

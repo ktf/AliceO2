@@ -34,9 +34,9 @@ void GPUParam::SetDefaults(float solenoidBz, bool assumeConstantBz)
 {
   memset((void*)this, 0, sizeof(*this));
   new (&rec) GPUSettingsRec;
-  occupancyMap = nullptr;
-  occupancyMapSize = 0;
-  occupancyTotal = 0;
+  occupancy.map = nullptr;
+  occupancy.mapSize = 0;
+  occupancy.total = 0;
 
 #ifndef GPUCA_RUN2
   const float kErrorsY[4] = {0.06, 0.24, 0.12, 0.1};
@@ -107,7 +107,7 @@ void GPUParam::UpdateSettings(const GPUSettingsGRP* g, const GPUSettingsProcessi
   if (w) {
     par.dodEdx = dodEdxEnabled = w->steps.isSet(gpudatatypes::RecoStep::TPCdEdx);
     if (dodEdxEnabled && p && p->tpcDownscaledEdx != 0) {
-      dodEdxEnabled = (rand() % 100) < p->tpcDownscaledEdx;
+      dodEdxEnabled = p->tpcDownscaledEdx <= 100 && (rand() % 100) < p->tpcDownscaledEdx;
     }
   }
   if (d) {
@@ -159,14 +159,14 @@ void GPUParamRTC::setFrom(const GPUParam& param)
   memcpy((void*)this, (void*)&param, sizeof(param));
 }
 
-std::string GPUParamRTC::generateRTCCode(const GPUParam& param, bool useConstexpr)
+std::string GPUParamRTC::generateRTCCode(const GPUParam& param, bool useConstexpr, bool gpuConstexprArrayInConstantMem)
 {
   return "#include <string>\n"
          "#include <vector>\n"
          "#include <cstdint>\n"
          "#include <cstddef>\n"
          "namespace o2::gpu { class GPUDisplayFrontendInterface; }\n" +
-         qConfigPrintRtc(std::make_tuple(&param.rec.tpc, &param.rec.trd, &param.rec, &param.par), useConstexpr);
+         qConfigPrintRtc(std::make_tuple(&param.rec.tpc, &param.rec.trd, &param.rec, &param.par), useConstexpr, gpuConstexprArrayInConstantMem);
 }
 
 static_assert(sizeof(o2::gpu::GPUParam) == sizeof(o2::gpu::GPUParamRTC), "RTC param size mismatch");
