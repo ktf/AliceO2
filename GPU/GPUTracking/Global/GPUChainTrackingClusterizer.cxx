@@ -382,7 +382,7 @@ std::pair<uint32_t, uint32_t> GPUChainTracking::TPCClusterizerDecodeZSCount(uint
         const TPCZSHDR* const hdr = (const TPCZSHDR*)(rdh_utils::getLink(o2::raw::RDHUtils::getFEEID(*rdh)) == rdh_utils::DLBZSLinkID ? (page + o2::raw::RDHUtils::getMemorySize(*rdh) - sizeof(TPCZSHDRV2)) : (page + sizeof(o2::header::RAWDataHeader)));
         if (mCFContext->zsVersion == -1) {
           mCFContext->zsVersion = hdr->version;
-          if (GetProcessingSettings().param.tpcTriggerHandling && mCFContext->zsVersion < ZSVersion::ZSVersionDenseLinkBased) { // TODO: Move tpcTriggerHandling to recoSteps bitmask
+          if ((GetRecoSteps() & RecoStep::TPCTriggerHandling) && mCFContext->zsVersion < ZSVersion::ZSVersionDenseLinkBased) {
             static bool errorShown = false;
             if (errorShown == false) {
               GPUAlarm("Trigger handling only possible with TPC Dense Link Based data, received version %d, disabling", mCFContext->zsVersion);
@@ -410,7 +410,7 @@ std::pair<uint32_t, uint32_t> GPUChainTracking::TPCClusterizerDecodeZSCount(uint
             GPUFatal("Cannot process with invalid TPC ZS data, exiting");
           }
         }
-        if (GetProcessingSettings().param.tpcTriggerHandling) {
+        if (GetRecoSteps() & RecoStep::TPCTriggerHandling) {
           const TPCZSHDRV2* const hdr2 = (const TPCZSHDRV2*)hdr;
           if (hdr2->flags & TPCZSHDRV2::ZSFlags::TriggerWordPresent) {
             const char* triggerWord = (const char*)hdr - TPCZSHDRV2::TRIGGER_WORD_SIZE;
@@ -667,7 +667,7 @@ int32_t GPUChainTracking::RunTPCClusterizer_prepare(bool restorePointers, const 
   mCFContext->tpcMaxTimeBin = maxAllowedTimebin;
   const CfFragment fragmentMax{(tpccf::TPCTime)mCFContext->tpcMaxTimeBin + 1, maxFragmentLen};
   mCFContext->prepare(mIOPtrs.tpcZS, fragmentMax);
-  if (GetProcessingSettings().param.tpcTriggerHandling) {
+  if (GetRecoSteps() & RecoStep::TPCTriggerHandling) {
     mTriggerBuffer->triggers.clear();
   }
   if (mIOPtrs.tpcZS) {
@@ -1504,10 +1504,25 @@ int32_t GPUChainTracking::RunTPCClusterizer(bool synchronizeOutput)
     }
   }
 
-  if (GetProcessingSettings().param.tpcTriggerHandling) {
+  if (GetRecoSteps() & RecoStep::TPCTriggerHandling) {
     GPUOutputControl* triggerOutput = mSubOutputControls[GPUTrackingOutputs::getIndex(&GPUTrackingOutputs::tpcTriggerWords)];
-    if (triggerOutput && triggerOutput->allocator) {
-      // GPUInfo("Storing %lu trigger words", mTriggerBuffer->triggers.size());
+    const bool storeTriggers = triggerOutput && triggerOutput->allocator;
+    if (GetProcessingSettings().debugLevel >= 3) {
+      GPUInfo("%zu trigger words found%s", mTriggerBuffer->triggers.size(), storeTriggers ? ", storing" : "");
+    }
+    if (GetProcessingSettings().debugLevel >= 6) {
+      std::vector<o2::tpc::TriggerInfoDLBZS> sorted(mTriggerBuffer->triggers.begin(), mTriggerBuffer->triggers.end());
+      std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) { return a.orbit != b.orbit ? a.orbit < b.orbit : memcmp(&a.triggerWord, &b.triggerWord, sizeof(a.triggerWord)) < 0; });
+      *mDebugFile << "\n\nTPC Trigger Words: " << sorted.size() << "\n";
+      for (const auto& t : sorted) {
+        *mDebugFile << "Orbit " << t.orbit << ":";
+        for (uint32_t j = 0; j < o2::tpc::TriggerWordDLBZS::MaxTriggerEntries; j++) {
+          *mDebugFile << " " << t.triggerWord.triggerEntries[j];
+        }
+        *mDebugFile << "\n";
+      }
+    }
+    if (storeTriggers) {
       auto* outputBuffer = (decltype(mTriggerBuffer->triggers)::value_type*)triggerOutput->allocator(mTriggerBuffer->triggers.size() * sizeof(decltype(mTriggerBuffer->triggers)::value_type));
       std::copy(mTriggerBuffer->triggers.begin(), mTriggerBuffer->triggers.end(), outputBuffer);
     }
