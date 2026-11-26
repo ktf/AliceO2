@@ -11,6 +11,8 @@
 
 /// \file GPUReconstructionMetalKernelsSpecialize.inc
 
+#include <chrono>
+
 template <>
 inline void GPUReconstructionMetal::runKernelBackend<GPUMemClean16, 0>(const krnlSetupTime& _xyz, void* const& ptr, uint64_t const& size)
 {
@@ -29,4 +31,22 @@ inline void GPUReconstructionMetal::runKernelBackend<GPUMemClean16, 0>(const krn
   if (_xyz.z.ev) {
     RecordMarker(_xyz.z.ev, _xyz.x.stream);
   }
+}
+
+// Kernels that are a long serial chain per GPU thread, with little parallelism,
+// run on the host instead, with the CPU code, on the memory shared with the
+// host, as the sorts do with UNIFIED_MEM_SORT_ON_HOST.
+template <class T, int32_t I, typename... Args>
+inline void GPUReconstructionMetal::RunOnHost(const krnlSetupTime& _xyz, uint32_t nBlocks, const Args&... args)
+{
+  const auto start = std::chrono::steady_clock::now();
+  krnlSetupArgs<T, I, Args...> argPack{{}, {{{nBlocks, 1, _xyz.x.stream, krnlDeviceType::HostOnDeviceMemory, _xyz.x.step}, _xyz.y, _xyz.z}, _xyz.t}, {args...}};
+  runKernelOnHost(GetKernelNum<T, I>(), &argPack);
+  _xyz.t = std::chrono::duration<double>(std::chrono::steady_clock::now() - start).count();
+}
+
+template <>
+inline void GPUReconstructionMetal::runKernelBackend<GPUTPCGMMergerMergeBorders, 2>(const krnlSetupTime& _xyz, int32_t const& iSector, uint8_t const& mergeMode)
+{
+  RunOnHost<GPUTPCGMMergerMergeBorders, 2>(_xyz, 1, iSector, mergeMode);
 }
