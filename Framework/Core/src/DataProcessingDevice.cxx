@@ -2347,6 +2347,9 @@ bool DataProcessingDevice::tryDispatchComputation(ServiceRegistryRef ref, std::v
     }
   };
 
+  // Only what is ready now: the end-of-stream drain calls this in a loop with the
+  // same vector, and whatever the last call dispatched has been consumed since.
+  completed.clear();
   ref.get<DataRelayer>().getReadyToProcess(completed);
   if (completed.empty() == true) {
     LOGP(debug, "No computations available for dispatching.");
